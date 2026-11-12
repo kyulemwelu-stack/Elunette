@@ -157,9 +157,17 @@
             </div>
 
 
-            <form
-                id="client-questionnaire-form"
-                class="questionnaire-form">
+
+<form
+    id="client-questionnaire-form"
+    class="questionnaire-form"
+    method="POST">
+
+    <!-- CSRF PROTECTION -->
+    <input
+        type="hidden"
+        name="csrf_token"
+        value="{{ csrf_token() }}">
 
                 {% for question in questions %}
 
@@ -280,12 +288,31 @@
                         Back to My Briefs
                     </a>
 
-                    <button
-                        type="button"
-                        id="check-questionnaire"
-                        class="btn btn-primary">
-                        Check Answers
-                    </button>
+<!-- CHECK QUESTIONNAIRE ANSWERS -->
+
+<button
+    type="button"
+    id="check-questionnaire"
+    class="btn btn-primary">
+    Check Answers
+</button>
+
+
+<!-- SAVE QUESTIONNAIRE DRAFT -->
+
+{% if brief_id is defined and brief_id and brief_status == 'draft' %}
+
+
+<button
+    type="submit"
+    class="btn btn-primary"
+    formaction="{{ url_for('save_brief_answers', brief_id=brief_id) }}"
+    formmethod="POST"
+    formnovalidate>
+    Save Draft
+</button>
+
+{% endif %}
 
                 </div>
 
@@ -296,13 +323,156 @@
                     aria-live="polite">
                 </p>
 
-                <p class="form-hint">
-                    This is the questionnaire interaction stage.
-                    Saving answers to your project brief
-                    will be connected next.
-                </p>
+
+
+<!-- SAVE DRAFT SUCCESS MESSAGE -->
+
+{% if request.args.get('saved') == '1' %}
+
+<div class="questionnaire-save-feedback"
+     role="status"
+     aria-live="polite">
+
+    <p class="save-message">
+        Your questionnaire draft has been saved successfully.
+    </p>
+
+</div>
+
+{% endif %}
+
+
+<p class="questionnaire-save-hint">
+    Save your progress anytime and return later
+    to complete your project brief.
+</p>
 
             </form>
+
+<!-- ==========================================
+     SUBMIT BRIEF FOR PROVIDER REVIEW
+========================================== -->
+
+{% if brief_id and brief_status == 'draft' %}
+
+<form
+    action="{{ url_for('submit_brief', brief_id=brief_id) }}"
+    method="POST"
+    class="client-questionnaire-actions"
+    id="submit-brief-form">
+
+    <input
+        type="hidden"
+        name="csrf_token"
+        value="{{ csrf_token() }}">
+
+    <button
+        type="submit"
+        class="btn btn-primary">
+        Submit for Review
+    </button>
+
+</form>
+
+
+<!-- CUSTOM SUBMISSION CONFIRMATION -->
+
+<dialog
+    id="submit-brief-dialog"
+    class="submit-confirm-dialog"
+    aria-labelledby="submit-dialog-title"
+    aria-describedby="submit-dialog-description">
+
+    <div class="submit-dialog-inner">
+
+        <p class="submit-dialog-label">
+            FINAL CONFIRMATION
+        </p>
+
+        <h2 id="submit-dialog-title">
+            Ready to submit your brief?
+        </h2>
+
+        <p
+            id="submit-dialog-description"
+            class="submit-dialog-description">
+            Your saved answers will be sent to the
+            service provider for review.
+
+            You won't be able to edit this draft
+            after submission.
+        </p>
+
+        <div class="submit-dialog-actions">
+
+            <button
+                type="button"
+                id="cancel-brief-submission"
+                class="submit-dialog-cancel">
+                Keep Editing
+            </button>
+
+            <button
+                type="button"
+                id="confirm-brief-submission"
+                class="submit-dialog-confirm">
+                Yes, Submit Brief
+            </button>
+
+        </div>
+
+    </div>
+
+</dialog>
+
+<script>
+(function () {
+    const form = document.getElementById("submit-brief-form");
+    const dialog = document.getElementById("submit-brief-dialog");
+    const cancelButton = document.getElementById(
+        "cancel-brief-submission"
+    );
+    const confirmButton = document.getElementById(
+        "confirm-brief-submission"
+    );
+
+    if (!form || !dialog) return;
+
+    let confirmed = false;
+
+    form.addEventListener("submit", function (event) {
+        if (confirmed) return;
+
+        event.preventDefault();
+        dialog.showModal();
+    });
+
+    cancelButton.addEventListener("click", function () {
+        dialog.close();
+    });
+
+    confirmButton.addEventListener("click", function () {
+        confirmed = true;
+        dialog.close();
+        form.requestSubmit();
+    });
+})();
+</script>
+
+
+<p class="questionnaire-save-hint">
+    Please save your latest answers before submitting.
+</p>
+
+{% elif brief_id and brief_status != 'draft' %}
+
+<div class="questionnaire-save-feedback" role="status">
+    <p class="save-message">
+        This brief has been submitted for review.
+    </p>
+</div>
+
+{% endif %}
 
         </section>
 
@@ -319,6 +489,61 @@
 
     </footer>
 
+
+<!-- ==========================================
+     STEP 84.8 - RESTORE SAVED ANSWERS
+========================================== -->
+
+<script type="application/json" id="saved-answers-data">
+    {{ saved_answers | default({}) | tojson }}
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const dataElement = document.getElementById(
+        "saved-answers-data"
+    );
+
+    const form = document.getElementById(
+        "client-questionnaire-form"
+    );
+
+    if (!dataElement || !form) {
+        return;
+    }
+
+    const savedAnswers = JSON.parse(
+        dataElement.textContent
+    );
+
+    Object.entries(savedAnswers).forEach(
+        function ([questionId, answer]) {
+
+            const fields = form.querySelectorAll(
+                '[name="answer_' + questionId + '"]'
+            );
+
+            fields.forEach(function (field) {
+
+                if (
+                    field.type === "radio" ||
+                    field.type === "checkbox"
+                ) {
+                    field.checked = (
+                        field.value === String(answer)
+                    );
+                } else {
+                    field.value = answer;
+                }
+
+            });
+
+        }
+    );
+
+});
+</script>
 
     <!-- ADAPTIVE QUESTIONNAIRE LOGIC -->
 

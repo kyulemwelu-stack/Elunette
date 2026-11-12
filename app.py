@@ -2039,12 +2039,15 @@ def client_questionnaire(questionnaire_id):
     if brief_id is not None:
         questionnaire = db.execute(
             """
-            SELECT
-                q.id,
-                p.title_snapshot AS title,
-                p.description_snapshot AS description,
-                v.id AS version_id,
-                v.version_number
+
+    SELECT
+        q.id,
+        pb.status AS brief_status,
+        p.title_snapshot AS title,
+        p.description_snapshot AS description,
+        v.id AS version_id,
+        v.version_number
+
             FROM project_briefs AS pb
             JOIN questionnaire_versions AS v
                 ON v.id = pb.questionnaire_version_id
@@ -2146,13 +2149,19 @@ def client_questionnaire(questionnaire_id):
         )
     ).fetchall()
 
+
     return render_template(
         "client_questionnaire.html",
         questionnaire=questionnaire,
         questions=questions,
         adaptive_rules=[dict(rule) for rule in rules],
         brief_id=brief_id,
-        saved_answers=saved_answers
+        saved_answers=saved_answers,
+        brief_status=(
+            questionnaire["brief_status"]
+            if brief_id is not None
+            else None
+        )
     )
 
 
@@ -2168,6 +2177,13 @@ def client_questionnaire(questionnaire_id):
 def save_brief_answers(brief_id):
     db = get_db()
     client = current_user()
+
+    print(
+        "SAVE DRAFT REQUEST:",
+        brief_id,
+        list(request.form.keys()),
+        flush=True
+    )
 
     # Verify that the client owns this draft.
     brief = db.execute(
@@ -2376,14 +2392,250 @@ def save_brief_answers(brief_id):
         "success"
     )
 
+    
+    return redirect(
+    url_for(
+        "client_questionnaire",
+        questionnaire_id=version["questionnaire_id"],
+        brief_id=brief_id,
+        saved=1
+    )
+)
+
+
+# ==========================================
+# STEP 84.9 - SUBMIT BRIEF FOR REVIEW
+# ==========================================
+
+@app.route(
+    "/briefs/<int:brief_id>/submit",
+    methods=["POST"]
+)
+@role_required("client")
+def submit_brief(brief_id):
+
+    db = get_db()
+    client = current_user()
+
+    # Verify ownership and current status.
+
+    brief = db.execute(
+        """
+        SELECT id, questionnaire_version_id, status
+        FROM project_briefs
+        WHERE id = ?
+          AND client_id = ?
+        """,
+        (brief_id, client["id"])
+    ).fetchone()
+
+    if brief is None:
+        abort(404)
+
+    if brief["status"] != "draft":
+        abort(409, "This brief has already left draft status.")
+
+    version_id = brief["questionnaire_version_id"]
+
+    version = db.execute(
+        """
+        SELECT questionnaire_id
+        FROM questionnaire_versions
+        WHERE id = ?
+        """,
+        (version_id,)
+    ).fetchone()
+
+    if version is None:
+        abort(404)
+
+    questionnaire_url = url_for(
+        "client_questionnaire",
+        questionnaire_id=version["questionnaire_id"],
+        brief_id=brief_id
+    )
+
+    # Load the questions for this exact version.
+
+    questions = db.execute(
+        """
+        SELECT
+            id,
+            question_type,
+            is_required,
+            option_one,
+            option_two
+        FROM questions
+        WHERE questionnaire_version_id = ?
+          AND is_active = 1
+        ORDER BY position ASC, id ASC
+        """,
+        (version_id,)
+    ).fetchall()
+
+    if not questions:
+        flash("This questionnaire has no active questions.", "error")
+        return redirect(questionnaire_url)
+
+    # Use responses already saved in SQLite.
+
+    rows = db.execute(
+        """
+        SELECT r.question_id, r.answer_text
+        FROM brief_responses r
+        JOIN questions q
+            ON q.id = r.question_id
+        WHERE r.brief_id = ?
+          AND q.questionnaire_version_id = ?
+        """,
+        (brief_id, version_id)
+    ).fetchall()
+
+    answers = {
+        row["question_id"]: (row["answer_text"] or "").strip()
+        for row in rows
+    }
+
+    # Load the adaptive conditions.
+
+    rules = db.execute(
+        """
+        SELECT
+            source_question_id,
+            target_question_id,
+            expected_answer
+        FROM adaptive_rules
+        WHERE questionnaire_version_id = ?
+        """,
+        (version_id,)
+    ).fetchall()
+
+    rules_by_target = {
+        rule["target_question_id"]: rule
+        for rule in rules
+    }
+
+    visible = {}
+    required_total = 0
+    required_completed = 0
+    visible_answer_count = 0
+
+    # Validate the actual applicable questions.
+
+    for question in questions:
+
+        question_id = question["id"]
+        answer = answers.get(question_id, "")
+        rule = rules_by_target.get(question_id)
+
+        applicable = True
+
+        if rule is not None:
+            source_id = rule["source_question_id"]
+
+            applicable = (
+                visible.get(source_id, False)
+                and answers.get(source_id, "")
+                == rule["expected_answer"]
+            )
+
+        visible[question_id] = applicable
+
+        if not applicable:
+            continue
+
+        if question["is_required"]:
+            required_total += 1
+
+            if not answer:
+                flash(
+                    "Complete and save all required answers "
+                    "before submitting.",
+                    "error"
+                )
+                return redirect(questionnaire_url)
+
+            required_completed += 1
+
+        if not answer:
+            continue
+
+        visible_answer_count += 1
+
+        if len(answer) > 5000:
+            abort(400, "An answer is too long.")
+
+        question_type = question["question_type"]
+
+        if question_type == "multiple_choice":
+            if answer not in (
+                question["option_one"],
+                question["option_two"]
+            ):
+                abort(400, "Invalid multiple-choice answer.")
+
+        elif question_type == "number":
+            try:
+                number = Decimal(answer)
+            except InvalidOperation:
+                abort(400, "Invalid numerical answer.")
+
+            if not number.is_finite():
+                abort(400, "Invalid numerical answer.")
+
+        elif question_type == "date":
+            try:
+                date.fromisoformat(answer)
+            except ValueError:
+                abort(400, "Invalid date answer.")
+
+    # Prevent empty submissions.
+
+    if visible_answer_count == 0:
+        flash(
+            "Save your questionnaire answers before submitting.",
+            "error"
+        )
+        return redirect(questionnaire_url)
+
+    if required_completed != required_total:
+        abort(409, "Required answers are incomplete.")
+
+    # Update the brief only if it is still a draft.
+    # The status transition is performed atomically.
+
+    try:
+        cursor = db.execute(
+            """
+            UPDATE project_briefs
+            SET status = 'submitted',
+                completeness_percentage = 100,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+              AND client_id = ?
+              AND status = 'draft'
+            """,
+            (brief_id, client["id"])
+        )
+
+        if cursor.rowcount != 1:
+            db.rollback()
+            abort(409, "This brief cannot be submitted.")
+
+        db.commit()
+
+    except Exception:
+        db.rollback()
+        raise
+
     return redirect(
         url_for(
             "client_questionnaire",
             questionnaire_id=version["questionnaire_id"],
-            brief_id=brief_id
+            brief_id=brief_id,
+            submitted=1
         )
     )
-
 
 # ==========================================
 # RUN ELUNETTE

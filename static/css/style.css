@@ -9874,3 +9874,136 @@ select {
     margin: 0 auto;
     max-width: 450px;
 }
+
+/* CLIENT QUESTIONNAIRE - HINT ALIGNMENT */
+
+.client-questionnaire-page .questionnaire-save-hint {
+    text-align: right;
+    margin: 18px 0 0;
+    font-size: 13px;
+    line-height: 1.7;
+    color: #77685B;
+}
+
+/* ==========================================
+   SAVE DRAFT SUCCESS MESSAGE
+========================================== */
+
+.client-questionnaire-page .questionnaire-save-feedback {
+    width: fit-content;
+    max-width: 100%;
+    margin: 20px 0 15px auto;
+    padding: 14px 20px;
+
+    background: #E8EDE1;
+    border-left: 4px solid #A3B18A;
+    border-radius: 10px;
+}
+
+.client-questionnaire-page .save-message {
+    margin: 0;
+    color: #5C3A26;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.6;
+}
+
+/* ==========================================
+   ELUNETTE - SUBMIT BRIEF CONFIRMATION
+========================================== */
+
+.client-questionnaire-page .submit-confirm-dialog {
+    width: min(480px, calc(100% - 32px));
+    max-width: 480px;
+    padding: 0;
+    border: none;
+    border-radius: 20px;
+    background: #F1E7D3;
+    color: #5C3A26;
+    box-shadow: 0 20px 60px rgba(40, 25, 20, 0.20);
+}
+
+.client-questionnaire-page .submit-confirm-dialog::backdrop {
+    background: rgba(35, 25, 20, 0.55);
+}
+
+.client-questionnaire-page .submit-dialog-inner {
+    padding: 36px;
+}
+
+.client-questionnaire-page .submit-dialog-label {
+    margin: 0 0 16px;
+    color: #6B1F2F;
+    font-family: var(--font-navigation);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+}
+
+.client-questionnaire-page .submit-dialog-inner h2 {
+    margin: 0 0 18px;
+    color: #5C3A26;
+    font-family: var(--font-heading);
+    font-size: clamp(27px, 4vw, 34px);
+    font-weight: 400;
+    line-height: 1.2;
+}
+
+.client-questionnaire-page .submit-dialog-description {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.8;
+    color: #705746;
+}
+
+.client-questionnaire-page .submit-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 30px;
+}
+
+.client-questionnaire-page .submit-dialog-actions button {
+    padding: 13px 19px;
+    border-radius: 50px;
+    font-family: var(--font-navigation);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.client-questionnaire-page .submit-dialog-cancel {
+    background: transparent;
+    border: 1px solid #5C3A26;
+    color: #5C3A26;
+}
+
+.client-questionnaire-page .submit-dialog-cancel:hover {
+    background: #E8DBCA;
+}
+
+.client-questionnaire-page .submit-dialog-confirm {
+    background: #6B1F2F;
+    border: 1px solid #6B1F2F;
+    color: #FFFFFF;
+}
+
+.client-questionnaire-page .submit-dialog-confirm:hover {
+    background: #511724;
+}
+
+@media (max-width: 480px) {
+    .client-questionnaire-page .submit-dialog-inner {
+        padding: 26px;
+    }
+
+    .client-questionnaire-page .submit-dialog-actions {
+        flex-direction: column;
+    }
+
+    .client-questionnaire-page .submit-dialog-actions button {
+        width: 100%;
+    }
+}
