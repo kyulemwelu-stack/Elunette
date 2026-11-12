@@ -121,16 +121,24 @@
 
             <div class="new-brief-container">
 
-                <form action="/briefs/new"
-                      method="POST"
-                      class="new-brief-form">
 
-<!-- CSRF PROTECTION -->
+<!-- ==========================================
+     CREATE NEW PROJECT BRIEF FORM
+========================================== -->
 
-<input
-    type="hidden"
-    name="csrf_token"
-    value="{{ csrf_token() }}">
+<form
+    action="{{ url_for('new_brief') }}"
+    method="POST"
+    class="new-brief-form">
+
+    <!-- CSRF PROTECTION -->
+
+    <input
+        type="hidden"
+        name="csrf_token"
+        value="{{ csrf_token() }}">
+
+    <!-- PROJECT TITLE -->
 
                     <!-- PROJECT TITLE -->
 
@@ -164,28 +172,33 @@
                             Select a Questionnaire
                         </label>
 
-                        <select
-                            id="questionnaire"
-                            name="questionnaire_id"
-                            required>
 
-                            <option value=""
-                                    selected
-                                    disabled>
-                                No active questionnaires available yet
-                            </option>
+<select
+    id="questionnaire"
+    name="questionnaire_id"
+    required>
 
-                            <!--
-                            Active questionnaire options
-                            will be loaded from the
-                            database using Flask.
+    <option value="" selected disabled>
+        Select a Questionnaire
+    </option>
 
-                            Each option will contain
-                            the questionnaire ID
-                            and its title.
-                            -->
+    {% for questionnaire in questionnaires %}
 
-                        </select>
+        <option value="{{ questionnaire['id'] }}">
+            {{ questionnaire['title'] }}
+            (Version {{ questionnaire['version_number'] }})
+        </option>
+
+    {% else %}
+
+        <option value="" disabled>
+            No active questionnaires available yet
+        </option>
+
+    {% endfor %}
+
+</select>
+
 
                         <small class="form-hint">
                             Questionnaires are created
@@ -205,11 +218,13 @@
                             Cancel
                         </a>
 
-                        <button type="submit"
-                                class="btn btn-primary"
-                                disabled>
-                            Continue to Questionnaire
-                        </button>
+                        
+<button
+    type="submit"
+    class="btn btn-primary">
+    Continue to Questionnaire
+</button>
+
 
                     </div>
 

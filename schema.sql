@@ -323,3 +323,96 @@ BEGIN
         'Cannot delete published adaptive rules'
     );
 END;
+
+
+
+-- ==========================================
+-- ELUNETTE PROJECT BRIEF MANAGEMENT
+-- STEP 82.1
+-- ==========================================
+
+-- PROJECT BRIEFS
+
+CREATE TABLE IF NOT EXISTS project_briefs (
+
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    client_id INTEGER NOT NULL,
+
+    questionnaire_version_id INTEGER NOT NULL,
+
+    title TEXT NOT NULL
+        CHECK (LENGTH(TRIM(title)) > 0),
+
+    status TEXT NOT NULL DEFAULT 'draft'
+        CHECK (
+            status IN (
+                'draft',
+                'submitted',
+                'under_review',
+                'revision_requested',
+                'approved'
+            )
+        ),
+
+    completeness_percentage INTEGER NOT NULL DEFAULT 0
+        CHECK (
+            completeness_percentage BETWEEN 0 AND 100
+        ),
+
+    created_at TEXT NOT NULL
+        DEFAULT CURRENT_TIMESTAMP,
+
+    updated_at TEXT NOT NULL
+        DEFAULT CURRENT_TIMESTAMP,
+
+    submitted_at TEXT,
+
+    FOREIGN KEY (client_id)
+        REFERENCES users(id),
+
+    FOREIGN KEY (questionnaire_version_id)
+        REFERENCES questionnaire_versions(id)
+
+);
+
+
+-- INDEX FOR CLIENT PROJECT LOOKUPS
+
+CREATE INDEX IF NOT EXISTS idx_project_briefs_client
+    ON project_briefs (client_id, updated_at);
+
+
+-- ==========================================
+-- CLIENT QUESTIONNAIRE RESPONSES
+-- ==========================================
+
+CREATE TABLE IF NOT EXISTS brief_responses (
+
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    brief_id INTEGER NOT NULL,
+
+    question_id INTEGER NOT NULL,
+
+    answer_text TEXT NOT NULL,
+
+    updated_at TEXT NOT NULL
+        DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (brief_id)
+        REFERENCES project_briefs(id)
+        ON DELETE CASCADE,
+
+    FOREIGN KEY (question_id)
+        REFERENCES questions(id),
+
+    UNIQUE (brief_id, question_id)
+
+);
+
+
+-- INDEX FOR RETRIEVING BRIEF ANSWERS
+
+CREATE INDEX IF NOT EXISTS idx_brief_responses_brief
+    ON brief_responses (brief_id);

@@ -53,9 +53,29 @@
 
         </nav>
 
-        <!-- LOGOUT -->
+ 
+<!-- ==========================================
+     SERVICE PROVIDER LOGOUT
+========================================== -->
 
-        action="/logout"
+<form
+    action="{{ url_for('logout') }}"
+    method="POST"
+    class="logout-form">
+
+    <input
+        type="hidden"
+        name="csrf_token"
+        value="{{ csrf_token() }}">
+
+    <button
+        type="submit"
+        class="logout-btn">
+        Log Out
+    </button>
+
+</form>
+
     </header>
 
 

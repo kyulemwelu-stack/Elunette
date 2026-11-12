@@ -449,12 +449,217 @@ def my_briefs():
     return render_template("my_briefs.html")
 
 
-# CREATE NEW BRIEF
 
-@app.route("/briefs/new")
+# ==========================================
+# CREATE NEW PROJECT BRIEF
+# ==========================================
+
+
+# ==========================================
+# STEP 82.4 - CREATE CLIENT PROJECT BRIEF
+# ==========================================
+
+@app.route("/briefs/new", methods=["GET", "POST"])
 @role_required("client")
 def new_brief():
-    return render_template("new_brief.html")
+
+    db = get_db()
+
+    # --------------------------------------
+    # CREATE AND SAVE A NEW DRAFT
+    # --------------------------------------
+
+    if request.method == "POST":
+
+        user = current_user()
+
+        title = request.form.get(
+            "project_title", ""
+        ).strip()
+
+        questionnaire_id = request.form.get(
+            "questionnaire_id", "",
+            type=int
+        )
+
+        # Validate the project title
+        if not title or len(title) > 150:
+
+            flash(
+                "Enter a project title of up to 150 characters.",
+                "error"
+            )
+
+            return redirect(url_for("new_brief"))
+
+        # Validate the selected questionnaire
+        if questionnaire_id is None:
+
+            flash(
+                "Please select a questionnaire.",
+                "error"
+            )
+
+            return redirect(url_for("new_brief"))
+
+        # Get the latest published version
+        # of the selected active questionnaire
+
+        questionnaire = db.execute(
+            """
+            SELECT
+                q.id,
+                q.title,
+                v.id AS version_id,
+                v.version_number
+
+            FROM questionnaires q
+
+            JOIN questionnaire_versions v
+                ON v.questionnaire_id = q.id
+
+            JOIN questionnaire_publications p
+                ON p.questionnaire_version_id = v.id
+
+            WHERE q.id = ?
+              AND q.status = 'active'
+
+            ORDER BY v.version_number DESC
+
+            LIMIT 1
+            """,
+            (questionnaire_id,)
+        ).fetchone()
+
+        if questionnaire is None:
+
+            flash(
+                "The selected questionnaire is not available.",
+                "error"
+            )
+
+            return redirect(url_for("new_brief"))
+
+        # Create the project brief
+
+        cursor = db.execute(
+            """
+            INSERT INTO project_briefs (
+                client_id,
+                questionnaire_version_id,
+                title,
+                status,
+                completeness_percentage
+            )
+
+            VALUES (?, ?, ?, 'draft', 0)
+            """,
+            (
+                user["id"],
+                questionnaire["version_id"],
+                title
+            )
+        )
+
+        db.commit()
+
+        brief_id = cursor.lastrowid
+
+        # Open the questionnaire.
+        # The brief ID will be used when we
+        # implement response saving.
+
+        return redirect(
+            url_for(
+                "client_questionnaire",
+                questionnaire_id=questionnaire_id,
+                brief_id=brief_id
+            )
+        )
+
+    # --------------------------------------
+    # DISPLAY AVAILABLE QUESTIONNAIRES
+    # --------------------------------------
+
+    questionnaires = db.execute(
+        """
+        SELECT
+            q.id,
+            q.title,
+            v.version_number
+
+        FROM questionnaires q
+
+        JOIN questionnaire_versions v
+            ON v.questionnaire_id = q.id
+
+        JOIN questionnaire_publications p
+            ON p.questionnaire_version_id = v.id
+
+        WHERE q.status = 'active'
+
+          AND v.version_number = (
+              SELECT MAX(v2.version_number)
+
+              FROM questionnaire_versions v2
+
+              JOIN questionnaire_publications p2
+                  ON p2.questionnaire_version_id = v2.id
+
+              WHERE v2.questionnaire_id = q.id
+          )
+
+        ORDER BY q.title COLLATE NOCASE ASC
+        """
+    ).fetchall()
+
+    return render_template(
+        "new_brief.html",
+        questionnaires=questionnaires
+    )
+
+
+    db = get_db()
+
+    # Retrieve active questionnaires with
+    # their latest published versions.
+
+    questionnaires = db.execute(
+        """
+        SELECT
+            q.id,
+            q.title,
+            v.version_number
+
+        FROM questionnaires AS q
+
+        JOIN questionnaire_versions AS v
+            ON v.questionnaire_id = q.id
+
+        JOIN questionnaire_publications AS p
+            ON p.questionnaire_version_id = v.id
+
+        WHERE q.status = 'active'
+
+          AND v.version_number = (
+              SELECT MAX(v2.version_number)
+              FROM questionnaire_versions AS v2
+
+              JOIN questionnaire_publications AS p2
+                  ON p2.questionnaire_version_id = v2.id
+
+              WHERE v2.questionnaire_id = q.id
+          )
+
+        ORDER BY q.title COLLATE NOCASE ASC
+        """
+    ).fetchall()
+
+    return render_template(
+        "new_brief.html",
+        questionnaires=questionnaires
+    )
+
 
 
 # QUESTIONNAIRE PREVIEW
@@ -512,12 +717,67 @@ def provider_dashboard():
     return render_template("provider_dashboard.html")
 
 
-# CLIENT BRIEFS
+
+# ==========================================
+# STEP 83 - PROVIDER CLIENT BRIEFS
+# ==========================================
 
 @app.route("/provider/briefs")
 @role_required("service_provider")
 def provider_briefs():
-    return render_template("provider_briefs.html")
+
+    user = current_user()
+    db = get_db()
+
+    # Retrieve briefs submitted to this provider.
+    # A provider only sees projects associated
+    # with questionnaires they created.
+
+    briefs = db.execute(
+        """
+        SELECT
+            pb.id,
+            pb.title,
+            pb.status,
+            pb.completeness_percentage,
+            pb.created_at,
+            pb.updated_at,
+
+            u.full_name AS client_name,
+
+            q.title AS questionnaire_title,
+
+            v.version_number
+
+        FROM project_briefs AS pb
+
+        JOIN users AS u
+            ON u.id = pb.client_id
+
+        JOIN questionnaire_versions AS v
+            ON v.id = pb.questionnaire_version_id
+
+        JOIN questionnaires AS q
+            ON q.id = v.questionnaire_id
+
+        WHERE q.created_by = ?
+
+        AND pb.status IN (
+            'submitted',
+            'under_review',
+            'revision_requested',
+            'approved'
+        )
+
+        ORDER BY pb.updated_at DESC, pb.id DESC
+        """,
+        (user["id"],)
+    ).fetchall()
+
+    return render_template(
+        "provider_briefs.html",
+        briefs=briefs
+    )
 
 
 # REVIEW BRIEF PREVIEW
