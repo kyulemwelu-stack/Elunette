@@ -125,43 +125,55 @@
 
             </div>
 
-            <dl class="brief-information">
 
-                <div class="brief-info-item">
-                    <dt>Project Title</dt>
-                    <dd>Project title will appear here.</dd>
-                </div>
+{% if brief is defined and brief %}
 
-                <div class="brief-info-item">
-                    <dt>Client Name</dt>
-                    <dd>Client name will appear here.</dd>
-                </div>
+<dl class="brief-information">
 
-                <div class="brief-info-item">
-                    <dt>Questionnaire</dt>
-                    <dd>Questionnaire title will appear here.</dd>
-                </div>
+    <div class="brief-info-item">
+        <dt>Project Title</dt>
+        <dd>{{ brief['title'] }}</dd>
+    </div>
 
-                <div class="brief-info-item">
-                    <dt>Questionnaire Version</dt>
-                    <dd>Version details will appear here.</dd>
-                </div>
+    <div class="brief-info-item">
+        <dt>Client Name</dt>
+        <dd>{{ brief['client_name'] }}</dd>
+    </div>
 
-                <div class="brief-info-item">
-                    <dt>Submission Date</dt>
-                    <dd>Submission date will appear here.</dd>
-                </div>
+    <div class="brief-info-item">
+        <dt>Questionnaire</dt>
+        <dd>{{ brief['questionnaire_title'] }}</dd>
+    </div>
 
-                <div class="brief-info-item">
-                    <dt>Brief Status</dt>
-                    <dd>
-                        <span class="status-badge">
-                            Status will appear here.
-                        </span>
-                    </dd>
-                </div>
+    <div class="brief-info-item">
+        <dt>Questionnaire Version</dt>
+        <dd>Version {{ brief['version_number'] }}</dd>
+    </div>
 
-            </dl>
+    <div class="brief-info-item">
+        <dt>Submission Date</dt>
+        <dd>{{ brief['submitted_at'] or 'Not recorded' }}</dd>
+    </div>
+
+    <div class="brief-info-item">
+        <dt>Brief Status</dt>
+        <dd>
+            <span class="status-badge">
+                {{ brief['status'] | replace('_', ' ') | title }}
+            </span>
+        </dd>
+    </div>
+
+</dl>
+
+{% else %}
+
+<p class="form-hint">
+    Select a submitted project brief to view its details.
+</p>
+
+{% endif %}
+
 
         </section>
 
@@ -189,29 +201,48 @@
 
             </div>
 
-            <div class="requirements-container">
 
-                <!--
-                Actual question-and-answer records
-                will be displayed here.
+<div class="requirements-container">
 
-                Answers are read-only for providers.
-                Questions will come from the
-                questionnaire version used
-                by the client.
-                -->
+    {% if responses is defined and responses %}
 
-                <div class="empty-state">
+        {% for response in responses %}
 
-                    <h3>Project responses</h3>
+        <article class="requirement-card">
 
-                    <p>
-                        The client's submitted answers
-                        will appear here when a
-                        brief is selected.
-                    </p>
+            <h3>
+                Question {{ loop.index }}
+            </h3>
 
-                </div>
+            <p class="requirement-question">
+                {{ response['question_text'] }}
+            </p>
+
+            <p class="requirement-answer">
+                {{ response['answer_text'] }}
+            </p>
+
+        </article>
+
+        {% endfor %}
+
+    {% else %}
+
+        <div class="empty-state">
+
+            <h3>No saved responses to display</h3>
+
+            <p>
+                Submitted questionnaire answers
+                will appear here when available.
+            </p>
+
+        </div>
+
+    {% endif %}
+
+</div>
+
 
             </div>
 
@@ -235,22 +266,36 @@
 
             </div>
 
-            <div class="completeness-container">
 
-                <h3>Completeness Status</h3>
+<div class="completeness-container">
 
-                <p>
-                    The results of the mandatory
-                    information check will appear here.
-                </p>
+    <h3>Completeness Status</h3>
 
-                <!--
-                The backend will verify all
-                applicable mandatory responses
-                before allowing approval.
-                -->
+    {% if brief is defined and brief %}
 
-            </div>
+        <p>
+            Recorded Completeness:
+            <strong>
+                {{ brief['completeness_percentage'] }}%
+            </strong>
+        </p>
+
+        <p class="form-hint">
+            Completeness is based on the value
+            currently saved with this project brief.
+        </p>
+
+    {% else %}
+
+        <p>
+            Completeness information will appear
+            when a submitted brief is selected.
+        </p>
+
+    {% endif %}
+
+</div>
+
 
         </section>
 
@@ -273,14 +318,53 @@
 
             </div>
 
-            <div class="review-history-container">
+
+<div class="review-history-container">
+
+    {% if review_history is defined and review_history %}
+
+        {% for review in review_history %}
+
+        <article class="review-record">
+
+            <h3>
+                {{ review['decision']
+                   | replace('_', ' ')
+                   | title }}
+            </h3>
+
+            <p>
+                <strong>Reviewed by:</strong>
+                {{ review['reviewer_name'] }}
+            </p>
+
+            <p>
+                <strong>Date:</strong>
+                {{ review['created_at'] }}
+            </p>
+
+            {% if review['comment'] %}
 
                 <p>
-                    Previous review decisions
-                    will appear here.
+                    <strong>Feedback:</strong>
+                    {{ review['comment'] }}
                 </p>
 
-            </div>
+            {% endif %}
+
+        </article>
+
+        {% endfor %}
+
+    {% else %}
+
+        <p>
+            No previous review decisions recorded.
+        </p>
+
+    {% endif %}
+
+</div>
 
         </section>
 
@@ -324,9 +408,11 @@
                         and are acceptable.
                     </p>
 
-                    <form action=""
-                          method="POST"
-                          class="approval-form">
+
+<form
+    action="{{ url_for('review_brief', brief_id=brief['id']) if brief is defined and brief else '' }}"
+    method="POST"
+    class="approval-form">
 
 <!-- CSRF PROTECTION -->
 
@@ -354,7 +440,7 @@
                             name="decision"
                             value="approve"
                             class="btn btn-primary"
-                            disabled>
+                            {% if not (can_review | default(false)) %}disabled{% endif %}
                             Approve Brief
                         </button>
 
@@ -375,9 +461,11 @@
                         correction before approval.
                     </p>
 
-                    <form action=""
-                          method="POST"
-                          class="revision-request-form">
+
+<form
+    action="{{ url_for('review_brief', brief_id=brief['id']) if brief is defined and brief else '' }}"
+    method="POST"
+    class="revision-request-form">
 
 <!-- CSRF PROTECTION -->
 
@@ -406,7 +494,7 @@
                             name="decision"
                             value="request_revision"
                             class="btn btn-secondary"
-                            disabled>
+                            {% if not (can_review | default(false)) %}disabled{% endif %}>
                             Request Revisions
                         </button>
 

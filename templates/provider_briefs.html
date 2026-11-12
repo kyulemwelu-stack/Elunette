@@ -241,56 +241,96 @@
 
             <div class="table-container">
 
-                <table class="briefs-table">
 
-                    <caption>
-                        Submitted project briefs
-                        available for provider review.
-                    </caption>
+<!-- ==========================================
+     STEP 83.2 - REAL CLIENT BRIEFS
+========================================== -->
 
-                    <thead>
-                        <tr>
-                            <th scope="col">Project Title</th>
-                            <th scope="col">Client</th>
-                            <th scope="col">Questionnaire</th>
-                            <th scope="col">Submitted On</th>
-                            <th scope="col">Status</th>
-                            <th scope="col">Action</th>
-                        </tr>
-                    </thead>
+<table class="briefs-table provider-briefs-table">
 
-                    <tbody>
+    <caption>
+        Submitted project briefs available for provider review.
+    </caption>
 
-                        <!--
-                        Flask will display actual
-                        client brief records here.
+    <thead>
+        <tr>
+            <th scope="col">Project Title</th>
+            <th scope="col">Client</th>
+            <th scope="col">Questionnaire</th>
+            <th scope="col">Status</th>
+            <th scope="col">Completeness</th>
+            <th scope="col">Last Updated</th>
+            <th scope="col">Actions</th>
+        </tr>
+    </thead>
 
-                        Each record will have a
-                        link to the relevant
-                        brief review page.
-                        -->
+    <tbody>
 
-                        <tr>
-                            <td colspan="6">
+        {% for brief in briefs %}
 
-                                <div class="empty-state">
+        <tr>
+            <td>
+                <strong>{{ brief['title'] }}</strong>
+            </td>
 
-                                    <h3>No submitted briefs yet.</h3>
+            <td>
+                {{ brief['client_name'] }}
+            </td>
 
-                                    <p>
-                                        Client briefs will appear
-                                        here when they have
-                                        been submitted.
-                                    </p>
+            <td>
+                {{ brief['questionnaire_title'] }}
+                <small>
+                    Version {{ brief['version_number'] }}
+                </small>
+            </td>
 
-                                </div>
+            <td>
+                <span class="brief-status status-{{ brief['status'] | replace('_', '-') }}">
+                    {{ brief['status'] | replace('_', ' ') | title }}
+                </span>
+            </td>
 
-                            </td>
-                        </tr>
+            <td>
+                {{ brief['completeness_percentage'] }}%
+            </td>
 
-                    </tbody>
+            <td>
+                {{ brief['updated_at'] }}
+            </td>
 
-                </table>
+            <td>
+                
+<a
+    href="{{ url_for('review_brief', brief_id=brief['id']) }}"
+    class="btn btn-secondary">
+    Review Brief
+</a>
+
+                </span>
+            </td>
+        </tr>
+
+        {% else %}
+
+        <tr>
+            <td colspan="7" class="empty-state">
+
+                <h3>No submitted briefs yet</h3>
+
+                <p>
+                    Client project briefs will appear here
+                    once submitted for review.
+                </p>
+
+            </td>
+        </tr>
+
+        {% endfor %}
+
+    </tbody>
+
+</table>
+
 
             </div>
 

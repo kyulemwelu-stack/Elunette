@@ -416,3 +416,48 @@ CREATE TABLE IF NOT EXISTS brief_responses (
 
 CREATE INDEX IF NOT EXISTS idx_brief_responses_brief
     ON brief_responses (brief_id);
+
+
+
+-- ==========================================
+-- STEP 84.4 - PROVIDER REVIEW HISTORY
+-- ==========================================
+
+CREATE TABLE IF NOT EXISTS brief_reviews (
+
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    brief_id INTEGER NOT NULL,
+
+    reviewer_id INTEGER NOT NULL,
+
+    decision TEXT NOT NULL
+        CHECK (
+            decision IN (
+                'approved',
+                'revision_requested'
+            )
+        ),
+
+    comment TEXT,
+
+    created_at TEXT NOT NULL
+        DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (brief_id)
+        REFERENCES project_briefs(id),
+
+    FOREIGN KEY (reviewer_id)
+        REFERENCES users(id),
+
+    CHECK (
+        decision != 'revision_requested'
+        OR LENGTH(TRIM(COALESCE(comment, ''))) > 0
+    )
+
+);
+
+-- Quickly retrieve a brief's review history
+
+CREATE INDEX IF NOT EXISTS idx_brief_reviews_brief
+ON brief_reviews (brief_id, created_at);

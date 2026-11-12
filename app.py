@@ -2,27 +2,17 @@
 import os
 import re
 import secrets
-
+from datetime import date
+from decimal import Decimal, InvalidOperation
 from functools import wraps
 from sqlite3 import IntegrityError
-from flask_wtf.csrf import CSRFProtect
 
 from flask import (
-    Flask,
-    abort,
-    flash,
-    redirect,
-    render_template,
-    request,
-    session,
-    url_for
+    Flask, abort, flash, redirect, render_template,
+    request, session, url_for
 )
-
-from werkzeug.security import (
-    check_password_hash,
-    generate_password_hash
-)
-
+from flask_wtf.csrf import CSRFProtect
+from werkzeug.security import check_password_hash, generate_password_hash
 from database import get_db, init_app
 
 
@@ -32,24 +22,14 @@ from database import get_db, init_app
 
 app = Flask(__name__)
 
-# Flask session configuration
 app.config["SECRET_KEY"] = (
     os.environ.get("ELUNETTE_SECRET_KEY")
     or secrets.token_hex(32)
 )
-
-
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
-# Enable CSRF protection for form submissions
 csrf = CSRFProtect(app)
-
-# Connect SQLite database
-init_app(app)
-
-
-# Connect SQLite database
 init_app(app)
 
 
@@ -58,20 +38,14 @@ init_app(app)
 # ==========================================
 
 def current_user():
-
     user_id = session.get("user_id")
-
     if user_id is None:
         return None
 
     db = get_db()
-
     user = db.execute(
-        """
-        SELECT id, full_name, email, role, status
-        FROM users
-        WHERE id = ?
-        """,
+        "SELECT id, full_name, email, role, status "
+        "FROM users WHERE id = ?",
         (user_id,)
     ).fetchone()
 
@@ -82,64 +56,37 @@ def current_user():
     return user
 
 
-# ==========================================
-# LOGIN REQUIRED
-# ==========================================
-
 def login_required(view):
-
     @wraps(view)
     def protected_view(*args, **kwargs):
-
         user = current_user()
-
         if user is None:
-            flash(
-                "Please log in to continue.",
-                "error"
-            )
+            flash("Please log in to continue.", "error")
             return redirect(url_for("login"))
-
         return view(*args, **kwargs)
-
     return protected_view
 
 
-# ==========================================
-# ROLE-BASED ACCESS CONTROL
-# ==========================================
-
 def role_required(required_role):
-
     def decorator(view):
-
         @wraps(view)
         def protected_view(*args, **kwargs):
-
             user = current_user()
-
             if user is None:
-                flash(
-                    "Please log in to continue.",
-                    "error"
-                )
+                flash("Please log in to continue.", "error")
                 return redirect(url_for("login"))
-
             if user["role"] != required_role:
                 abort(403)
-
             return view(*args, **kwargs)
-
         return protected_view
-
     return decorator
+
 
 # ==========================================
 # QUESTIONNAIRE VERSION HELPERS
 # ==========================================
 
 def latest_questionnaire_version(db, questionnaire_id):
-
     return db.execute(
         """
         SELECT id, version_number
@@ -153,7 +100,6 @@ def latest_questionnaire_version(db, questionnaire_id):
 
 
 def version_is_published(db, version_id):
-
     record = db.execute(
         """
         SELECT id
@@ -162,41 +108,31 @@ def version_is_published(db, version_id):
         """,
         (version_id,)
     ).fetchone()
-
     return record is not None
 
 
 def questionnaire_is_editable(db, questionnaire):
-
     if questionnaire["status"] != "inactive":
         return False
 
     version = latest_questionnaire_version(
-        db,
-        questionnaire["id"]
+        db, questionnaire["id"]
     )
 
     if version is None:
         return False
 
-    return not version_is_published(
-        db,
-        version["id"]
-    )
+    return not version_is_published(db, version["id"])
 
 
 # ==========================================
 # PUBLIC PAGES
 # ==========================================
 
-# HOME PAGE
-
 @app.route("/")
 def home():
     return render_template("index.html")
 
-
-# ABOUT PAGE
 
 @app.route("/about")
 def about():
@@ -209,61 +145,30 @@ def about():
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
-
     if request.method == "GET":
         return render_template("register.html")
 
-    full_name = request.form.get(
-        "full_name", ""
-    ).strip()
+    full_name = request.form.get("full_name", "").strip()
+    email = request.form.get("email", "").strip().lower()
+    password = request.form.get("password", "")
+    confirm_password = request.form.get("confirm_password", "")
 
-    email = request.form.get(
-        "email", ""
-    ).strip().lower()
-
-    password = request.form.get(
-        "password", ""
-    )
-
-    confirm_password = request.form.get(
-        "confirm_password", ""
-    )
-
-    # Required fields
-    if not all((
-        full_name,
-        email,
-        password,
-        confirm_password
-    )):
-        flash(
-            "Please complete all fields.",
-            "error"
-        )
+    if not all((full_name, email, password, confirm_password)):
+        flash("Please complete all fields.", "error")
         return redirect(url_for("register"))
 
-    # Full name validation
     if not 2 <= len(full_name) <= 100:
-        flash(
-            "Enter a valid full name.",
-            "error"
-        )
+        flash("Enter a valid full name.", "error")
         return redirect(url_for("register"))
 
-    # Email validation
     valid_email = re.fullmatch(
-        r"[^@\s]+@[^@\s]+\.[^@\s]+",
-        email
+        r"[^@\s]+@[^@\s]+\.[^@\s]+", email
     )
 
     if len(email) > 254 or not valid_email:
-        flash(
-            "Enter a valid email address.",
-            "error"
-        )
+        flash("Enter a valid email address.", "error")
         return redirect(url_for("register"))
 
-    # Password validation
     if len(password) < 12:
         flash(
             "Password must contain at least 12 characters.",
@@ -272,41 +177,25 @@ def register():
         return redirect(url_for("register"))
 
     if password != confirm_password:
-        flash(
-            "Passwords do not match.",
-            "error"
-        )
+        flash("Passwords do not match.", "error")
         return redirect(url_for("register"))
 
-    # Hash the password
     password_hash = generate_password_hash(password)
-
     db = get_db()
 
     try:
         db.execute(
             """
             INSERT INTO users (
-                full_name,
-                email,
-                password_hash,
-                role,
-                status
+                full_name, email, password_hash, role, status
             )
             VALUES (?, ?, ?, 'client', 'active')
             """,
-            (
-                full_name,
-                email,
-                password_hash
-            )
+            (full_name, email, password_hash)
         )
-
         db.commit()
-
     except IntegrityError:
         db.rollback()
-
         flash(
             "This email address is already registered.",
             "error"
@@ -317,7 +206,6 @@ def register():
         "Account created successfully. Please log in.",
         "success"
     )
-
     return redirect(url_for("login"))
 
 
@@ -327,69 +215,38 @@ def register():
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-
     if request.method == "GET":
         return render_template("login.html")
 
-    email = request.form.get(
-        "email", ""
-    ).strip().lower()
-
-    password = request.form.get(
-        "password", ""
-    )
+    email = request.form.get("email", "").strip().lower()
+    password = request.form.get("password", "")
 
     db = get_db()
-
     user = db.execute(
-        """
-        SELECT *
-        FROM users
-        WHERE email = ?
-        """,
+        "SELECT * FROM users WHERE email = ?",
         (email,)
     ).fetchone()
 
-    # Verify login credentials
     if user is None or not check_password_hash(
-        user["password_hash"],
-        password
+        user["password_hash"], password
     ):
-        flash(
-            "Invalid email or password.",
-            "error"
-        )
+        flash("Invalid email or password.", "error")
         return redirect(url_for("login"))
 
-    # Check whether account is active
     if user["status"] != "active":
-        flash(
-            "This account is inactive.",
-            "error"
-        )
+        flash("This account is inactive.", "error")
         return redirect(url_for("login"))
 
-    # Create user session
     session.clear()
-
     session["user_id"] = user["id"]
     session["user_role"] = user["role"]
 
-    # Redirect according to role
     if user["role"] == "client":
-        return redirect(
-            url_for("client_dashboard")
-        )
-
+        return redirect(url_for("client_dashboard"))
     elif user["role"] == "service_provider":
-        return redirect(
-            url_for("provider_dashboard")
-        )
-
+        return redirect(url_for("provider_dashboard"))
     elif user["role"] == "administrator":
-        return redirect(
-            url_for("admin_dashboard")
-        )
+        return redirect(url_for("admin_dashboard"))
 
     session.clear()
     abort(403)
@@ -401,20 +258,16 @@ def login():
 
 @app.route("/logout", methods=["POST"])
 def logout():
-
     session.clear()
-
     flash(
         "You have been logged out successfully.",
         "success"
     )
-
     return redirect(url_for("login"))
 
 
 # ==========================================
-# PASSWORD RECOVERY
-# DESIGN PREVIEWS ONLY
+# PASSWORD RECOVERY PREVIEWS
 # ==========================================
 
 @app.route("/forgot-password")
@@ -431,16 +284,12 @@ def reset_password_preview():
 # CLIENT WORKSPACE
 # ==========================================
 
-# CLIENT DASHBOARD
-
 @app.route("/dashboard/client")
 @app.route("/dashboard/client-preview")
 @role_required("client")
 def client_dashboard():
     return render_template("client_dashboard.html")
 
-
-# MY BRIEFS
 
 @app.route("/briefs")
 @app.route("/briefs-preview")
@@ -449,98 +298,62 @@ def my_briefs():
     return render_template("my_briefs.html")
 
 
-
 # ==========================================
 # CREATE NEW PROJECT BRIEF
-# ==========================================
-
-
-# ==========================================
-# STEP 82.4 - CREATE CLIENT PROJECT BRIEF
 # ==========================================
 
 @app.route("/briefs/new", methods=["GET", "POST"])
 @role_required("client")
 def new_brief():
-
     db = get_db()
 
-    # --------------------------------------
-    # CREATE AND SAVE A NEW DRAFT
-    # --------------------------------------
-
     if request.method == "POST":
-
         user = current_user()
-
         title = request.form.get(
             "project_title", ""
         ).strip()
-
         questionnaire_id = request.form.get(
-            "questionnaire_id", "",
-            type=int
+            "questionnaire_id", "", type=int
         )
 
-        # Validate the project title
         if not title or len(title) > 150:
-
             flash(
                 "Enter a project title of up to 150 characters.",
                 "error"
             )
-
             return redirect(url_for("new_brief"))
 
-        # Validate the selected questionnaire
         if questionnaire_id is None:
-
             flash(
                 "Please select a questionnaire.",
                 "error"
             )
-
             return redirect(url_for("new_brief"))
-
-        # Get the latest published version
-        # of the selected active questionnaire
 
         questionnaire = db.execute(
             """
-            SELECT
-                q.id,
-                q.title,
-                v.id AS version_id,
-                v.version_number
-
+            SELECT q.id, q.title,
+                   v.id AS version_id,
+                   v.version_number
             FROM questionnaires q
-
             JOIN questionnaire_versions v
                 ON v.questionnaire_id = q.id
-
             JOIN questionnaire_publications p
                 ON p.questionnaire_version_id = v.id
-
             WHERE q.id = ?
               AND q.status = 'active'
-
             ORDER BY v.version_number DESC
-
             LIMIT 1
             """,
             (questionnaire_id,)
         ).fetchone()
 
         if questionnaire is None:
-
             flash(
                 "The selected questionnaire is not available.",
                 "error"
             )
-
             return redirect(url_for("new_brief"))
-
-        # Create the project brief
 
         cursor = db.execute(
             """
@@ -551,7 +364,6 @@ def new_brief():
                 status,
                 completeness_percentage
             )
-
             VALUES (?, ?, ?, 'draft', 0)
             """,
             (
@@ -560,14 +372,9 @@ def new_brief():
                 title
             )
         )
-
         db.commit()
 
         brief_id = cursor.lastrowid
-
-        # Open the questionnaire.
-        # The brief ID will be used when we
-        # implement response saving.
 
         return redirect(
             url_for(
@@ -577,38 +384,22 @@ def new_brief():
             )
         )
 
-    # --------------------------------------
-    # DISPLAY AVAILABLE QUESTIONNAIRES
-    # --------------------------------------
-
     questionnaires = db.execute(
         """
-        SELECT
-            q.id,
-            q.title,
-            v.version_number
-
+        SELECT q.id, q.title, v.version_number
         FROM questionnaires q
-
         JOIN questionnaire_versions v
             ON v.questionnaire_id = q.id
-
         JOIN questionnaire_publications p
             ON p.questionnaire_version_id = v.id
-
         WHERE q.status = 'active'
-
           AND v.version_number = (
               SELECT MAX(v2.version_number)
-
               FROM questionnaire_versions v2
-
               JOIN questionnaire_publications p2
                   ON p2.questionnaire_version_id = v2.id
-
               WHERE v2.questionnaire_id = q.id
           )
-
         ORDER BY q.title COLLATE NOCASE ASC
         """
     ).fetchall()
@@ -619,50 +410,9 @@ def new_brief():
     )
 
 
-    db = get_db()
-
-    # Retrieve active questionnaires with
-    # their latest published versions.
-
-    questionnaires = db.execute(
-        """
-        SELECT
-            q.id,
-            q.title,
-            v.version_number
-
-        FROM questionnaires AS q
-
-        JOIN questionnaire_versions AS v
-            ON v.questionnaire_id = q.id
-
-        JOIN questionnaire_publications AS p
-            ON p.questionnaire_version_id = v.id
-
-        WHERE q.status = 'active'
-
-          AND v.version_number = (
-              SELECT MAX(v2.version_number)
-              FROM questionnaire_versions AS v2
-
-              JOIN questionnaire_publications AS p2
-                  ON p2.questionnaire_version_id = v2.id
-
-              WHERE v2.questionnaire_id = q.id
-          )
-
-        ORDER BY q.title COLLATE NOCASE ASC
-        """
-    ).fetchall()
-
-    return render_template(
-        "new_brief.html",
-        questionnaires=questionnaires
-    )
-
-
-
-# QUESTIONNAIRE PREVIEW
+# ==========================================
+# CLIENT DESIGN PREVIEWS
+# ==========================================
 
 @app.route("/questionnaire-preview")
 @role_required("client")
@@ -670,23 +420,17 @@ def questionnaire_preview():
     return render_template("questionnaire.html")
 
 
-# BRIEF PREVIEW
-
 @app.route("/brief-preview")
 @role_required("client")
 def brief_preview_design():
     return render_template("brief_preview.html")
 
 
-# BRIEF DETAILS
-
 @app.route("/brief-details-preview")
 @role_required("client")
 def brief_details_preview():
     return render_template("brief_details.html")
 
-
-# REVISION HISTORY
 
 @app.route("/revision-history-preview")
 @role_required("client")
@@ -705,10 +449,8 @@ def notifications():
 
 
 # ==========================================
-# SERVICE PROVIDER WORKSPACE
-# ==========================================
-
 # SERVICE PROVIDER DASHBOARD
+# ==========================================
 
 @app.route("/dashboard/provider")
 @app.route("/dashboard/provider-preview")
@@ -717,21 +459,15 @@ def provider_dashboard():
     return render_template("provider_dashboard.html")
 
 
-
 # ==========================================
-# STEP 83 - PROVIDER CLIENT BRIEFS
+# PROVIDER CLIENT BRIEFS
 # ==========================================
 
 @app.route("/provider/briefs")
 @role_required("service_provider")
 def provider_briefs():
-
     user = current_user()
     db = get_db()
-
-    # Retrieve briefs submitted to this provider.
-    # A provider only sees projects associated
-    # with questionnaires they created.
 
     briefs = db.execute(
         """
@@ -742,33 +478,23 @@ def provider_briefs():
             pb.completeness_percentage,
             pb.created_at,
             pb.updated_at,
-
             u.full_name AS client_name,
-
             q.title AS questionnaire_title,
-
             v.version_number
-
         FROM project_briefs AS pb
-
         JOIN users AS u
             ON u.id = pb.client_id
-
         JOIN questionnaire_versions AS v
             ON v.id = pb.questionnaire_version_id
-
         JOIN questionnaires AS q
             ON q.id = v.questionnaire_id
-
         WHERE q.created_by = ?
-
-        AND pb.status IN (
-            'submitted',
-            'under_review',
-            'revision_requested',
-            'approved'
-        )
-
+          AND pb.status IN (
+              'submitted',
+              'under_review',
+              'revision_requested',
+              'approved'
+          )
         ORDER BY pb.updated_at DESC, pb.id DESC
         """,
         (user["id"],)
@@ -780,7 +506,9 @@ def provider_briefs():
     )
 
 
-# REVIEW BRIEF PREVIEW
+# ==========================================
+# PROVIDER REVIEW PREVIEW
+# ==========================================
 
 @app.route("/provider/briefs/review-preview")
 @role_required("service_provider")
@@ -788,7 +516,255 @@ def review_brief_preview():
     return render_template("review_brief.html")
 
 
-# QUESTIONNAIRE MANAGEMENT
+# ==========================================
+# PROVIDER REVIEW DECISIONS
+# ==========================================
+
+@app.route(
+    "/provider/briefs/<int:brief_id>/review",
+    methods=["GET", "POST"]
+)
+@role_required("service_provider")
+def review_brief(brief_id):
+    db = get_db()
+    provider = current_user()
+
+    brief = db.execute(
+        """
+        SELECT
+            pb.*,
+            u.full_name AS client_name,
+            q.title AS questionnaire_title,
+            v.version_number
+        FROM project_briefs pb
+        JOIN users u
+            ON u.id = pb.client_id
+        JOIN questionnaire_versions v
+            ON v.id = pb.questionnaire_version_id
+        JOIN questionnaires q
+            ON q.id = v.questionnaire_id
+        WHERE pb.id = ?
+          AND q.created_by = ?
+          AND pb.status != 'draft'
+        """,
+        (brief_id, provider["id"])
+    ).fetchone()
+
+    if brief is None:
+        abort(404)
+
+    if request.method == "POST":
+        if brief["status"] not in (
+            "submitted", "under_review"
+        ):
+            abort(409)
+
+        decision = request.form.get("decision", "")
+
+        if decision == "approve":
+            comment = request.form.get(
+                "approval_comment", ""
+            ).strip()
+
+            if brief["completeness_percentage"] != 100:
+                abort(409, "The brief is not complete.")
+
+            questions = db.execute(
+                """
+                SELECT *
+                FROM questions
+                WHERE questionnaire_version_id = ?
+                  AND is_active = 1
+                ORDER BY position ASC, id ASC
+                """,
+                (brief["questionnaire_version_id"],)
+            ).fetchall()
+
+            saved_answers = db.execute(
+                """
+                SELECT r.question_id, r.answer_text
+                FROM brief_responses r
+                JOIN questions q
+                    ON q.id = r.question_id
+                WHERE r.brief_id = ?
+                  AND q.questionnaire_version_id = ?
+                """,
+                (
+                    brief_id,
+                    brief["questionnaire_version_id"]
+                )
+            ).fetchall()
+
+            answers = {
+                row["question_id"]: row["answer_text"].strip()
+                for row in saved_answers
+            }
+
+            rules = db.execute(
+                """
+                SELECT
+                    source_question_id,
+                    target_question_id,
+                    expected_answer
+                FROM adaptive_rules
+                WHERE questionnaire_version_id = ?
+                """,
+                (brief["questionnaire_version_id"],)
+            ).fetchall()
+
+            rules_by_target = {
+                rule["target_question_id"]: rule
+                for rule in rules
+            }
+
+            visible = {}
+
+            if not questions:
+                abort(409, "No questions available.")
+
+            for question in questions:
+                question_id = question["id"]
+                rule = rules_by_target.get(question_id)
+                applicable = True
+
+                if rule is not None:
+                    source_id = rule["source_question_id"]
+                    applicable = (
+                        visible.get(source_id, False)
+                        and answers.get(source_id, "")
+                        == rule["expected_answer"]
+                    )
+
+                visible[question_id] = applicable
+
+                if applicable and question["is_required"]:
+                    answer = answers.get(question_id, "")
+
+                    if not answer:
+                        abort(
+                            409,
+                            "Required answers are incomplete."
+                        )
+
+                    if question["question_type"] == "multiple_choice":
+                        valid_options = (
+                            question["option_one"],
+                            question["option_two"]
+                        )
+                        if answer not in valid_options:
+                            abort(
+                                409,
+                                "An answer is invalid."
+                            )
+
+            new_status = "approved"
+
+        elif decision == "request_revision":
+            comment = request.form.get(
+                "revision_comments", ""
+            ).strip()
+
+            if not comment:
+                abort(
+                    400,
+                    "Revision feedback is required."
+                )
+
+            new_status = "revision_requested"
+
+        else:
+            abort(400)
+
+        cursor = db.execute(
+            """
+            UPDATE project_briefs
+            SET status = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+              AND status IN (
+                  'submitted', 'under_review'
+              )
+            """,
+            (new_status, brief_id)
+        )
+
+        if cursor.rowcount != 1:
+            db.rollback()
+            abort(409)
+
+        db.execute(
+            """
+            INSERT INTO brief_reviews (
+                brief_id,
+                reviewer_id,
+                decision,
+                comment
+            )
+            VALUES (?, ?, ?, ?)
+            """,
+            (
+                brief_id,
+                provider["id"],
+                new_status,
+                comment
+            )
+        )
+
+        db.commit()
+
+        flash(
+            "Review decision saved successfully.",
+            "success"
+        )
+
+        return redirect(
+            url_for("review_brief", brief_id=brief_id)
+        )
+
+    responses = db.execute(
+        """
+        SELECT q.question_text, r.answer_text
+        FROM brief_responses r
+        JOIN questions q
+            ON q.id = r.question_id
+        WHERE r.brief_id = ?
+          AND q.questionnaire_version_id = ?
+        ORDER BY q.position ASC, q.id ASC
+        """,
+        (
+            brief_id,
+            brief["questionnaire_version_id"]
+        )
+    ).fetchall()
+
+    review_history = db.execute(
+        """
+        SELECT
+            br.decision,
+            br.comment,
+            br.created_at,
+            u.full_name AS reviewer_name
+        FROM brief_reviews br
+        JOIN users u
+            ON u.id = br.reviewer_id
+        WHERE br.brief_id = ?
+        ORDER BY br.created_at DESC, br.id DESC
+        """,
+        (brief_id,)
+    ).fetchall()
+
+    can_review = brief["status"] in (
+        "submitted", "under_review"
+    )
+
+    return render_template(
+        "review_brief.html",
+        brief=brief,
+        responses=responses,
+        review_history=review_history,
+        can_review=can_review
+    )
+
 
 # ==========================================
 # QUESTIONNAIRE MANAGEMENT
@@ -797,11 +773,9 @@ def review_brief_preview():
 @app.route("/provider/questionnaires")
 @role_required("service_provider")
 def questionnaire_management():
-
     user = current_user()
     db = get_db()
 
-    # Get search and filter values
     search_query = request.args.get(
         "search", ""
     ).strip()[:150]
@@ -810,36 +784,27 @@ def questionnaire_management():
         "status", ""
     ).strip()
 
-    if status_filter not in (
-        "",
-        "active",
-        "inactive"
-    ):
+    if status_filter not in ("", "active", "inactive"):
         status_filter = ""
 
-    # Count the provider's questionnaires
     overview = db.execute(
         """
         SELECT
             COUNT(*) AS total,
-
             COALESCE(SUM(
                 CASE WHEN status = 'active'
                 THEN 1 ELSE 0 END
             ), 0) AS active,
-
             COALESCE(SUM(
                 CASE WHEN status = 'inactive'
                 THEN 1 ELSE 0 END
             ), 0) AS inactive
-
         FROM questionnaires
         WHERE created_by = ?
         """,
         (user["id"],)
     ).fetchone()
 
-    # Retrieve saved questionnaires
     questionnaires = db.execute(
         """
         SELECT
@@ -848,13 +813,11 @@ def questionnaire_management():
             q.description,
             q.status,
             q.updated_at,
-
             COALESCE((
                 SELECT MAX(v.version_number)
                 FROM questionnaire_versions v
                 WHERE v.questionnaire_id = q.id
             ), 1) AS version_number,
-
             (
                 SELECT COUNT(*)
                 FROM questions qs
@@ -866,13 +829,10 @@ def questionnaire_management():
                     LIMIT 1
                 )
             ) AS question_count
-
         FROM questionnaires q
-
         WHERE q.created_by = ?
           AND q.title LIKE ?
           AND (? = '' OR q.status = ?)
-
         ORDER BY q.updated_at DESC, q.id DESC
         """,
         (
@@ -892,8 +852,6 @@ def questionnaire_management():
     )
 
 
-
-
 # ==========================================
 # CREATE QUESTIONNAIRE
 # ==========================================
@@ -904,100 +862,63 @@ def questionnaire_management():
 )
 @role_required("service_provider")
 def create_questionnaire():
-
-    # Display the questionnaire editor
     if request.method == "GET":
-        return render_template(
-            "questionnaire_editor.html"
-        )
+        return render_template("questionnaire_editor.html")
 
-    # Process questionnaire creation
-    form_action = request.form.get("form_action")
-
-    if form_action != "save_template":
+    if request.form.get("form_action") != "save_template":
         abort(400)
 
-    title = request.form.get(
-        "title", ""
-    ).strip()
-
+    title = request.form.get("title", "").strip()
     description = request.form.get(
         "description", ""
     ).strip()
 
-    # Validate questionnaire information
     if not title or not description:
-
         flash(
             "Please complete all questionnaire fields.",
             "error"
         )
-
-        return redirect(
-            url_for("create_questionnaire")
-        )
+        return redirect(url_for("create_questionnaire"))
 
     if len(title) > 150:
-
         flash(
             "Questionnaire title cannot exceed 150 characters.",
             "error"
         )
-
-        return redirect(
-            url_for("create_questionnaire")
-        )
+        return redirect(url_for("create_questionnaire"))
 
     if len(description) > 1000:
-
         flash(
             "Description cannot exceed 1000 characters.",
             "error"
         )
+        return redirect(url_for("create_questionnaire"))
 
-        return redirect(
-            url_for("create_questionnaire")
-        )
-
-    # Identify the logged-in service provider
     user = current_user()
-
     db = get_db()
 
     try:
-
-        # Save the questionnaire
         cursor = db.execute(
             """
             INSERT INTO questionnaires (
-                title,
-                description,
-                created_by,
-                status
+                title, description, created_by, status
             )
             VALUES (?, ?, ?, 'inactive')
             """,
-            (
-                title,
-                description,
-                user["id"]
-            )
+            (title, description, user["id"])
         )
 
         questionnaire_id = cursor.lastrowid
 
-        # Create the first questionnaire version
         db.execute(
             """
             INSERT INTO questionnaire_versions (
-                questionnaire_id,
-                version_number
+                questionnaire_id, version_number
             )
             VALUES (?, 1)
             """,
             (questionnaire_id,)
         )
-
         db.commit()
 
     except Exception:
@@ -1008,14 +929,8 @@ def create_questionnaire():
         "Questionnaire created successfully as an inactive draft.",
         "success"
     )
+    return redirect(url_for("create_questionnaire"))
 
-    return redirect(
-        url_for("create_questionnaire")
-    )
-
-
-
-# ADAPTIVE RULES PREVIEW
 
 @app.route("/provider/questionnaires/rules-preview")
 @role_required("service_provider")
@@ -1027,8 +942,6 @@ def adaptive_rules_preview():
 # ADMINISTRATOR WORKSPACE
 # ==========================================
 
-# ADMIN DASHBOARD
-
 @app.route("/dashboard/admin")
 @app.route("/dashboard/admin-preview")
 @role_required("administrator")
@@ -1036,15 +949,11 @@ def admin_dashboard():
     return render_template("admin_dashboard.html")
 
 
-# USER MANAGEMENT
-
 @app.route("/admin/users")
 @role_required("administrator")
 def user_management():
     return render_template("user_management.html")
 
-
-# CREATE USER ACCOUNT
 
 @app.route("/admin/users/new", methods=["GET"])
 @role_required("administrator")
@@ -1052,17 +961,11 @@ def create_user():
     return render_template("create_user.html")
 
 
-# EDIT USER ACCOUNT PREVIEW
-
 @app.route("/admin/users/edit-preview", methods=["GET"])
 @role_required("administrator")
 def edit_user_preview():
     return render_template("edit_user.html")
 
-
-# ==========================================
-# RUN ELUNETTE
-# ==========================================
 
 # ==========================================
 # EDIT EXISTING QUESTIONNAIRE
@@ -1074,11 +977,9 @@ def edit_user_preview():
 )
 @role_required("service_provider")
 def edit_questionnaire(questionnaire_id):
-
     user = current_user()
     db = get_db()
 
-    # Retrieve only questionnaires owned by this provider
     questionnaire = db.execute(
         """
         SELECT *
@@ -1092,8 +993,6 @@ def edit_questionnaire(questionnaire_id):
         abort(404)
 
     if request.method == "POST":
-
-
         if not questionnaire_is_editable(db, questionnaire):
             abort(409)
 
@@ -1137,14 +1036,12 @@ def edit_questionnaire(questionnaire_id):
                 user["id"]
             )
         )
-
         db.commit()
 
         flash(
             "Questionnaire updated successfully.",
             "success"
         )
-
         return redirect(
             url_for(
                 "edit_questionnaire",
@@ -1152,22 +1049,12 @@ def edit_questionnaire(questionnaire_id):
             )
         )
 
-
-    # LOAD SAVED QUESTIONNAIRE QUESTIONS
-
     questions = db.execute(
         """
         SELECT
-            id,
-            question_text,
-            question_type,
-            position,
-            is_required,
-            option_one,
-            option_two
-
+            id, question_text, question_type,
+            position, is_required, option_one, option_two
         FROM questions
-
         WHERE questionnaire_version_id = (
             SELECT id
             FROM questionnaire_versions
@@ -1175,17 +1062,13 @@ def edit_questionnaire(questionnaire_id):
             ORDER BY version_number DESC
             LIMIT 1
         )
-
         ORDER BY position ASC, id ASC
         """,
         (questionnaire_id,)
     ).fetchall()
 
-
-    # Check whether the questionnaire can be edited
     can_edit = questionnaire_is_editable(
-        db,
-        questionnaire
+        db, questionnaire
     )
 
     return render_template(
@@ -1196,9 +1079,8 @@ def edit_questionnaire(questionnaire_id):
     )
 
 
-
 # ==========================================
-# ADD A QUESTION TO A QUESTIONNAIRE
+# ADD A QUESTION
 # ==========================================
 
 @app.route(
@@ -1207,11 +1089,9 @@ def edit_questionnaire(questionnaire_id):
 )
 @role_required("service_provider")
 def add_question(questionnaire_id):
-
     user = current_user()
     db = get_db()
 
-    # Check questionnaire ownership
     questionnaire = db.execute(
         """
         SELECT *
@@ -1224,13 +1104,9 @@ def add_question(questionnaire_id):
     if questionnaire is None:
         abort(404)
 
-    # Only inactive questionnaires can be edited
-    
-        if not questionnaire_is_editable(db, questionnaire):
-            abort(409)
+    if not questionnaire_is_editable(db, questionnaire):
+        abort(409)
 
-
-    # Get the latest questionnaire version
     version = db.execute(
         """
         SELECT id
@@ -1245,19 +1121,15 @@ def add_question(questionnaire_id):
     if version is None:
         abort(409)
 
-    # Collect question details
     question_text = request.form.get(
         "question_text", ""
     ).strip()
-
     question_type = request.form.get(
         "question_type", ""
     ).strip()
-
     option_one = request.form.get(
         "option_one", ""
     ).strip()
-
     option_two = request.form.get(
         "option_two", ""
     ).strip()
@@ -1267,12 +1139,8 @@ def add_question(questionnaire_id):
         else 0
     )
 
-    # Validate question
     allowed_types = (
-        "text",
-        "multiple_choice",
-        "number",
-        "date"
+        "text", "multiple_choice", "number", "date"
     )
 
     if (
@@ -1280,12 +1148,7 @@ def add_question(questionnaire_id):
         or len(question_text) > 500
         or question_type not in allowed_types
     ):
-
-        flash(
-            "Enter valid question details.",
-            "error"
-        )
-
+        flash("Enter valid question details.", "error")
         return redirect(
             url_for(
                 "edit_questionnaire",
@@ -1293,9 +1156,7 @@ def add_question(questionnaire_id):
             )
         )
 
-    # Validate multiple-choice options
     if question_type == "multiple_choice":
-
         if not option_one or not option_two:
             flash(
                 "Multiple-choice questions need two options.",
@@ -1308,9 +1169,13 @@ def add_question(questionnaire_id):
                 )
             )
 
-        if len(option_one) > 150 or len(option_two) > 150:
+        if (
+            len(option_one) > 150
+            or len(option_two) > 150
+            or option_one == option_two
+        ):
             flash(
-                "Each option must be 150 characters or fewer.",
+                "Provide two different options of up to 150 characters.",
                 "error"
             )
             return redirect(
@@ -1319,12 +1184,10 @@ def add_question(questionnaire_id):
                     questionnaire_id=questionnaire_id
                 )
             )
-
     else:
         option_one = None
         option_two = None
 
-    # Determine question order
     next_position = db.execute(
         """
         SELECT COALESCE(MAX(position), 0) + 1
@@ -1334,7 +1197,6 @@ def add_question(questionnaire_id):
         (version["id"],)
     ).fetchone()[0]
 
-    # Save the question
     db.execute(
         """
         INSERT INTO questions (
@@ -1360,7 +1222,6 @@ def add_question(questionnaire_id):
         )
     )
 
-    # Update questionnaire timestamp
     db.execute(
         """
         UPDATE questionnaires
@@ -1369,20 +1230,16 @@ def add_question(questionnaire_id):
         """,
         (questionnaire_id,)
     )
-
     db.commit()
 
-    flash(
-        "Question added successfully!",
-        "success"
-    )
-
+    flash("Question added successfully!", "success")
     return redirect(
         url_for(
             "edit_questionnaire",
             questionnaire_id=questionnaire_id
         )
     )
+
 
 # ==========================================
 # EDIT AN EXISTING QUESTION
@@ -1394,11 +1251,9 @@ def add_question(questionnaire_id):
 )
 @role_required("service_provider")
 def edit_question(questionnaire_id, question_id):
-
     user = current_user()
     db = get_db()
 
-    # Confirm questionnaire ownership
     questionnaire = db.execute(
         """
         SELECT *
@@ -1411,13 +1266,9 @@ def edit_question(questionnaire_id, question_id):
     if questionnaire is None:
         abort(404)
 
-    # Active questionnaires cannot be edited
-
     if not questionnaire_is_editable(db, questionnaire):
         abort(409)
 
-
-    # Get the latest questionnaire version
     version = db.execute(
         """
         SELECT id
@@ -1432,13 +1283,12 @@ def edit_question(questionnaire_id, question_id):
     if version is None:
         abort(404)
 
-    # Retrieve the selected question
     question = db.execute(
         """
         SELECT *
         FROM questions
         WHERE id = ?
-        AND questionnaire_version_id = ?
+          AND questionnaire_version_id = ?
         """,
         (question_id, version["id"])
     ).fetchone()
@@ -1446,7 +1296,6 @@ def edit_question(questionnaire_id, question_id):
     if question is None:
         abort(404)
 
-    # Display editing form
     if request.method == "GET":
         return render_template(
             "edit_question.html",
@@ -1454,19 +1303,15 @@ def edit_question(questionnaire_id, question_id):
             question=question
         )
 
-    # Collect updated information
     question_text = request.form.get(
         "question_text", ""
     ).strip()
-
     question_type = request.form.get(
         "question_type", ""
     ).strip()
-
     option_one = request.form.get(
         "option_one", ""
     ).strip()
-
     option_two = request.form.get(
         "option_two", ""
     ).strip()
@@ -1477,13 +1322,9 @@ def edit_question(questionnaire_id, question_id):
     )
 
     allowed_types = (
-        "text",
-        "multiple_choice",
-        "number",
-        "date"
+        "text", "multiple_choice", "number", "date"
     )
 
-    # Validate question details
     if (
         not question_text
         or len(question_text) > 500
@@ -1493,7 +1334,6 @@ def edit_question(questionnaire_id, question_id):
             "Please enter valid question details.",
             "error"
         )
-
         return redirect(
             url_for(
                 "edit_question",
@@ -1502,9 +1342,7 @@ def edit_question(questionnaire_id, question_id):
             )
         )
 
-    # Validate multiple-choice options
     if question_type == "multiple_choice":
-
         if (
             not option_one
             or not option_two
@@ -1516,7 +1354,6 @@ def edit_question(questionnaire_id, question_id):
                 "Enter two different options, each under 151 characters.",
                 "error"
             )
-
             return redirect(
                 url_for(
                     "edit_question",
@@ -1524,12 +1361,10 @@ def edit_question(questionnaire_id, question_id):
                     question_id=question_id
                 )
             )
-
     else:
         option_one = None
         option_two = None
 
-    # Save updated question
     db.execute(
         """
         UPDATE questions
@@ -1539,7 +1374,7 @@ def edit_question(questionnaire_id, question_id):
             option_one = ?,
             option_two = ?
         WHERE id = ?
-        AND questionnaire_version_id = ?
+          AND questionnaire_version_id = ?
         """,
         (
             question_text,
@@ -1560,20 +1395,16 @@ def edit_question(questionnaire_id, question_id):
         """,
         (questionnaire_id, user["id"])
     )
-
     db.commit()
 
-    flash(
-        "Question updated successfully!",
-        "success"
-    )
-
+    flash("Question updated successfully!", "success")
     return redirect(
         url_for(
             "edit_questionnaire",
             questionnaire_id=questionnaire_id
         )
     )
+
 
 # ==========================================
 # DELETE QUESTION
@@ -1585,11 +1416,9 @@ def edit_question(questionnaire_id, question_id):
 )
 @role_required("service_provider")
 def delete_question(questionnaire_id, question_id):
-
     user = current_user()
     db = get_db()
 
-    # Confirm questionnaire ownership
     questionnaire = db.execute(
         """
         SELECT *
@@ -1602,13 +1431,9 @@ def delete_question(questionnaire_id, question_id):
     if questionnaire is None:
         abort(404)
 
-    # Prevent changes to active questionnaires
-
     if not questionnaire_is_editable(db, questionnaire):
         abort(409)
 
-
-    # Retrieve the latest version
     version = db.execute(
         """
         SELECT id
@@ -1623,7 +1448,6 @@ def delete_question(questionnaire_id, question_id):
     if version is None:
         abort(404)
 
-    # Confirm that the question belongs to this version
     question = db.execute(
         """
         SELECT id
@@ -1638,7 +1462,6 @@ def delete_question(questionnaire_id, question_id):
         abort(404)
 
     try:
-        # Delete the selected question
         db.execute(
             """
             DELETE FROM questions
@@ -1648,7 +1471,6 @@ def delete_question(questionnaire_id, question_id):
             (question_id, version["id"])
         )
 
-        # Recalculate remaining question positions
         remaining = db.execute(
             """
             SELECT id
@@ -1669,7 +1491,6 @@ def delete_question(questionnaire_id, question_id):
                 (position, row["id"])
             )
 
-        # Record when the questionnaire was modified
         db.execute(
             """
             UPDATE questionnaires
@@ -1678,7 +1499,6 @@ def delete_question(questionnaire_id, question_id):
             """,
             (questionnaire_id, user["id"])
         )
-
         db.commit()
 
     except Exception:
@@ -1689,13 +1509,13 @@ def delete_question(questionnaire_id, question_id):
         "Question deleted successfully.",
         "success"
     )
-
     return redirect(
         url_for(
             "edit_questionnaire",
             questionnaire_id=questionnaire_id
         )
     )
+
 
 # ==========================================
 # ACTIVATE QUESTIONNAIRE
@@ -1707,7 +1527,6 @@ def delete_question(questionnaire_id, question_id):
 )
 @role_required("service_provider")
 def activate_questionnaire(questionnaire_id):
-
     db = get_db()
     user = current_user()
 
@@ -1729,14 +1548,12 @@ def activate_questionnaire(questionnaire_id):
         )
 
     version = latest_questionnaire_version(
-        db,
-        questionnaire_id
+        db, questionnaire_id
     )
 
     if version is None:
         abort(409)
 
-    # A questionnaire needs at least one question
     question_count = db.execute(
         """
         SELECT COUNT(*)
@@ -1748,12 +1565,10 @@ def activate_questionnaire(questionnaire_id):
     ).fetchone()[0]
 
     if question_count == 0:
-
         flash(
             "Add at least one question before activation.",
             "error"
         )
-
         return redirect(
             url_for(
                 "edit_questionnaire",
@@ -1761,7 +1576,6 @@ def activate_questionnaire(questionnaire_id):
             )
         )
 
-    # Check multiple-choice answers
     invalid_options = db.execute(
         """
         SELECT COUNT(*)
@@ -1780,12 +1594,10 @@ def activate_questionnaire(questionnaire_id):
     ).fetchone()[0]
 
     if invalid_options:
-
         flash(
             "Check the multiple-choice options before activation.",
             "error"
         )
-
         return redirect(
             url_for(
                 "edit_questionnaire",
@@ -1793,9 +1605,7 @@ def activate_questionnaire(questionnaire_id):
             )
         )
 
-    # Preserve this version on first publication
     if not version_is_published(db, version["id"]):
-
         db.execute(
             """
             INSERT INTO questionnaire_publications (
@@ -1823,17 +1633,13 @@ def activate_questionnaire(questionnaire_id):
         """,
         (questionnaire_id, user["id"])
     )
-
     db.commit()
 
     flash(
         "Questionnaire activated successfully.",
         "success"
     )
-
-    return redirect(
-        url_for("questionnaire_management")
-    )
+    return redirect(url_for("questionnaire_management"))
 
 
 # ==========================================
@@ -1846,7 +1652,6 @@ def activate_questionnaire(questionnaire_id):
 )
 @role_required("service_provider")
 def deactivate_questionnaire(questionnaire_id):
-
     db = get_db()
     user = current_user()
 
@@ -1871,20 +1676,17 @@ def deactivate_questionnaire(questionnaire_id):
         """,
         (questionnaire_id, user["id"])
     )
-
     db.commit()
 
     flash(
         "Questionnaire deactivated successfully.",
         "success"
     )
+    return redirect(url_for("questionnaire_management"))
 
-    return redirect(
-        url_for("questionnaire_management")
-    )
 
 # ==========================================
-# CREATE A NEW QUESTIONNAIRE VERSION
+# CREATE NEW QUESTIONNAIRE VERSION
 # ==========================================
 
 @app.route(
@@ -1893,11 +1695,9 @@ def deactivate_questionnaire(questionnaire_id):
 )
 @role_required("service_provider")
 def create_new_questionnaire_version(questionnaire_id):
-
     db = get_db()
     user = current_user()
 
-    # Confirm questionnaire ownership
     questionnaire = db.execute(
         """
         SELECT *
@@ -1910,45 +1710,34 @@ def create_new_questionnaire_version(questionnaire_id):
     if questionnaire is None:
         abort(404)
 
-    # A new version can only be created
-    # after deactivating the questionnaire
     if questionnaire["status"] != "inactive":
         abort(409)
 
     latest = latest_questionnaire_version(
-        db,
-        questionnaire_id
+        db, questionnaire_id
     )
 
     if latest is None:
         abort(409)
 
-    # Prevent creating multiple unfinished drafts
     if not version_is_published(db, latest["id"]):
         abort(409)
 
     new_version_number = latest["version_number"] + 1
 
     try:
-
-        # Create the new draft version
         cursor = db.execute(
             """
             INSERT INTO questionnaire_versions (
-                questionnaire_id,
-                version_number
+                questionnaire_id, version_number
             )
             VALUES (?, ?)
             """,
-            (
-                questionnaire_id,
-                new_version_number
-            )
+            (questionnaire_id, new_version_number)
         )
 
         new_version_id = cursor.lastrowid
 
-        # Copy questions from the previous version
         db.execute(
             """
             INSERT INTO questions (
@@ -1961,7 +1750,6 @@ def create_new_questionnaire_version(questionnaire_id):
                 option_one,
                 option_two
             )
-
             SELECT
                 ?,
                 question_text,
@@ -1971,20 +1759,13 @@ def create_new_questionnaire_version(questionnaire_id):
                 is_active,
                 option_one,
                 option_two
-
             FROM questions
-
             WHERE questionnaire_version_id = ?
-
             ORDER BY position ASC
             """,
-            (
-                new_version_id,
-                latest["id"]
-            )
+            (new_version_id, latest["id"])
         )
 
-        # Update modification date
         db.execute(
             """
             UPDATE questionnaires
@@ -1993,7 +1774,6 @@ def create_new_questionnaire_version(questionnaire_id):
             """,
             (questionnaire_id, user["id"])
         )
-
         db.commit()
 
     except Exception:
@@ -2005,7 +1785,6 @@ def create_new_questionnaire_version(questionnaire_id):
         "You can now edit its questions.",
         "success"
     )
-
     return redirect(
         url_for(
             "edit_questionnaire",
@@ -2013,8 +1792,9 @@ def create_new_questionnaire_version(questionnaire_id):
         )
     )
 
+
 # ==========================================
-# ELUNETTE - ADAPTIVE RULE MANAGEMENT
+# ADAPTIVE RULE MANAGEMENT
 # ==========================================
 
 @app.route(
@@ -2023,11 +1803,9 @@ def create_new_questionnaire_version(questionnaire_id):
 )
 @role_required("service_provider")
 def manage_adaptive_rules(questionnaire_id):
-
     db = get_db()
     user = current_user()
 
-    # Find questionnaire belonging to this provider
     questionnaire = db.execute(
         """
         SELECT *
@@ -2040,7 +1818,6 @@ def manage_adaptive_rules(questionnaire_id):
     if questionnaire is None:
         abort(404)
 
-    # Retrieve latest questionnaire version
     version = latest_questionnaire_version(
         db, questionnaire_id
     )
@@ -2052,7 +1829,6 @@ def manage_adaptive_rules(questionnaire_id):
         db, questionnaire
     )
 
-    # Retrieve questions for this version
     questions = db.execute(
         """
         SELECT
@@ -2062,57 +1838,48 @@ def manage_adaptive_rules(questionnaire_id):
             position,
             option_one,
             option_two
-
         FROM questions
-
         WHERE questionnaire_version_id = ?
           AND is_active = 1
-
         ORDER BY position ASC, id ASC
         """,
         (version["id"],)
     ).fetchall()
 
-    # ======================================
-    # SAVE NEW ADAPTIVE RULE
-    # ======================================
-
     if request.method == "POST":
-
         if not can_edit:
             abort(409)
 
         source_id = request.form.get(
             "source_question_id", type=int
         )
-
         target_id = request.form.get(
             "target_question_id", type=int
         )
-
         expected_answer = request.form.get(
             "expected_answer", ""
         ).strip()
 
-        # Find the selected questions
         source = next(
-            (q for q in questions if q["id"] == source_id),
+            (
+                q for q in questions
+                if q["id"] == source_id
+            ),
             None
         )
-
         target = next(
-            (q for q in questions if q["id"] == target_id),
+            (
+                q for q in questions
+                if q["id"] == target_id
+            ),
             None
         )
 
-        # Both questions must belong to this version
         if source is None or target is None:
-
             flash(
                 "Please select valid questions.",
                 "error"
             )
-
             return redirect(
                 url_for(
                     "manage_adaptive_rules",
@@ -2120,14 +1887,11 @@ def manage_adaptive_rules(questionnaire_id):
                 )
             )
 
-        # Source must be multiple choice
         if source["question_type"] != "multiple_choice":
-
             flash(
                 "The controlling question must be multiple choice.",
                 "error"
             )
-
             return redirect(
                 url_for(
                     "manage_adaptive_rules",
@@ -2135,15 +1899,12 @@ def manage_adaptive_rules(questionnaire_id):
                 )
             )
 
-        # Follow-up must come after source
         if source["position"] >= target["position"]:
-
             flash(
                 "The follow-up question must appear after "
                 "the controlling question.",
                 "error"
             )
-
             return redirect(
                 url_for(
                     "manage_adaptive_rules",
@@ -2151,19 +1912,16 @@ def manage_adaptive_rules(questionnaire_id):
                 )
             )
 
-        # Answer must match an existing option
         valid_answers = (
             source["option_one"],
             source["option_two"]
         )
 
         if expected_answer not in valid_answers:
-
             flash(
                 "Select an answer belonging to the controlling question.",
                 "error"
             )
-
             return redirect(
                 url_for(
                     "manage_adaptive_rules",
@@ -2171,9 +1929,7 @@ def manage_adaptive_rules(questionnaire_id):
                 )
             )
 
-        # Store rule in SQLite
         try:
-
             db.execute(
                 """
                 INSERT INTO adaptive_rules (
@@ -2191,19 +1947,14 @@ def manage_adaptive_rules(questionnaire_id):
                     expected_answer
                 )
             )
-
             db.commit()
 
         except IntegrityError:
-
             db.rollback()
-
             flash(
-                "This follow-up question already has "
-                "an adaptive rule.",
+                "This follow-up question already has an adaptive rule.",
                 "error"
             )
-
             return redirect(
                 url_for(
                     "manage_adaptive_rules",
@@ -2215,17 +1966,12 @@ def manage_adaptive_rules(questionnaire_id):
             "Adaptive rule created successfully!",
             "success"
         )
-
         return redirect(
             url_for(
                 "manage_adaptive_rules",
                 questionnaire_id=questionnaire_id
             )
         )
-
-    # ======================================
-    # LOAD EXISTING RULES
-    # ======================================
 
     rules = db.execute(
         """
@@ -2236,17 +1982,12 @@ def manage_adaptive_rules(questionnaire_id):
             r.target_question_id,
             source.question_text AS source_question,
             target.question_text AS target_question
-
         FROM adaptive_rules r
-
         JOIN questions source
             ON source.id = r.source_question_id
-
         JOIN questions target
             ON target.id = r.target_question_id
-
         WHERE r.questionnaire_version_id = ?
-
         ORDER BY r.id DESC
         """,
         (version["id"],)
@@ -2261,14 +2002,16 @@ def manage_adaptive_rules(questionnaire_id):
         can_edit=can_edit
     )
 
+
 # ==========================================
 # QUESTIONNAIRE DETAILS REDIRECT
 # ==========================================
 
-@app.route("/provider/questionnaires/<int:questionnaire_id>")
+@app.route(
+    "/provider/questionnaires/<int:questionnaire_id>"
+)
 @role_required("service_provider")
 def questionnaire_detail(questionnaire_id):
-
     return redirect(
         url_for(
             "edit_questionnaire",
@@ -2276,8 +2019,10 @@ def questionnaire_detail(questionnaire_id):
         )
     )
 
+
 # ==========================================
 # CLIENT QUESTIONNAIRE
+# LOAD PUBLISHED VERSION AND SAVED ANSWERS
 # ==========================================
 
 @app.route(
@@ -2286,41 +2031,79 @@ def questionnaire_detail(questionnaire_id):
 )
 @role_required("client")
 def client_questionnaire(questionnaire_id):
-
     db = get_db()
+    client = current_user()
+    brief_id = request.args.get("brief_id", type=int)
+    saved_answers = {}
 
-    # Retrieve the latest published version
-    # of an active questionnaire.
-    questionnaire = db.execute(
-        """
-        SELECT
-            q.id,
-            q.title,
-            q.description,
-            v.id AS version_id,
-            v.version_number
+    if brief_id is not None:
+        questionnaire = db.execute(
+            """
+            SELECT
+                q.id,
+                p.title_snapshot AS title,
+                p.description_snapshot AS description,
+                v.id AS version_id,
+                v.version_number
+            FROM project_briefs AS pb
+            JOIN questionnaire_versions AS v
+                ON v.id = pb.questionnaire_version_id
+            JOIN questionnaires AS q
+                ON q.id = v.questionnaire_id
+            JOIN questionnaire_publications AS p
+                ON p.questionnaire_version_id = v.id
+            WHERE pb.id = ?
+              AND pb.client_id = ?
+              AND q.id = ?
+            """,
+            (brief_id, client["id"], questionnaire_id)
+        ).fetchone()
 
-        FROM questionnaires q
+        if questionnaire is None:
+            abort(404)
 
-        JOIN questionnaire_versions v
-            ON v.questionnaire_id = q.id
+        rows = db.execute(
+            """
+            SELECT r.question_id, r.answer_text
+            FROM brief_responses AS r
+            JOIN questions AS q
+                ON q.id = r.question_id
+            WHERE r.brief_id = ?
+              AND q.questionnaire_version_id = ?
+            """,
+            (brief_id, questionnaire["version_id"])
+        ).fetchall()
 
-        JOIN questionnaire_publications p
-            ON p.questionnaire_version_id = v.id
+        saved_answers = {
+            str(row["question_id"]): row["answer_text"]
+            for row in rows
+        }
 
-        WHERE q.id = ?
-          AND q.status = 'active'
+    else:
+        questionnaire = db.execute(
+            """
+            SELECT
+                q.id,
+                q.title,
+                q.description,
+                v.id AS version_id,
+                v.version_number
+            FROM questionnaires AS q
+            JOIN questionnaire_versions AS v
+                ON v.questionnaire_id = q.id
+            JOIN questionnaire_publications AS p
+                ON p.questionnaire_version_id = v.id
+            WHERE q.id = ?
+              AND q.status = 'active'
+            ORDER BY v.version_number DESC
+            LIMIT 1
+            """,
+            (questionnaire_id,)
+        ).fetchone()
 
-        ORDER BY v.version_number DESC
-        LIMIT 1
-        """,
-        (questionnaire_id,)
-    ).fetchone()
+        if questionnaire is None:
+            abort(404)
 
-    if questionnaire is None:
-        abort(404)
-
-    # Load questions belonging to this version
     questions = db.execute(
         """
         SELECT
@@ -2331,33 +2114,25 @@ def client_questionnaire(questionnaire_id):
             is_required,
             option_one,
             option_two
-
         FROM questions
-
         WHERE questionnaire_version_id = ?
           AND is_active = 1
-
         ORDER BY position ASC, id ASC
         """,
         (questionnaire["version_id"],)
     ).fetchall()
 
-    # Load adaptive conditions
     rules = db.execute(
         """
         SELECT
             r.source_question_id,
             r.target_question_id,
             r.expected_answer
-
-        FROM adaptive_rules r
-
-        JOIN questions source
+        FROM adaptive_rules AS r
+        JOIN questions AS source
             ON source.id = r.source_question_id
-
-        JOIN questions target
+        JOIN questions AS target
             ON target.id = r.target_question_id
-
         WHERE r.questionnaire_version_id = ?
           AND source.questionnaire_version_id = ?
           AND target.questionnaire_version_id = ?
@@ -2371,14 +2146,248 @@ def client_questionnaire(questionnaire_id):
         )
     ).fetchall()
 
-
     return render_template(
         "client_questionnaire.html",
         questionnaire=questionnaire,
         questions=questions,
-        adaptive_rules=[dict(rule) for rule in rules]
+        adaptive_rules=[dict(rule) for rule in rules],
+        brief_id=brief_id,
+        saved_answers=saved_answers
     )
 
+
+# ==========================================
+# STEP 84.6 - SAVE CLIENT QUESTIONNAIRE DRAFT
+# ==========================================
+
+@app.route(
+    "/briefs/<int:brief_id>/answers",
+    methods=["POST"]
+)
+@role_required("client")
+def save_brief_answers(brief_id):
+    db = get_db()
+    client = current_user()
+
+    # Verify that the client owns this draft.
+    brief = db.execute(
+        """
+        SELECT id, questionnaire_version_id
+        FROM project_briefs
+        WHERE id = ?
+          AND client_id = ?
+          AND status = 'draft'
+        """,
+        (brief_id, client["id"])
+    ).fetchone()
+
+    if brief is None:
+        abort(404)
+
+    version_id = brief["questionnaire_version_id"]
+
+    version = db.execute(
+        """
+        SELECT questionnaire_id
+        FROM questionnaire_versions
+        WHERE id = ?
+        """,
+        (version_id,)
+    ).fetchone()
+
+    if version is None:
+        abort(404)
+
+    # Load active questions belonging to this version.
+    questions = db.execute(
+        """
+        SELECT
+            id,
+            question_type,
+            is_required,
+            option_one,
+            option_two
+        FROM questions
+        WHERE questionnaire_version_id = ?
+          AND is_active = 1
+        ORDER BY position ASC, id ASC
+        """,
+        (version_id,)
+    ).fetchall()
+
+    # Load adaptive rules for the same version.
+    rules = db.execute(
+        """
+        SELECT
+            source_question_id,
+            target_question_id,
+            expected_answer
+        FROM adaptive_rules
+        WHERE questionnaire_version_id = ?
+        """,
+        (version_id,)
+    ).fetchall()
+
+    rules_by_target = {
+        rule["target_question_id"]: rule
+        for rule in rules
+    }
+
+    answers = {}
+    visible = {}
+
+    required_total = 0
+    required_completed = 0
+
+    # Process questions in their saved display order.
+    for question in questions:
+        question_id = question["id"]
+        rule = rules_by_target.get(question_id)
+        applicable = True
+
+        if rule is not None:
+            source_id = rule["source_question_id"]
+            applicable = (
+                visible.get(source_id, False)
+                and answers.get(source_id, "")
+                == rule["expected_answer"]
+            )
+
+        visible[question_id] = applicable
+
+        # Ignore answers belonging to hidden questions.
+        if not applicable:
+            continue
+
+        answer = request.form.get(
+            f"answer_{question_id}", ""
+        ).strip()
+
+        if len(answer) > 5000:
+            abort(400, "An answer is too long.")
+
+        # Validate multiple-choice answers.
+        if (
+            answer
+            and question["question_type"] == "multiple_choice"
+        ):
+            if answer not in (
+                question["option_one"],
+                question["option_two"]
+            ):
+                abort(
+                    400,
+                    "Invalid multiple-choice answer."
+                )
+
+        # Validate numerical answers.
+        elif (
+            answer
+            and question["question_type"] == "number"
+        ):
+            try:
+                number = Decimal(answer)
+            except InvalidOperation:
+                abort(400, "Invalid number.")
+
+            if not number.is_finite():
+                abort(400, "Invalid number.")
+
+        # Validate date answers.
+        elif (
+            answer
+            and question["question_type"] == "date"
+        ):
+            try:
+                date.fromisoformat(answer)
+            except ValueError:
+                abort(400, "Invalid date.")
+
+        # Retain nonempty answers.
+        if answer:
+            answers[question_id] = answer
+
+        # Calculate applicable required-question progress.
+        if question["is_required"]:
+            required_total += 1
+            if answer:
+                required_completed += 1
+
+    completeness = (
+        round(required_completed * 100 / required_total)
+        if required_total
+        else 0
+    )
+
+    # Save changes together in one transaction.
+    try:
+        updated = db.execute(
+            """
+            UPDATE project_briefs
+            SET completeness_percentage = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+              AND client_id = ?
+              AND status = 'draft'
+            """,
+            (
+                completeness,
+                brief_id,
+                client["id"]
+            )
+        )
+
+        if updated.rowcount != 1:
+            db.rollback()
+            abort(
+                409,
+                "This project brief can no longer be edited."
+            )
+
+        db.execute(
+            """
+            DELETE FROM brief_responses
+            WHERE brief_id = ?
+            """,
+            (brief_id,)
+        )
+
+        for question_id, answer in answers.items():
+            db.execute(
+                """
+                INSERT INTO brief_responses (
+                    brief_id,
+                    question_id,
+                    answer_text
+                )
+                VALUES (?, ?, ?)
+                """,
+                (brief_id, question_id, answer)
+            )
+
+        db.commit()
+
+    except Exception:
+        db.rollback()
+        raise
+
+    flash(
+        "Your questionnaire draft has been saved.",
+        "success"
+    )
+
+    return redirect(
+        url_for(
+            "client_questionnaire",
+            questionnaire_id=version["questionnaire_id"],
+            brief_id=brief_id
+        )
+    )
+
+
+# ==========================================
+# RUN ELUNETTE
+# ==========================================
 
 if __name__ == "__main__":
     app.run(debug=True)
