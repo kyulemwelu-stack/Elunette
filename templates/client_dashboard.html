@@ -1,0 +1,238 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Client Dashboard | Elunette</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body class="dashboard-page">
+
+    <!-- DASHBOARD HEADER -->
+
+    <header class="dashboard-header">
+
+        <a href="/dashboard/client" class="logo"
+           aria-label="Elunette Dashboard">
+
+            <img
+                src="{{ url_for('static', filename='images/elunette-logo.png') }}"
+                alt="Elunette"
+                class="logo-img">
+        </a>
+
+        <nav class="dashboard-nav"
+             aria-label="Client navigation">
+
+            <ul>
+                <li>
+                    <a href="/dashboard/client"
+                       class="active"
+                       aria-current="page">Dashboard</a>
+                </li>
+
+                <li>
+                    <a href="/briefs">My Briefs</a>
+                </li>
+
+                <li>
+                    <a href="/notifications">Notifications</a>
+                </li>
+            </ul>
+
+        </nav>
+
+        <!-- LOGOUT -->
+
+        
+<!-- LOG OUT -->
+
+<form action="/logout" method="POST">
+
+    <input
+        type="hidden"
+        name="csrf_token"
+        value="{{ csrf_token() }}">
+
+    <button type="submit" class="logout-btn">
+        Log Out
+    </button>
+
+</form>
+
+
+    </header>
+
+
+    <!-- MAIN DASHBOARD -->
+
+    <main class="dashboard-main">
+
+        <!-- WELCOME SECTION -->
+
+        <section class="dashboard-welcome">
+
+            <p class="section-label">
+                YOUR WORKSPACE
+            </p>
+
+            <h1>Welcome to Elunette.</h1>
+
+            <p>
+                Your ideas, projects, and progress
+                all in one organised space.
+            </p>
+
+            <a href="/briefs/new" class="btn btn-primary">
+                Create New Brief
+            </a>
+
+        </section>
+
+
+        <!-- PROJECT OVERVIEW -->
+
+        <section class="dashboard-overview"
+                 aria-labelledby="overview-title">
+
+            <div class="section-header">
+
+                <h2 id="overview-title">Project Overview</h2>
+
+                <p>
+                    A quick look at your project briefs.
+                </p>
+
+            </div>
+
+            <div class="overview-grid">
+
+                <!-- TOTAL BRIEFS -->
+
+                <article class="overview-card">
+
+                    <h3>Total Briefs</h3>
+
+                    <p class="overview-number">0</p>
+
+                    <p>All your project briefs</p>
+
+                </article>
+
+
+                <!-- PENDING BRIEFS -->
+
+                <article class="overview-card">
+
+                    <h3>Pending Review</h3>
+
+                    <p class="overview-number">0</p>
+
+                    <p>Briefs awaiting review</p>
+
+                </article>
+
+
+                <!-- APPROVED BRIEFS -->
+
+                <article class="overview-card">
+
+                    <h3>Approved Briefs</h3>
+
+                    <p class="overview-number">0</p>
+
+                    <p>Successfully approved briefs</p>
+
+                </article>
+
+            </div>
+
+        </section>
+
+
+        <!-- MY PROJECT BRIEFS -->
+
+        <section class="dashboard-briefs"
+                 aria-labelledby="briefs-title">
+
+            <div class="section-header">
+
+                <h2 id="briefs-title">My Project Briefs</h2>
+
+                <a href="/briefs" class="text-link">
+                    View All Briefs
+                </a>
+
+            </div>
+
+
+            <!-- EMPTY STATE -->
+
+            <div class="empty-state">
+
+                <h3>No project briefs yet.</h3>
+
+                <p>
+                    Your project briefs will appear here
+                    once you create your first one.
+                </p>
+
+                <a href="/briefs/new" class="btn btn-secondary">
+                    Start Your First Brief
+                </a>
+
+            </div>
+
+        </section>
+
+
+        <!-- RECENT NOTIFICATIONS -->
+
+        <section class="dashboard-notifications"
+                 aria-labelledby="notifications-title">
+
+            <div class="section-header">
+
+                <h2 id="notifications-title">
+                    Recent Notifications
+                </h2>
+
+                <a href="/notifications" class="text-link">
+                    View All
+                </a>
+
+            </div>
+
+            <div class="notifications-content">
+
+                <p>
+                    You're all caught up!
+                    New notifications will appear here.
+                </p>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <!-- FOOTER -->
+
+    <footer class="dashboard-footer">
+
+        <p>
+            &copy; 2026 Elunette. All rights reserved.
+        </p>
+
+    </footer>
+
+</body>
+
+</html>

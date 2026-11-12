@@ -1,0 +1,379 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>User Management | Elunette</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body class="dashboard-page admin-page">
+
+    <!-- HEADER -->
+
+    <header class="dashboard-header">
+
+        <a href="/dashboard/admin"
+           class="logo"
+           aria-label="Elunette Administrator Dashboard">
+
+            <img
+                src="{{ url_for('static', filename='images/elunette-logo.png') }}"
+                alt="Elunette"
+                class="logo-img">
+        </a>
+
+        <nav class="dashboard-nav"
+             aria-label="Administrator navigation">
+
+            <ul>
+                <li>
+                    <a href="/dashboard/admin">Dashboard</a>
+                </li>
+
+                <li>
+                    <a href="/admin/users"
+                       class="active"
+                       aria-current="page">
+                        User Management
+                    </a>
+                </li>
+
+                <li>
+                    <a href="/admin/users/new">Create User</a>
+                </li>
+
+                <li>
+                    <a href="/notifications">Notifications</a>
+                </li>
+            </ul>
+
+        </nav>
+
+        <!-- LOGOUT -->
+
+        action="/logout"
+
+    </header>
+
+
+    <!-- MAIN CONTENT -->
+
+    <main class="dashboard-main">
+
+        <!-- PAGE INTRODUCTION -->
+
+        <section class="users-intro">
+
+            <div class="intro-content">
+
+                <p class="section-label">
+                    ACCOUNT ADMINISTRATION
+                </p>
+
+                <h1>User Management</h1>
+
+                <p>
+                    View registered accounts,
+                    manage user roles, and control
+                    access to Elunette.
+                </p>
+
+            </div>
+
+            <a href="/admin/users/new"
+               class="btn btn-primary">
+                Create User
+            </a>
+
+        </section>
+
+
+        <!-- USER OVERVIEW -->
+
+        <section class="admin-overview"
+                 aria-labelledby="users-overview-title">
+
+            <div class="section-header">
+
+                <h2 id="users-overview-title">
+                    Account Overview
+                </h2>
+
+                <p>
+                    An overview of registered
+                    accounts and their status.
+                </p>
+
+            </div>
+
+
+            <div class="overview-grid">
+
+                <article class="overview-card">
+
+                    <h3>Total Users</h3>
+
+                    <p class="overview-number">0</p>
+
+                    <p>All registered accounts</p>
+
+                </article>
+
+
+                <article class="overview-card">
+
+                    <h3>Clients</h3>
+
+                    <p class="overview-number">0</p>
+
+                    <p>Registered client accounts</p>
+
+                </article>
+
+
+                <article class="overview-card">
+
+                    <h3>Service Providers</h3>
+
+                    <p class="overview-number">0</p>
+
+                    <p>Authorised provider accounts</p>
+
+                </article>
+
+
+                <article class="overview-card">
+
+                    <h3>Inactive Accounts</h3>
+
+                    <p class="overview-number">0</p>
+
+                    <p>Accounts with disabled access</p>
+
+                </article>
+
+            </div>
+
+        </section>
+
+
+        <!-- SEARCH AND FILTERS -->
+
+        <section class="users-filters"
+                 aria-label="Search and filter user accounts">
+
+            <form action="/admin/users"
+                  method="GET"
+                  class="filter-form">
+
+                <!-- SEARCH -->
+
+                <div class="form-group">
+
+                    <label for="user-search">
+                        Search Users
+                    </label>
+
+                    <input
+                        type="search"
+                        id="user-search"
+                        name="search"
+                        placeholder="Search by name or email">
+
+                </div>
+
+
+                <!-- ROLE FILTER -->
+
+                <div class="form-group">
+
+                    <label for="role-filter">
+                        User Role
+                    </label>
+
+                    <select id="role-filter" name="role">
+
+                        <option value="">All Roles</option>
+
+                        <option value="client">
+                            Client
+                        </option>
+
+                        <option value="service_provider">
+                            Service Provider
+                        </option>
+
+                        <option value="administrator">
+                            Administrator
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <!-- ACCOUNT STATUS -->
+
+                <div class="form-group">
+
+                    <label for="status-filter">
+                        Account Status
+                    </label>
+
+                    <select id="status-filter" name="status">
+
+                        <option value="">All Statuses</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+
+                    </select>
+
+                </div>
+
+                <button type="submit"
+                        class="btn btn-secondary">
+                    Apply Filters
+                </button>
+
+            </form>
+
+        </section>
+
+
+        <!-- USER DIRECTORY -->
+
+        <section class="users-directory"
+                 aria-labelledby="directory-title">
+
+            <div class="section-header">
+
+                <p class="section-label">
+                    USER DIRECTORY
+                </p>
+
+                <h2 id="directory-title">
+                    Registered Users
+                </h2>
+
+                <p>
+                    View user accounts and
+                    manage their access settings.
+                </p>
+
+            </div>
+
+
+            <div class="table-container">
+
+                <table class="users-table">
+
+                    <caption>
+                        Elunette registered user accounts
+                    </caption>
+
+                    <thead>
+
+                        <tr>
+                            <th scope="col">Full Name</th>
+                            <th scope="col">Email Address</th>
+                            <th scope="col">Role</th>
+                            <th scope="col">Date Created</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Action</th>
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody>
+
+                        <!--
+                        Actual user records will be
+                        loaded dynamically using Flask.
+
+                        Each row will contain:
+                        - Full name
+                        - Email address
+                        - Assigned role
+                        - Registration date
+                        - Account status
+                        - Edit account link
+                        -->
+
+                        <tr>
+
+                            <td colspan="6">
+
+                                <div class="empty-state">
+
+                                    <h3>No user records displayed.</h3>
+
+                                    <p>
+                                        Registered user accounts
+                                        will appear here when
+                                        the database is connected.
+                                    </p>
+
+                                </div>
+
+                            </td>
+
+                        </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </section>
+
+
+        <!-- ACCOUNT MANAGEMENT HELP -->
+
+        <aside class="admin-help"
+               aria-labelledby="account-help-title">
+
+            <h2 id="account-help-title">
+                Managing User Accounts
+            </h2>
+
+            <p>
+                Clients can register through
+                the public registration page.
+                Service provider and administrator
+                accounts are created by authorised
+                administrators.
+            </p>
+
+            <p>
+                Administrators can manage roles
+                and account access while ensuring
+                that only authorised users can
+                access protected system features.
+            </p>
+
+        </aside>
+
+    </main>
+
+
+    <!-- FOOTER -->
+
+    <footer class="dashboard-footer">
+
+        <p>
+            &copy; 2026 Elunette. All rights reserved.
+        </p>
+
+    </footer>
+
+</body>
+
+</html>

@@ -1,0 +1,381 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Brief Preview | Elunette</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+
+</head>
+
+<body class="dashboard-page brief-preview-page">
+
+    <!-- DASHBOARD HEADER -->
+
+    <header class="dashboard-header">
+
+        <a href="/dashboard/client"
+           class="logo"
+           aria-label="Elunette Dashboard">
+
+            <img
+                src="{{ url_for('static', filename='images/elunette-logo.png') }}"
+                alt="Elunette"
+                class="logo-img">
+
+        </a>
+
+        <!-- NAVIGATION -->
+
+        <nav class="dashboard-nav"
+             aria-label="Client navigation">
+
+            <ul>
+
+                <li>
+                    <a href="/dashboard/client">
+                        Dashboard
+                    </a>
+                </li>
+
+                <li>
+                    <a href="/briefs">
+                        My Briefs
+                    </a>
+                </li>
+
+                <li>
+                    <a href="/notifications">
+                        Notifications
+                    </a>
+                </li>
+
+            </ul>
+
+        </nav>
+
+        <!-- LOGOUT -->
+
+        action="/logout"
+
+    </header>
+
+
+    <!-- MAIN CONTENT -->
+
+    <main class="dashboard-main">
+
+        <!-- PAGE INTRODUCTION -->
+
+        <section class="preview-intro">
+
+            <p class="section-label">
+                ALMOST THERE
+            </p>
+
+            <h1>Review Your Project Brief</h1>
+
+            <p>
+                Take a moment to review your project
+                information before submitting it
+                for approval.
+            </p>
+
+        </section>
+
+
+        <!-- BRIEF INFORMATION -->
+
+        <section class="brief-summary"
+                 aria-labelledby="summary-title">
+
+            <div class="section-header">
+
+                <h2 id="summary-title">
+                    Project Overview
+                </h2>
+
+                <p>
+                    A summary of your project
+                    information.
+                </p>
+
+            </div>
+
+            <div class="brief-summary-container">
+
+                <dl class="brief-information">
+
+                    <div class="brief-info-item">
+
+                        <dt>Project Title</dt>
+
+                        <dd>
+                            Your project title will
+                            appear here.
+                        </dd>
+
+                    </div>
+
+                    <div class="brief-info-item">
+
+                        <dt>Questionnaire</dt>
+
+                        <dd>
+                            Selected questionnaire
+                            details will appear here.
+                        </dd>
+
+                    </div>
+
+                    <div class="brief-info-item">
+
+                        <dt>Brief Status</dt>
+
+                        <dd>
+                            Draft
+                        </dd>
+
+                    </div>
+
+                </dl>
+
+            </div>
+
+        </section>
+
+
+        <!-- QUESTIONNAIRE RESPONSES -->
+
+        <section class="preview-responses"
+                 aria-labelledby="responses-title">
+
+            <div class="section-header">
+
+                <h2 id="responses-title">
+                    Your Project Requirements
+                </h2>
+
+                <p>
+                    Review the information provided
+                    in your questionnaire.
+                </p>
+
+            </div>
+
+
+            <div class="responses-container">
+
+                <!-- PROJECT DESCRIPTION -->
+
+                <article class="response-card">
+
+                    <h3>Project Description</h3>
+
+                    <p>
+                        Your project description
+                        will appear here.
+                    </p>
+
+                </article>
+
+
+                <!-- PROJECT TYPE -->
+
+                <article class="response-card">
+
+                    <h3>Project Type</h3>
+
+                    <p>
+                        Your selected project type
+                        will appear here.
+                    </p>
+
+                </article>
+
+
+                <!-- PROJECT BUDGET -->
+
+                <article class="response-card">
+
+                    <h3>Estimated Budget</h3>
+
+                    <p>
+                        Your estimated budget
+                        will appear here.
+                    </p>
+
+                </article>
+
+
+                <!-- COMPLETION DATE -->
+
+                <article class="response-card">
+
+                    <h3>Preferred Completion Date</h3>
+
+                    <p>
+                        Your preferred completion
+                        date will appear here.
+                    </p>
+
+                </article>
+
+
+                <!--
+                Additional applicable questions and
+                their responses will be displayed
+                dynamically during backend integration.
+
+                The questions above are examples
+                from the demonstration questionnaire.
+                -->
+
+            </div>
+
+        </section>
+
+
+        <!-- COMPLETENESS CHECK -->
+
+        <section class="completeness-section"
+                 aria-labelledby="completeness-title">
+
+            <div class="section-header">
+
+                <p class="section-label">
+                    FINAL CHECK
+                </p>
+
+                <h2 id="completeness-title">
+                    Brief Completeness
+                </h2>
+
+                <p>
+                    Elunette checks whether all
+                    applicable mandatory questions
+                    have been answered.
+                </p>
+
+            </div>
+
+
+            <div class="completeness-container">
+
+                <!-- COMPLETENESS STATUS -->
+
+                <div class="completeness-status"
+                     role="status">
+
+                    <h3>Completeness Check</h3>
+
+                    <p>
+                        Your completeness results
+                        will appear here once the
+                        questionnaire has been checked.
+                    </p>
+
+                </div>
+
+
+                <!-- MISSING INFORMATION -->
+
+                <div class="missing-fields">
+
+                    <h3>Missing Information</h3>
+
+                    <p>
+                        If any required information
+                        is missing, Elunette will
+                        identify the relevant questions
+                        so you can complete them.
+                    </p>
+
+                    <!--
+                    Missing mandatory questions
+                    will be listed here dynamically.
+                    -->
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- PREVIEW ACTIONS -->
+
+        <section class="preview-actions"
+                 aria-labelledby="actions-title">
+
+            <h2 id="actions-title">
+                Ready for the next step?
+            </h2>
+
+            <p>
+                Make sure your information is
+                accurate and complete before
+                submitting your brief.
+            </p>
+
+            <div class="action-buttons">
+
+                <a href="#"
+                   class="btn btn-secondary">
+                    Edit Responses
+                </a>
+
+                <form action="#"
+                      method="POST"
+                      class="submit-brief-form">
+
+<!-- CSRF PROTECTION -->
+
+<input
+    type="hidden"
+    name="csrf_token"
+    value="{{ csrf_token() }}">
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary"
+                        disabled>
+
+                        Submit for Review
+
+                    </button>
+
+                </form>
+
+            </div>
+
+            <p class="form-hint">
+                Submission will become available
+                after the completeness check
+                is implemented and passed.
+            </p>
+
+        </section>
+
+    </main>
+
+
+    <!-- FOOTER -->
+
+    <footer class="dashboard-footer">
+
+        <p>
+            &copy; 2026 Elunette. All rights reserved.
+        </p>
+
+    </footer>
+
+</body>
+
+</html>

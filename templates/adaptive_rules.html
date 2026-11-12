@@ -1,0 +1,633 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Adaptive Rules | Elunette</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body class="dashboard-page provider-page">
+
+    <!-- HEADER -->
+
+    <header class="dashboard-header">
+
+        <a href="/dashboard/provider"
+           class="logo"
+           aria-label="Elunette Provider Dashboard">
+
+            <img
+                src="{{ url_for('static', filename='images/elunette-logo.png') }}"
+                alt="Elunette"
+                class="logo-img">
+        </a>
+
+        <nav class="dashboard-nav"
+             aria-label="Service provider navigation">
+
+            <ul>
+                <li>
+                    <a href="/dashboard/provider">Dashboard</a>
+                </li>
+
+                <li>
+                    <a href="/provider/questionnaires"
+                       class="active"
+                       aria-current="page">
+                        Questionnaires
+                    </a>
+                </li>
+
+                <li>
+                    <a href="/provider/briefs">Client Briefs</a>
+                </li>
+
+                <li>
+                    <a href="/notifications">Notifications</a>
+                </li>
+            </ul>
+
+        </nav>
+
+        action="/logout"
+
+    </header>
+
+
+    <!-- MAIN CONTENT -->
+
+    <main class="dashboard-main">
+
+        <!-- INTRODUCTION -->
+
+        <section class="rules-intro">
+
+            <a
+                href="{{ url_for('edit_questionnaire', questionnaire_id=questionnaire['id']) }}"
+                class="back-link">
+                Back to Questionnaire Editor
+            </a>
+
+            <p class="section-label">
+                INTELLIGENT QUESTIONNAIRES
+            </p>
+
+            <h1>Adaptive Rule Configuration</h1>
+
+            <p>
+                Create rules that determine which questions
+                clients see based on their previous answers.
+            </p>
+
+        </section>
+
+
+        <!-- FEEDBACK MESSAGES -->
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+
+            {% if messages %}
+
+                <div class="auth-alerts" aria-live="polite">
+
+                    {% for category, message in messages %}
+
+                        <div
+                            class="auth-alert auth-alert--{{ category }}"
+                            role="{{ 'alert' if category == 'error' else 'status' }}">
+
+                            {{ message }}
+
+                        </div>
+
+                    {% endfor %}
+
+                </div>
+
+            {% endif %}
+
+        {% endwith %}
+
+
+        <!-- SELECTED QUESTIONNAIRE -->
+
+        <section class="rules-questionnaire"
+                 aria-labelledby="questionnaire-title">
+
+            <h2 id="questionnaire-title">
+                Selected Questionnaire
+            </h2>
+
+            <dl class="brief-information">
+
+                <div class="brief-info-item">
+
+                    <dt>Questionnaire</dt>
+
+                    <dd>
+                        {{ questionnaire['title'] }}
+                    </dd>
+
+                </div>
+
+                <div class="brief-info-item">
+
+                    <dt>Version</dt>
+
+                    <dd>
+                        Version {{ version['version_number'] }}
+                    </dd>
+
+                </div>
+
+                <div class="brief-info-item">
+
+                    <dt>Status</dt>
+
+                    <dd>
+                        {{ questionnaire['status'] | title }}
+                    </dd>
+
+                </div>
+
+            </dl>
+
+        </section>
+
+
+        <!-- ADAPTIVE RULE BUILDER -->
+
+        <section class="rule-builder-section"
+                 aria-labelledby="builder-title">
+
+            <div class="section-header">
+
+                <p class="section-label">
+                    BUILD A CONDITION
+                </p>
+
+                <h2 id="builder-title">
+                    Create an Adaptive Rule
+                </h2>
+
+                <p>
+                    Choose a controlling question, select
+                    the answer that triggers a follow-up,
+                    and choose the question to display.
+                </p>
+
+            </div>
+
+
+            {% if can_edit %}
+
+                {% if questions | length < 2 %}
+
+                    <p class="form-hint">
+                        Add at least two questions in the
+                        Questionnaire Editor before creating a rule.
+                    </p>
+
+                {% endif %}
+
+
+                <!-- RULE CONFIGURATION FORM -->
+
+                <form
+                    action="{{ url_for('manage_adaptive_rules', questionnaire_id=questionnaire['id']) }}"
+                    method="POST"
+                    class="adaptive-rule-form">
+
+                    <!-- CSRF PROTECTION -->
+
+                    <input
+                        type="hidden"
+                        name="csrf_token"
+                        value="{{ csrf_token() }}">
+
+
+                    <!-- CONTROLLING QUESTION -->
+
+                    <div class="form-group">
+
+                        <label for="rule-source-question">
+                            Controlling Question
+                        </label>
+
+                        <select
+                            id="rule-source-question"
+                            name="source_question_id"
+                            required>
+
+                            <option value="">
+                                Select a question
+                            </option>
+
+                            {% for question in questions %}
+
+                                {% if question['question_type'] == 'multiple_choice' %}
+
+                                    <option
+                                        value="{{ question['id'] }}"
+                                        data-position="{{ question['position'] }}"
+                                        data-one="{{ question['option_one'] or '' }}"
+                                        data-two="{{ question['option_two'] or '' }}">
+
+                                        {{ question['position'] }}.
+                                        {{ question['question_text'] }}
+
+                                    </option>
+
+                                {% endif %}
+
+                            {% endfor %}
+
+                        </select>
+
+                        <p class="form-hint">
+                            This must be a multiple-choice question.
+                        </p>
+
+                    </div>
+
+
+                    <!-- EXPECTED ANSWER -->
+
+                    <div class="form-group">
+
+                        <label for="rule-expected-answer">
+                            Expected Answer
+                        </label>
+
+                        <select
+                            id="rule-expected-answer"
+                            name="expected_answer"
+                            required>
+
+                            <option value="">
+                                Select a controlling question first
+                            </option>
+
+                        </select>
+
+                        <p class="form-hint">
+                            The follow-up appears when the
+                            client chooses this answer.
+                        </p>
+
+                    </div>
+
+
+                    <!-- FOLLOW-UP QUESTION -->
+
+                    <div class="form-group">
+
+                        <label for="rule-target-question">
+                            Follow-up Question
+                        </label>
+
+                        <select
+                            id="rule-target-question"
+                            name="target_question_id"
+                            required>
+
+                            <option value="">
+                                Select a follow-up question
+                            </option>
+
+                            {% for question in questions %}
+
+                                <option
+                                    value="{{ question['id'] }}"
+                                    data-position="{{ question['position'] }}">
+
+                                    {{ question['position'] }}.
+                                    {{ question['question_text'] }}
+
+                                </option>
+
+                            {% endfor %}
+
+                        </select>
+
+                        <p class="form-hint">
+                            Choose a question that comes after
+                            the controlling question.
+                        </p>
+
+                    </div>
+
+
+                    <!-- SAVE ADAPTIVE RULE -->
+
+                    <div class="form-actions">
+
+                        <button
+                            type="submit"
+                            class="btn btn-primary">
+
+                            Save Adaptive Rule
+
+                        </button>
+
+                    </div>
+
+                </form>
+
+
+            {% else %}
+
+                <p class="form-hint">
+                    This questionnaire version is locked.
+                    Deactivate the questionnaire and create
+                    a new editable version to add or change rules.
+                </p>
+
+            {% endif %}
+
+        </section>
+
+
+        <!-- CONFIGURED ADAPTIVE RULES -->
+
+        <section class="configured-rules"
+                 aria-labelledby="configured-title">
+
+            <div class="section-header">
+
+                <p class="section-label">
+                    RULE MANAGEMENT
+                </p>
+
+                <h2 id="configured-title">
+                    Configured Adaptive Rules
+                </h2>
+
+                <p>
+                    Rules saved for this questionnaire version.
+                </p>
+
+            </div>
+
+
+            <div class="table-container">
+
+                <table class="rules-table">
+
+                    <thead>
+
+                        <tr>
+                            <th scope="col">Earlier Question</th>
+                            <th scope="col">Condition</th>
+                            <th scope="col">Expected Answer</th>
+                            <th scope="col">Follow-up Question</th>
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        {% for rule in rules %}
+
+                            <tr>
+
+                                <td>
+                                    {{ rule['source_question'] }}
+                                </td>
+
+                                <td>
+                                    Equals
+                                </td>
+
+                                <td>
+                                    {{ rule['expected_answer'] }}
+                                </td>
+
+                                <td>
+                                    {{ rule['target_question'] }}
+                                </td>
+
+                            </tr>
+
+                        {% else %}
+
+                            <tr>
+
+                                <td colspan="4">
+
+                                    <div class="empty-state">
+
+                                        <h3>
+                                            No adaptive rules yet.
+                                        </h3>
+
+                                        <p>
+                                            Save a rule above to control
+                                            when a follow-up question appears.
+                                        </p>
+
+                                    </div>
+
+                                </td>
+
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </section>
+
+
+        <!-- RULE GUIDELINES -->
+
+        <aside class="rule-guidelines"
+               aria-labelledby="guidelines-title">
+
+            <h2 id="guidelines-title">
+                How Adaptive Rules Work
+            </h2>
+
+            <div class="guidelines-container">
+
+                <article class="guideline-card">
+
+                    <h3>Earlier Responses</h3>
+
+                    <p>
+                        A rule evaluates a client's answer
+                        to an earlier question.
+                    </p>
+
+                </article>
+
+
+                <article class="guideline-card">
+
+                    <h3>Conditional Display</h3>
+
+                    <p>
+                        A follow-up appears only when
+                        its condition is met.
+                    </p>
+
+                </article>
+
+
+                <article class="guideline-card">
+
+                    <h3>Completeness Checking</h3>
+
+                    <p>
+                        Only applicable mandatory questions
+                        should count toward completeness.
+                    </p>
+
+                </article>
+
+
+                <article class="guideline-card">
+
+                    <h3>Preserving Versions</h3>
+
+                    <p>
+                        Published questionnaire versions
+                        remain protected from changes.
+                    </p>
+
+                </article>
+
+            </div>
+
+        </aside>
+
+
+        <!-- PAGE ACTIONS -->
+
+        <section class="rules-page-actions"
+                 aria-label="Questionnaire navigation">
+
+            <a
+                href="{{ url_for('edit_questionnaire', questionnaire_id=questionnaire['id']) }}"
+                class="btn btn-secondary">
+
+                Back to Questionnaire Editor
+
+            </a>
+
+        </section>
+
+    </main>
+
+
+    <!-- FOOTER -->
+
+    <footer class="dashboard-footer">
+
+        <p>
+            &copy; 2026 Elunette. All rights reserved.
+        </p>
+
+    </footer>
+
+
+    <!-- ADAPTIVE QUESTION SELECTION -->
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const source = document.getElementById(
+                "rule-source-question"
+            );
+
+            const expected = document.getElementById(
+                "rule-expected-answer"
+            );
+
+            const target = document.getElementById(
+                "rule-target-question"
+            );
+
+            if (!source || !expected || !target) {
+                return;
+            }
+
+            function updateRuleFields() {
+
+                const selected = source.selectedOptions[0];
+
+                const position = Number(
+                    selected.dataset.position || 0
+                );
+
+                // Reset expected answer
+                expected.replaceChildren(
+                    new Option("Select an answer", "")
+                );
+
+                if (selected.value) {
+
+                    const answers = [
+                        selected.dataset.one,
+                        selected.dataset.two
+                    ];
+
+                    answers.forEach(function (answer) {
+
+                        if (answer) {
+                            expected.add(
+                                new Option(answer, answer)
+                            );
+                        }
+
+                    });
+                }
+
+                // Show only valid follow-up questions
+                Array.from(target.options).forEach(
+                    function (option) {
+
+                        if (!option.value) {
+                            return;
+                        }
+
+                        const targetPosition = Number(
+                            option.dataset.position || 0
+                        );
+
+                        const unavailable = (
+                            !selected.value ||
+                            targetPosition <= position
+                        );
+
+                        option.disabled = unavailable;
+                        option.hidden = unavailable;
+
+                    }
+                );
+
+                target.value = "";
+            }
+
+            source.addEventListener(
+                "change",
+                updateRuleFields
+            );
+
+            updateRuleFields();
+
+        });
+    </script>
+
+</body>
+</html>

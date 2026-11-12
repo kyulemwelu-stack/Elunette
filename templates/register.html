@@ -1,0 +1,220 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Create an Account | Elunette</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body class="auth-page">
+
+    <!-- HEADER -->
+
+    <header class="auth-header">
+
+        <a href="/" class="logo" aria-label="Elunette Home">
+            <img
+                src="{{ url_for('static', filename='images/elunette-logo.png') }}"
+                alt="Elunette"
+                class="logo-img">
+        </a>
+
+        <a href="/" class="back-home">
+            Back to Home
+        </a>
+
+    </header>
+
+
+    <!-- MAIN CONTENT -->
+
+    <main class="auth-main">
+
+        <section class="auth-container"
+                 aria-labelledby="register-title">
+
+            <!-- WELCOME MESSAGE -->
+
+            <div class="auth-intro">
+
+                <p class="section-label">
+                    YOUR JOURNEY STARTS HERE
+                </p>
+
+                <h1 id="register-title">
+                    Every great idea starts somewhere.
+                </h1>
+
+                <p class="auth-description">
+                    Create your Elunette account and take
+                    the first step towards clearer,
+                    more organised project briefs.
+                </p>
+
+            </div>
+
+
+            <!-- REGISTRATION FORM -->
+
+            <div class="auth-form-container">
+                
+<!-- LOGIN FEEDBACK MESSAGES -->
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="auth-alerts">
+            {% for category, message in messages %}
+                <div
+                    class="auth-alert auth-alert--{{ category }}"
+                    role="{{ 'alert' if category == 'error' else 'status' }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+
+
+                <form
+                    action="/register"
+                    method="POST"
+                    class="auth-form">
+
+<!-- CSRF PROTECTION -->
+
+<input
+    type="hidden"
+    name="csrf_token"
+    value="{{ csrf_token() }}">
+
+                    <!-- FULL NAME -->
+
+                    <div class="form-group">
+
+                        <label for="full-name">
+                            Full Name
+                        </label>
+
+                        <input
+                            type="text"
+                            id="full-name"
+                            name="full_name"
+                            placeholder="Enter your full name"
+                            autocomplete="name"
+                            minlength="2"
+                            maxlength="100"
+                            required>
+
+                    </div>
+
+
+                    <!-- EMAIL ADDRESS -->
+
+                    <div class="form-group">
+
+                        <label for="email">
+                            Email Address
+                        </label>
+
+                        <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            placeholder="Enter your email address"
+                            autocomplete="email"
+                            maxlength="254"
+                            required>
+
+                    </div>
+
+
+                    <!-- PASSWORD -->
+
+                    <div class="form-group">
+
+                        <label for="password">
+                            Password
+                        </label>
+
+                        <input
+                            type="password"
+                            id="password"
+                            name="password"
+                            placeholder="Create a password"
+                            autocomplete="new-password"
+                            minlength="12"
+                            required>
+
+                        <small class="form-hint">
+                            Use at least 12 characters.
+                        </small>
+
+                    </div>
+
+
+                    <!-- CONFIRM PASSWORD -->
+
+                    <div class="form-group">
+
+                        <label for="confirm-password">
+                            Confirm Password
+                        </label>
+
+                        <input
+                            type="password"
+                            id="confirm-password"
+                            name="confirm_password"
+                            placeholder="Re-enter your password"
+                            autocomplete="new-password"
+                            minlength="12"
+                            required>
+
+                    </div>
+
+
+                    <!-- SUBMIT BUTTON -->
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary auth-submit">
+
+                        Create Account
+
+                    </button>
+
+                </form>
+
+
+                <!-- LOGIN LINK -->
+
+                <p class="auth-switch">
+                    Already have an account?
+                    <a href="/login">Log In</a>
+                </p>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <!-- FOOTER -->
+
+    <footer class="auth-footer">
+
+        <p>
+            &copy; 2026 Elunette. All rights reserved.
+        </p>
+
+    </footer>
+
+</body>
+
+</html>

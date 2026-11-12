@@ -1,0 +1,410 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Elunette | Home</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+    <!-- NAVIGATION BAR -->
+
+    <header class="site-header">
+
+        <nav class="navbar" aria-label="Main navigation">
+
+            <!-- Brand Name -->
+            <a href="/" class="logo" aria-label="Elunette Home">
+                <img src="{{ url_for('static', filename='images/elunette-logo.png') }}"
+                alt="Elunette"
+                class="logo-img">
+            </a>
+
+            <!-- Navigation Links -->
+            <ul class="nav-links">
+
+                <li>
+                    <a href="/" class="active" aria-current="page">Home</a>
+                </li>
+
+                <li>
+                    <a href="/about">About</a>
+                </li>
+
+                <li>
+                    <a href="/how-it-works">How It Works</a>
+                </li>
+
+                <li>
+                    <a href="/login">Log In</a>
+                </li>
+
+                <li>
+                   <a href="/register" class="nav-btn">Sign Up</a>
+                </li>
+
+            </ul>
+
+        </nav>
+
+    </header>
+
+
+    <!-- MAIN CONTENT -->
+
+    <main>
+
+        <!-- HERO SECTION -->
+
+        <section class="hero" aria-labelledby="hero-title">
+
+            <div class="hero-content">
+
+                <p class="hero-label">
+                    A BETTER WAY TO BEGIN
+                </p>
+
+                
+                <h1 id="hero-title">
+                    Big ideas deserve a
+                    <em>beautiful beginning.</em>
+                </h1>
+
+
+                <p class="hero-description">
+                    Turn your ideas into clear, organised project briefs
+                    with a smarter and simpler approach.
+                </p>
+
+                <div class="hero-buttons">
+
+                    <a href="/register" class="btn btn-primary">
+                        Get Started
+                    </a>
+
+                    <a href="#how-it-works" class="btn btn-secondary">
+                        Explore More
+                    </a>
+                    
+
+
+
+                </div>
+
+            </div>
+
+<!-- DECORATIVE BOTANICAL ORNAMENT -->
+
+<div class="hero-ornament" aria-hidden="true">
+
+    <span class="petal petal-1"></span>
+    <span class="petal petal-2"></span>
+    <span class="petal petal-3"></span>
+    <span class="petal petal-4"></span>
+    <span class="petal petal-5"></span>
+
+    <span class="flower-center"></span>
+
+    <span class="ornament-caption">
+        IDEAS TAKE SHAPE
+    </span>
+
+</div>
+
+        </section>
+
+<!-- HOW IT WORKS SECTION -->
+
+<section id="how-it-works" class="how-it-works">
+
+    <div class="section-header">
+
+        <p class="section-label">
+            SIMPLE BY DESIGN
+        </p>
+
+        <h2>How Elunette Works</h2>
+
+        <p class="section-description">
+            From your first idea to a clear and approved
+            project brief, Elunette guides you through
+            every step.
+        </p>
+
+    </div>
+
+
+    <!-- STEPS CONTAINER -->
+
+    <div class="steps-container">
+
+        <!-- STEP 1 -->
+
+        <article class="step-card">
+
+            <span class="step-number">01</span>
+
+            <h3>Start a Brief</h3>
+
+            <p>
+                Select an available questionnaire
+                and begin describing your project.
+            </p>
+
+        </article>
+
+
+        <!-- STEP 2 -->
+
+        <article class="step-card">
+
+            <span class="step-number">02</span>
+
+            <h3>Share Your Ideas</h3>
+
+            <p>
+                Answer guided questions that adapt
+                based on your previous responses.
+            </p>
+
+        </article>
+
+
+        <!-- STEP 3 -->
+
+        <article class="step-card">
+
+            <span class="step-number">03</span>
+
+            <h3>Check & Submit</h3>
+
+            <p>
+                Review your project brief and complete
+                any missing required information
+                before submission.
+            </p>
+
+        </article>
+
+
+        <!-- STEP 4 -->
+
+        <article class="step-card">
+
+            <span class="step-number">04</span>
+
+            <h3>Review & Refine</h3>
+
+            <p>
+                Receive feedback from the service provider,
+                make revisions when requested,
+                and obtain approval.
+            </p>
+
+        </article>
+
+    </div>
+
+</section>
+
+<!-- KEY FEATURES SECTION -->
+
+<section id="features" class="features">
+
+    <div class="section-header">
+
+        <p class="section-label">
+            THOUGHTFULLY DESIGNED
+        </p>
+
+        <h2>Everything you need, beautifully organised.</h2>
+
+        <p class="section-description">
+            Elunette brings the essential tools for creating,
+            reviewing, and managing project briefs
+            into one simple platform.
+        </p>
+
+    </div>
+
+
+    <!-- FEATURES CONTAINER -->
+
+    <div class="features-container">
+
+        <!-- FEATURE 1 -->
+
+        <article class="feature-card">
+
+            <span class="feature-number">01</span>
+
+            <h3>Adaptive Questionnaires</h3>
+
+            <p>
+                Answer relevant questions that adjust
+                based on your previous responses,
+                making it easier to describe your project.
+            </p>
+
+        </article>
+
+
+        <!-- FEATURE 2 -->
+
+        <article class="feature-card">
+
+            <span class="feature-number">02</span>
+
+            <h3>Completeness Checking</h3>
+
+            <p>
+                Identify missing required information
+                before submitting your project brief,
+                helping ensure nothing important is overlooked.
+            </p>
+
+        </article>
+
+
+        <!-- FEATURE 3 -->
+
+        <article class="feature-card">
+
+            <span class="feature-number">03</span>
+
+            <h3>Brief Review &amp; Approval</h3>
+
+            <p>
+                Submit completed briefs for review,
+                receive feedback, and track approval
+                decisions in one place.
+            </p>
+
+        </article>
+
+
+        <!-- FEATURE 4 -->
+
+        <article class="feature-card">
+
+            <span class="feature-number">04</span>
+
+            <h3>Revision History</h3>
+
+            <p>
+                Keep a record of changes made to
+                project briefs, making it easier
+                to review updates and maintain clarity.
+            </p>
+
+        </article>
+
+    </div>
+
+</section>
+
+
+<!-- FINAL CALL TO ACTION -->
+
+<section class="home-cta" aria-labelledby="home-cta-title">
+
+    <div class="home-cta-content">
+
+        <p class="section-label">
+            YOUR IDEAS START HERE
+        </p>
+
+        <h2 id="home-cta-title">
+            Ready to bring clarity to your
+            <em>next project?</em>
+        </h2>
+
+        <p>
+            Turn your ideas into an organised
+            project brief, one thoughtful
+            question at a time.
+        </p>
+
+        <a href="/register" class="btn home-cta-btn">
+            Get Started <span aria-hidden="true">↗</span>
+        </a>
+
+    </div>
+
+    <div class="home-cta-detail" aria-hidden="true">
+        <span>FROM IDEA TO CLARITY</span>
+        <span>01 — 04</span>
+    </div>
+
+</section>
+
+    </main>
+
+<!-- MINIMAL ABOUT FOOTER -->
+
+<footer class="about-footer">
+
+    <div class="about-footer-inner">
+
+        <!-- BRAND AND NAVIGATION -->
+
+        <div class="about-footer-main">
+
+            <div class="about-footer-brand">
+
+                <a href="/" class="about-footer-logo"
+                   aria-label="Elunette Home">
+
+                    <span class="about-footer-wordmark">
+                        elunette.
+                    </span>
+
+                    <img
+                        src="{{ url_for('static', filename='images/elunette-icon.png') }}"
+                        alt=""
+                        class="about-footer-icon">
+
+                </a>
+
+                <p>Clearer briefs. Better beginnings.</p>
+
+            </div>
+
+
+            <!-- FOOTER LINKS -->
+
+            <nav class="about-footer-links"
+                 aria-label="Footer navigation">
+
+                <a href="/">Home</a>
+                <a href="/about">About</a>
+                <a href="/#how-it-works">How It Works</a>
+                <a href="/login">Log In</a>
+                <a href="/register">Get Started ↗</a>
+
+            </nav>
+
+        </div>
+
+
+        <!-- COPYRIGHT -->
+
+        <div class="about-footer-bottom">
+
+            <p>
+                &copy; 2026 Elunette. All rights reserved.
+            </p>
+
+            <p>Made for clearer beginnings.</p>
+
+        </div>
+
+    </div>
+
+</footer>

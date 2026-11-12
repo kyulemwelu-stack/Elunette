@@ -1,0 +1,325 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Client Briefs | Elunette</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body class="dashboard-page provider-page">
+
+    <!-- HEADER -->
+
+    <header class="dashboard-header">
+
+        <a href="/dashboard/provider"
+           class="logo"
+           aria-label="Elunette Provider Dashboard">
+
+            <img
+                src="{{ url_for('static', filename='images/elunette-logo.png') }}"
+                alt="Elunette"
+                class="logo-img">
+        </a>
+
+        <!-- PROVIDER NAVIGATION -->
+
+        <nav class="dashboard-nav"
+             aria-label="Service provider navigation">
+
+            <ul>
+                <li>
+                    <a href="/dashboard/provider">Dashboard</a>
+                </li>
+
+                <li>
+                    <a href="/provider/questionnaires">
+                        Questionnaires
+                    </a>
+                </li>
+
+                <li>
+                    <a href="/provider/briefs"
+                       class="active"
+                       aria-current="page">
+                        Client Briefs
+                    </a>
+                </li>
+
+                <li>
+                    <a href="/notifications">Notifications</a>
+                </li>
+            </ul>
+
+        </nav>
+
+        <!-- LOGOUT -->
+
+        action="/logout"
+
+    </header>
+
+
+    <!-- MAIN CONTENT -->
+
+    <main class="dashboard-main">
+
+        <!-- PAGE INTRODUCTION -->
+
+        <section class="provider-briefs-intro">
+
+            <p class="section-label">
+                CLIENT REQUIREMENTS
+            </p>
+
+            <h1>Client Project Briefs</h1>
+
+            <p>
+                Review submitted project requirements,
+                provide feedback, and manage brief
+                approval decisions in one place.
+            </p>
+
+        </section>
+
+
+        <!-- BRIEF OVERVIEW -->
+
+        <section class="dashboard-overview"
+                 aria-labelledby="overview-title">
+
+            <div class="section-header">
+
+                <h2 id="overview-title">
+                    Brief Overview
+                </h2>
+
+                <p>
+                    A summary of submitted project
+                    briefs and their review statuses.
+                </p>
+
+            </div>
+
+            <div class="overview-grid">
+
+                <article class="overview-card">
+                    <h3>Total Submitted</h3>
+                    <p class="overview-number">0</p>
+                    <p>All submitted briefs</p>
+                </article>
+
+                <article class="overview-card">
+                    <h3>Pending Review</h3>
+                    <p class="overview-number">0</p>
+                    <p>Awaiting a review decision</p>
+                </article>
+
+                <article class="overview-card">
+                    <h3>Revision Requested</h3>
+                    <p class="overview-number">0</p>
+                    <p>Awaiting client corrections</p>
+                </article>
+
+                <article class="overview-card">
+                    <h3>Approved</h3>
+                    <p class="overview-number">0</p>
+                    <p>Successfully approved briefs</p>
+                </article>
+
+            </div>
+
+        </section>
+
+
+        <!-- SEARCH AND FILTERS -->
+
+        <section class="provider-brief-filters"
+                 aria-label="Search and filter client briefs">
+
+            <form action="/provider/briefs"
+                  method="GET"
+                  class="filter-form">
+
+                <!-- SEARCH -->
+
+                <div class="form-group">
+
+                    <label for="brief-search">
+                        Search Briefs
+                    </label>
+
+                    <input
+                        type="search"
+                        id="brief-search"
+                        name="search"
+                        placeholder="Search by project or client">
+
+                </div>
+
+                <!-- STATUS -->
+
+                <div class="form-group">
+
+                    <label for="status-filter">
+                        Brief Status
+                    </label>
+
+                    <select id="status-filter" name="status">
+
+                        <option value="">All Statuses</option>
+                        <option value="submitted">Submitted</option>
+                        <option value="under_review">Under Review</option>
+
+                        <option value="revision_requested">
+                            Revision Requested
+                        </option>
+
+                        <option value="approved">Approved</option>
+
+                    </select>
+
+                </div>
+
+                <button type="submit"
+                        class="btn btn-secondary">
+                    Apply Filters
+                </button>
+
+            </form>
+
+        </section>
+
+
+        <!-- CLIENT BRIEFS LIST -->
+
+        <section class="provider-briefs-list"
+                 aria-labelledby="brief-list-title">
+
+            <div class="section-header">
+
+                <p class="section-label">
+                    PROJECT SUBMISSIONS
+                </p>
+
+                <h2 id="brief-list-title">
+                    Submitted Client Briefs
+                </h2>
+
+                <p>
+                    Select a project brief to view
+                    its requirements and review status.
+                </p>
+
+            </div>
+
+            <div class="table-container">
+
+                <table class="briefs-table">
+
+                    <caption>
+                        Submitted project briefs
+                        available for provider review.
+                    </caption>
+
+                    <thead>
+                        <tr>
+                            <th scope="col">Project Title</th>
+                            <th scope="col">Client</th>
+                            <th scope="col">Questionnaire</th>
+                            <th scope="col">Submitted On</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Action</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        <!--
+                        Flask will display actual
+                        client brief records here.
+
+                        Each record will have a
+                        link to the relevant
+                        brief review page.
+                        -->
+
+                        <tr>
+                            <td colspan="6">
+
+                                <div class="empty-state">
+
+                                    <h3>No submitted briefs yet.</h3>
+
+                                    <p>
+                                        Client briefs will appear
+                                        here when they have
+                                        been submitted.
+                                    </p>
+
+                                </div>
+
+                            </td>
+                        </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </section>
+
+
+        <!-- REVIEW GUIDANCE -->
+
+        <aside class="provider-review-help"
+               aria-labelledby="review-help-title">
+
+            <h2 id="review-help-title">
+                Reviewing Client Briefs
+            </h2>
+
+            <p>
+                Carefully review the client's
+                submitted requirements before
+                making an approval decision.
+            </p>
+
+            <p>
+                If clarification or corrections
+                are needed, request revisions
+                and provide clear feedback.
+            </p>
+
+            <p>
+                Approved briefs and their
+                revision records will remain
+                available for reference.
+            </p>
+
+        </aside>
+
+    </main>
+
+
+    <!-- FOOTER -->
+
+    <footer class="dashboard-footer">
+
+        <p>
+            &copy; 2026 Elunette. All rights reserved.
+        </p>
+
+    </footer>
+
+</body>
+
+</html>

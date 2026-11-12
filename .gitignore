@@ -1,0 +1,24 @@
+
+# Python virtual environments
+.venv/
+venv/
+
+# Python-generated files
+__pycache__/
+*.pyc
+*.pyo
+
+# Local SQLite databases
+instance/
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Development files
+.pytest_cache/
+*.log

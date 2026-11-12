@@ -1,0 +1,328 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Create New Brief | Elunette</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body class="dashboard-page">
+
+    <!-- DASHBOARD HEADER -->
+
+    <header class="dashboard-header">
+
+        <a href="/dashboard/client"
+           class="logo"
+           aria-label="Elunette Dashboard">
+
+            <img
+                src="{{ url_for('static', filename='images/elunette-logo.png') }}"
+                alt="Elunette"
+                class="logo-img">
+
+        </a>
+
+
+        <!-- NAVIGATION -->
+
+        <nav class="dashboard-nav"
+             aria-label="Client navigation">
+
+            <ul>
+
+                <li>
+                    <a href="/dashboard/client">
+                        Dashboard
+                    </a>
+                </li>
+
+                <li>
+                    <a href="/briefs"
+                       class="active">
+                        My Briefs
+                    </a>
+                </li>
+
+                <li>
+                    <a href="/notifications">
+                        Notifications
+                    </a>
+                </li>
+
+            </ul>
+
+        </nav>
+
+
+        <!-- LOGOUT -->
+
+        action="/logout"
+
+    </header>
+
+
+    <!-- MAIN CONTENT -->
+
+    <main class="dashboard-main">
+
+        <!-- PAGE INTRODUCTION -->
+
+        <section class="new-brief-intro">
+
+            <div class="intro-content">
+
+                <p class="section-label">
+                    LET'S GET STARTED
+                </p>
+
+                <h1>Create a New Project Brief</h1>
+
+                <p>
+                    Every great project starts with a clear
+                    understanding of your ideas. Let's turn
+                    yours into an organised project brief.
+                </p>
+
+                <a href="/briefs" class="back-link">
+                    Back to My Briefs
+                </a>
+
+            </div>
+
+        </section>
+
+
+        <!-- NEW BRIEF FORM -->
+
+        <section class="new-brief-section"
+                 aria-labelledby="new-brief-title">
+
+            <div class="section-header">
+
+                <h2 id="new-brief-title">
+                    Tell us about your project.
+                </h2>
+
+                <p>
+                    Give your project a name and choose
+                    the questionnaire that best suits
+                    your requirements.
+                </p>
+
+            </div>
+
+
+            <div class="new-brief-container">
+
+                <form action="/briefs/new"
+                      method="POST"
+                      class="new-brief-form">
+
+<!-- CSRF PROTECTION -->
+
+<input
+    type="hidden"
+    name="csrf_token"
+    value="{{ csrf_token() }}">
+
+                    <!-- PROJECT TITLE -->
+
+                    <div class="form-group">
+
+                        <label for="project-title">
+                            Project Title
+                        </label>
+
+                        <input
+                            type="text"
+                            id="project-title"
+                            name="project_title"
+                            placeholder="Enter your project title"
+                            maxlength="150"
+                            required>
+
+                        <small class="form-hint">
+                            Choose a short, descriptive
+                            name for your project.
+                        </small>
+
+                    </div>
+
+
+                    <!-- QUESTIONNAIRE SELECTION -->
+
+                    <div class="form-group">
+
+                        <label for="questionnaire">
+                            Select a Questionnaire
+                        </label>
+
+                        <select
+                            id="questionnaire"
+                            name="questionnaire_id"
+                            required>
+
+                            <option value=""
+                                    selected
+                                    disabled>
+                                No active questionnaires available yet
+                            </option>
+
+                            <!--
+                            Active questionnaire options
+                            will be loaded from the
+                            database using Flask.
+
+                            Each option will contain
+                            the questionnaire ID
+                            and its title.
+                            -->
+
+                        </select>
+
+                        <small class="form-hint">
+                            Questionnaires are created
+                            and activated by authorised
+                            service providers.
+                        </small>
+
+                    </div>
+
+
+                    <!-- FORM ACTIONS -->
+
+                    <div class="form-actions">
+
+                        <a href="/briefs"
+                           class="btn btn-secondary">
+                            Cancel
+                        </a>
+
+                        <button type="submit"
+                                class="btn btn-primary"
+                                disabled>
+                            Continue to Questionnaire
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+        </section>
+
+
+        <!-- HOW TO GET STARTED -->
+
+        <section class="new-brief-guide"
+                 aria-labelledby="guide-title">
+
+            <div class="section-header">
+
+                <p class="section-label">
+                    A LITTLE GUIDANCE
+                </p>
+
+                <h2 id="guide-title">
+                    What happens next?
+                </h2>
+
+            </div>
+
+
+            <div class="guide-container">
+
+                <!-- STEP 1 -->
+
+                <article class="guide-card">
+
+                    <span class="guide-number">01</span>
+
+                    <h3>Choose Your Questionnaire</h3>
+
+                    <p>
+                        Select an available questionnaire
+                        that matches your project needs.
+                    </p>
+
+                </article>
+
+
+                <!-- STEP 2 -->
+
+                <article class="guide-card">
+
+                    <span class="guide-number">02</span>
+
+                    <h3>Answer Guided Questions</h3>
+
+                    <p>
+                        Provide your project details through
+                        questions that adjust based on
+                        your previous responses.
+                    </p>
+
+                </article>
+
+
+                <!-- STEP 3 -->
+
+                <article class="guide-card">
+
+                    <span class="guide-number">03</span>
+
+                    <h3>Save Your Progress</h3>
+
+                    <p>
+                        Save your unfinished brief
+                        and return to complete it later.
+                    </p>
+
+                </article>
+
+
+                <!-- STEP 4 -->
+
+                <article class="guide-card">
+
+                    <span class="guide-number">04</span>
+
+                    <h3>Review and Submit</h3>
+
+                    <p>
+                        Check your completed brief,
+                        resolve any missing required
+                        information, and submit it
+                        for review.
+                    </p>
+
+                </article>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <!-- FOOTER -->
+
+    <footer class="dashboard-footer">
+
+        <p>
+            &copy; 2026 Elunette. All rights reserved.
+        </p>
+
+    </footer>
+
+</body>
+
+</html>

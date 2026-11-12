@@ -1,0 +1,432 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Project Questionnaire | Elunette</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body class="dashboard-page questionnaire-page">
+
+    <!-- DASHBOARD HEADER -->
+
+    <header class="dashboard-header">
+
+        <a href="/dashboard/client"
+           class="logo"
+           aria-label="Elunette Dashboard">
+
+            <img
+                src="{{ url_for('static', filename='images/elunette-logo.png') }}"
+                alt="Elunette"
+                class="logo-img">
+
+        </a>
+
+        <!-- NAVIGATION -->
+
+        <nav class="dashboard-nav"
+             aria-label="Client navigation">
+
+            <ul>
+
+                <li>
+                    <a href="/dashboard/client">
+                        Dashboard
+                    </a>
+                </li>
+
+                <li>
+                    <a href="/briefs">
+                        My Briefs
+                    </a>
+                </li>
+
+                <li>
+                    <a href="/notifications">
+                        Notifications
+                    </a>
+                </li>
+
+            </ul>
+
+        </nav>
+
+        <!-- LOGOUT -->
+
+        action="/logout"
+
+    </header>
+
+
+    <!-- MAIN CONTENT -->
+
+    <main class="dashboard-main">
+
+        <!-- PAGE INTRODUCTION -->
+
+        <section class="questionnaire-intro">
+
+            <a href="/briefs" class="back-link">
+                Back to My Briefs
+            </a>
+
+            <p class="section-label">
+                YOUR PROJECT, YOUR VISION
+            </p>
+
+            <h1>Let's understand your project.</h1>
+
+            <p>
+                Answer the questions below to help
+                create a clear and organised project
+                brief. Your responses will guide
+                the questions that follow.
+            </p>
+
+        </section>
+
+
+        <!-- QUESTIONNAIRE PROGRESS -->
+
+        <section class="questionnaire-progress"
+                 aria-labelledby="progress-title">
+
+            <div class="progress-header">
+
+                <h2 id="progress-title">
+                    Questionnaire Progress
+                </h2>
+
+                <p class="progress-text">
+                    Progress will update as you
+                    complete the questionnaire.
+                </p>
+
+            </div>
+
+            <div class="progress-container">
+
+                <progress
+                    id="questionnaire-progress"
+                    max="100"
+                    value="0">
+                    0%
+                </progress>
+
+            </div>
+
+            <p class="progress-note">
+                You can save your progress
+                and continue later.
+            </p>
+
+        </section>
+
+
+        <!-- QUESTIONNAIRE FORM -->
+
+        <section class="questionnaire-section"
+                 aria-labelledby="questionnaire-title">
+
+            <div class="section-header">
+
+                <p class="section-label">
+                    PROJECT DETAILS
+                </p>
+
+                <h2 id="questionnaire-title">
+                    Tell us about your idea.
+                </h2>
+
+                <p>
+                    The questions shown below are
+                    examples of the different
+                    response types Elunette supports.
+                </p>
+
+            </div>
+
+
+            <div class="questionnaire-container">
+
+                <!--
+                DEMONSTRATION QUESTIONNAIRE
+
+                These example questions demonstrate
+                the HTML structure.
+
+                During backend implementation,
+                authorised service providers will
+                configure the actual questions.
+                -->
+
+
+                <form
+                    action="#"
+                    method="POST"
+                    class="questionnaire-form">
+
+<!-- CSRF PROTECTION -->
+
+<input
+    type="hidden"
+    name="csrf_token"
+    value="{{ csrf_token() }}">
+
+
+                    <!-- QUESTION 1: TEXT -->
+
+                    <fieldset class="question-card">
+
+                        <legend>
+                            01. Describe your project.
+                        </legend>
+
+                        <p class="question-description">
+                            Briefly explain what you
+                            would like to accomplish.
+                        </p>
+
+                        <label for="project-description">
+                            Project Description
+                        </label>
+
+                        <textarea
+                            id="project-description"
+                            name="project_description"
+                            rows="5"
+                            placeholder="Tell us about your project..."
+                            required></textarea>
+
+                        <small class="form-hint">
+                            Required question
+                        </small>
+
+                    </fieldset>
+
+
+                    <!-- QUESTION 2: MULTIPLE CHOICE -->
+
+                    <fieldset class="question-card">
+
+                        <legend>
+                            02. What type of project
+                            are you planning?
+                        </legend>
+
+                        <p class="question-description">
+                            Select the option that
+                            best describes your project.
+                        </p>
+
+                        <div class="form-group">
+
+                            <label for="project-type">
+                                Project Type
+                            </label>
+
+                            <select
+                                id="project-type"
+                                name="project_type"
+                                required>
+
+                                <option value="">
+                                    Select an option
+                                </option>
+
+                                <option value="website">
+                                    Website
+                                </option>
+
+                                <option value="mobile-app">
+                                    Mobile Application
+                                </option>
+
+                                <option value="other">
+                                    Other
+                                </option>
+
+                            </select>
+
+                        </div>
+
+                    </fieldset>
+
+
+                    <!-- CONDITIONAL FOLLOW-UP QUESTION -->
+
+                    <div class="conditional-question"
+                         id="other-project-details"
+                         hidden>
+
+                        <fieldset class="question-card">
+
+                            <legend>
+                                Please specify your
+                                project type.
+                            </legend>
+
+                            <label for="other-project-type">
+                                Additional Details
+                            </label>
+
+                            <input
+                                type="text"
+                                id="other-project-type"
+                                name="other_project_type"
+                                placeholder="Describe your project type">
+
+                        </fieldset>
+
+                    </div>
+
+
+                    <!-- QUESTION 3: NUMBER -->
+
+                    <fieldset class="question-card">
+
+                        <legend>
+                            03. What is your estimated budget?
+                        </legend>
+
+                        <p class="question-description">
+                            Provide an approximate budget
+                            for your project in Kenyan
+                            shillings.
+                        </p>
+
+                        <label for="project-budget">
+                            Estimated Budget (KES)
+                        </label>
+
+                        <input
+                            type="number"
+                            id="project-budget"
+                            name="project_budget"
+                            min="0"
+                            step="0.01"
+                            placeholder="Enter estimated amount">
+
+                        <small class="form-hint">
+                            Optional question
+                        </small>
+
+                    </fieldset>
+
+
+                    <!-- QUESTION 4: DATE -->
+
+                    <fieldset class="question-card">
+
+                        <legend>
+                            04. When would you like
+                            your project completed?
+                        </legend>
+
+                        <p class="question-description">
+                            Select your preferred
+                            completion date.
+                        </p>
+
+                        <label for="project-deadline">
+                            Preferred Completion Date
+                        </label>
+
+                        <input
+                            type="date"
+                            id="project-deadline"
+                            name="project_deadline">
+
+                        <small class="form-hint">
+                            Optional question
+                        </small>
+
+                    </fieldset>
+
+
+                    <!-- FORM ACTIONS -->
+
+                    <div class="questionnaire-actions">
+
+                        <button
+                            type="button"
+                            class="btn btn-secondary"
+                            disabled>
+                            Save Draft
+                        </button>
+
+                        <button
+                            type="button"
+                            class="btn btn-secondary"
+                            disabled>
+                            Preview Brief
+                        </button>
+
+                        <button
+                            type="button"
+                            class="btn btn-primary"
+                            disabled>
+                            Continue
+                        </button>
+
+                    </div>
+
+                    <p class="form-hint">
+                        Questionnaire actions will
+                        become available when the
+                        application logic is connected.
+                    </p>
+
+                </form>
+
+            </div>
+
+        </section>
+
+
+        <!-- HELPFUL REMINDER -->
+
+        <aside class="questionnaire-help"
+               aria-labelledby="help-title">
+
+            <h2 id="help-title">
+                A little reminder
+            </h2>
+
+            <p>
+                Take your time and provide as much
+                relevant information as possible.
+                Clear answers help create a more
+                complete project brief.
+            </p>
+
+            <p>
+                Before submission, Elunette will
+                check for missing required information.
+            </p>
+
+        </aside>
+
+    </main>
+
+
+    <!-- FOOTER -->
+
+    <footer class="dashboard-footer">
+
+        <p>
+            &copy; 2026 Elunette. All rights reserved.
+        </p>
+
+    </footer>
+
+</body>
+
+</html>

@@ -1,0 +1,282 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+    <title>Edit Question | Elunette</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body class="dashboard-page provider-page">
+
+    <!-- HEADER -->
+
+    <header class="dashboard-header">
+
+        <a href="/dashboard/provider" class="logo">
+            <img
+                src="{{ url_for('static', filename='images/elunette-logo.png') }}"
+                alt="Elunette"
+                class="logo-img">
+        </a>
+
+        <nav class="dashboard-nav"
+             aria-label="Service provider navigation">
+
+            <ul>
+                <li>
+                    <a href="/dashboard/provider">
+                        Dashboard
+                    </a>
+                </li>
+
+                <li>
+                    <a href="/provider/questionnaires"
+                       class="active"
+                       aria-current="page">
+                        Questionnaires
+                    </a>
+                </li>
+
+                <li>
+                    <a href="/provider/briefs">
+                        Client Briefs
+                    </a>
+                </li>
+
+                <li>
+                    <a href="/notifications">
+                        Notifications
+                    </a>
+                </li>
+            </ul>
+
+        </nav>
+
+        action="/logout"
+
+    </header>
+
+
+    <!-- MAIN CONTENT -->
+
+    <main class="dashboard-main">
+
+        <section class="editor-intro">
+
+            <a
+                href="{{ url_for('edit_questionnaire', questionnaire_id=questionnaire['id']) }}"
+                class="back-link">
+                Back to Questionnaire
+            </a>
+
+            <p class="section-label">
+                QUESTION MANAGEMENT
+            </p>
+
+            <h1>Edit Question</h1>
+
+            <p>
+                Update a question in
+                {{ questionnaire["title"] }}.
+            </p>
+
+        </section>
+
+
+        <section class="editor-questions">
+
+            <div class="question-builder">
+
+                <h3>Question Details</h3>
+
+                <!-- FEEDBACK MESSAGES -->
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% for category, message in messages %}
+
+                        <p class="editor-alert editor-alert--{{ category }}"
+                           role="alert">
+                            {{ message }}
+                        </p>
+
+                    {% endfor %}
+                {% endwith %}
+
+
+                <form
+                    action="{{ url_for('edit_question', questionnaire_id=questionnaire['id'], question_id=question['id']) }}"
+                    method="POST"
+                    class="question-builder-form">
+
+                    <input
+                        type="hidden"
+                        name="csrf_token"
+                        value="{{ csrf_token() }}">
+
+
+                    <!-- QUESTION TEXT -->
+
+                    <div class="form-group">
+
+                        <label for="question-text">
+                            Question Text
+                        </label>
+
+                        <textarea
+                            id="question-text"
+                            name="question_text"
+                            rows="3"
+                            maxlength="500"
+                            required>{{ question["question_text"] }}</textarea>
+
+                    </div>
+
+
+                    <!-- QUESTION TYPE -->
+
+                    <div class="form-group">
+
+                        <label for="question-type">
+                            Question Type
+                        </label>
+
+                        <select
+                            id="question-type"
+                            name="question_type"
+                            required>
+
+                            {% for value, label in [
+                                ("text", "Text"),
+                                ("multiple_choice", "Multiple Choice"),
+                                ("number", "Number"),
+                                ("date", "Date")
+                            ] %}
+
+                                <option
+                                    value="{{ value }}"
+                                    {% if question["question_type"] == value %}
+                                        selected
+                                    {% endif %}>
+                                    {{ label }}
+                                </option>
+
+                            {% endfor %}
+
+                        </select>
+
+                    </div>
+
+
+                    <!-- MULTIPLE CHOICE -->
+
+                    <fieldset class="question-options">
+
+                        <legend>
+                            Multiple Choice Options
+                        </legend>
+
+                        <div class="form-group">
+
+                            <label for="option-one">
+                                Option One
+                            </label>
+
+                            <input
+                                type="text"
+                                id="option-one"
+                                name="option_one"
+                                maxlength="150"
+                                value="{{ question['option_one'] or '' }}">
+
+                        </div>
+
+                        <div class="form-group">
+
+                            <label for="option-two">
+                                Option Two
+                            </label>
+
+                            <input
+                                type="text"
+                                id="option-two"
+                                name="option_two"
+                                maxlength="150"
+                                value="{{ question['option_two'] or '' }}">
+
+                        </div>
+
+                        <p class="form-hint">
+                            Complete both options for
+                            multiple-choice questions.
+                        </p>
+
+                    </fieldset>
+
+
+                    <!-- REQUIRED QUESTION -->
+
+                    <div class="checkbox-group">
+
+                        <input
+                            type="checkbox"
+                            id="is-required"
+                            name="is_required"
+                            value="1"
+                            {% if question["is_required"] %}
+                                checked
+                            {% endif %}>
+
+                        <label for="is-required">
+                            This question is required
+                        </label>
+
+                    </div>
+
+
+                    <!-- ACTION BUTTONS -->
+
+                    <div class="form-actions">
+
+                        <a
+                            href="{{ url_for('edit_questionnaire', questionnaire_id=questionnaire['id']) }}"
+                            class="btn btn-secondary">
+                            Cancel
+                        </a>
+
+                        <button
+                            type="submit"
+                            class="btn btn-primary">
+                            Save Changes
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <!-- FOOTER -->
+
+    <footer class="dashboard-footer">
+        <p>
+            &copy; 2026 Elunette. All rights reserved.
+        </p>
+    </footer>
+
+</body>
+</html>

@@ -1,0 +1,332 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>My Project Briefs | Elunette</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body class="dashboard-page">
+
+    <!-- DASHBOARD HEADER -->
+
+    <header class="dashboard-header">
+
+        <a href="/dashboard/client" class="logo"
+           aria-label="Elunette Dashboard">
+
+            <img
+                src="{{ url_for('static', filename='images/elunette-logo.png') }}"
+                alt="Elunette"
+                class="logo-img">
+
+        </a>
+
+        <!-- NAVIGATION -->
+
+        <nav class="dashboard-nav"
+             aria-label="Client navigation">
+
+            <ul>
+
+                <li>
+                    <a href="/dashboard/client">Dashboard</a>
+                </li>
+
+                <li>
+                    <a href="/briefs"
+                       class="active"
+                       aria-current="page">My Briefs</a>
+                </li>
+
+                <li>
+                    <a href="/notifications">Notifications</a>
+                </li>
+
+            </ul>
+
+        </nav>
+
+        <!-- LOGOUT -->
+
+        action="/logout"
+    </header>
+
+
+    <!-- MAIN CONTENT -->
+
+    <main class="dashboard-main">
+
+        <!-- PAGE INTRODUCTION -->
+
+        <section class="briefs-intro">
+
+            <div class="briefs-intro-content">
+
+                <p class="section-label">
+                    YOUR PROJECTS
+                </p>
+
+                <h1>My Project Briefs</h1>
+
+                <p>
+                    Keep track of your ideas, manage
+                    your project briefs, and follow
+                    their progress in one place.
+                </p>
+
+            </div>
+
+            <a href="/briefs/new" class="btn btn-primary">
+                Create New Brief
+            </a>
+
+        </section>
+
+
+        <!-- BRIEF FILTERS -->
+
+        <section class="briefs-filter-section"
+                 aria-label="Search and filter project briefs">
+
+            <form action="/briefs"
+                  method="GET"
+                  class="briefs-filter-form">
+
+                <!-- SEARCH FIELD -->
+
+                <div class="filter-group">
+
+                    <label for="brief-search">
+                        Search Briefs
+                    </label>
+
+                    <input
+                        type="search"
+                        id="brief-search"
+                        name="search"
+                        placeholder="Search by project title">
+
+                </div>
+
+
+                <!-- STATUS FILTER -->
+
+                <div class="filter-group">
+
+                    <label for="brief-status">
+                        Filter by Status
+                    </label>
+
+                    <select id="brief-status" name="status">
+
+                        <option value="">All Statuses</option>
+
+                        <option value="draft">
+                            Draft
+                        </option>
+
+                        <option value="submitted">
+                            Submitted
+                        </option>
+
+                        <option value="under_review">
+                            Under Review
+                        </option>
+
+                        <option value="revision_requested">
+                            Revision Requested
+                        </option>
+
+                        <option value="approved">
+                            Approved
+                        </option>
+
+                    </select>
+
+                </div>
+
+                <button type="submit"
+                        class="btn btn-secondary">
+                    Apply Filters
+                </button>
+
+            </form>
+
+        </section>
+
+
+        <!-- PROJECT BRIEFS LIST -->
+
+        <section class="briefs-list-section"
+                 aria-labelledby="briefs-list-title">
+
+            <div class="section-header">
+
+                <h2 id="briefs-list-title">
+                    All Project Briefs
+                </h2>
+
+                <p>
+                    Your saved and submitted briefs
+                    will appear below.
+                </p>
+
+            </div>
+
+
+            <!-- BRIEFS TABLE -->
+
+            <div class="table-container">
+
+                <table class="briefs-table">
+
+                    <thead>
+
+                        <tr>
+                            <th scope="col">Project Title</th>
+                            <th scope="col">Questionnaire</th>
+                            <th scope="col">Last Updated</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Action</th>
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        <!--
+                        Brief records will be displayed
+                        dynamically using Flask and SQLite.
+                        -->
+
+                        <tr>
+
+                            <td colspan="5">
+
+                                <div class="empty-state">
+
+                                    <h3>No project briefs yet.</h3>
+
+                                    <p>
+                                        You haven't created any
+                                        project briefs. Start by
+                                        creating your first one.
+                                    </p>
+
+                                    <a href="/briefs/new"
+                                       class="btn btn-primary">
+                                        Create Your First Brief
+                                    </a>
+
+                                </div>
+
+                            </td>
+
+                        </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </section>
+
+
+        <!-- HELPFUL INFORMATION -->
+
+        <section class="briefs-help"
+                 aria-labelledby="briefs-help-title">
+
+            <div class="help-container">
+
+                <h2 id="briefs-help-title">
+                    Understanding Your Brief Status
+                </h2>
+
+                <div class="status-guide">
+
+                    <article class="status-item">
+
+                        <h3>Draft</h3>
+
+                        <p>
+                            Your brief is still being prepared.
+                            You can continue editing it.
+                        </p>
+
+                    </article>
+
+                    <article class="status-item">
+
+                        <h3>Submitted</h3>
+
+                        <p>
+                            Your brief has been submitted
+                            and is awaiting review.
+                        </p>
+
+                    </article>
+
+                    <article class="status-item">
+
+                        <h3>Under Review</h3>
+
+                        <p>
+                            The service provider is reviewing
+                            your project requirements.
+                        </p>
+
+                    </article>
+
+                    <article class="status-item">
+
+                        <h3>Revision Requested</h3>
+
+                        <p>
+                            Changes or additional information
+                            have been requested.
+                        </p>
+
+                    </article>
+
+                    <article class="status-item">
+
+                        <h3>Approved</h3>
+
+                        <p>
+                            Your project brief has been
+                            reviewed and approved.
+                        </p>
+
+                    </article>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <!-- FOOTER -->
+
+    <footer class="dashboard-footer">
+
+        <p>
+            &copy; 2026 Elunette. All rights reserved.
+        </p>
+
+    </footer>
+
+</body>
+
+</html>

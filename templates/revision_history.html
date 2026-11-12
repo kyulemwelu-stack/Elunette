@@ -1,0 +1,415 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Revision History | Elunette</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body class="dashboard-page revision-history-page">
+
+    <!-- DASHBOARD HEADER -->
+
+    <header class="dashboard-header">
+
+        <a href="/dashboard/client"
+           class="logo"
+           aria-label="Elunette Dashboard">
+
+            <img
+                src="{{ url_for('static', filename='images/elunette-logo.png') }}"
+                alt="Elunette"
+                class="logo-img">
+
+        </a>
+
+        <!-- NAVIGATION -->
+
+        <nav class="dashboard-nav"
+             aria-label="Client navigation">
+
+            <ul>
+
+                <li>
+                    <a href="/dashboard/client">
+                        Dashboard
+                    </a>
+                </li>
+
+                <li>
+                    <a href="/briefs"
+                       class="active"
+                       aria-current="page">
+                        My Briefs
+                    </a>
+                </li>
+
+                <li>
+                    <a href="/notifications">
+                        Notifications
+                    </a>
+                </li>
+
+            </ul>
+
+        </nav>
+
+
+        <!-- LOGOUT -->
+
+        action="/logout"
+
+    </header>
+
+
+    <!-- MAIN CONTENT -->
+
+    <main class="dashboard-main">
+
+        <!-- PAGE INTRODUCTION -->
+
+        <section class="revision-intro">
+
+            <a href="/briefs" class="back-link">
+                Back to My Briefs
+            </a>
+
+            <p class="section-label">
+                EVERY CHANGE MATTERS
+            </p>
+
+            <h1>Revision History</h1>
+
+            <p>
+                Follow the changes made to your
+                project brief and keep track of
+                its development over time.
+            </p>
+
+        </section>
+
+
+        <!-- PROJECT INFORMATION -->
+
+        <section class="revision-project"
+                 aria-labelledby="project-title">
+
+            <div class="section-header">
+
+                <h2 id="project-title">
+                    Project Information
+                </h2>
+
+                <p>
+                    The project brief associated
+                    with this revision history.
+                </p>
+
+            </div>
+
+
+            <dl class="brief-information">
+
+                <div class="brief-info-item">
+
+                    <dt>Project Title</dt>
+
+                    <dd>
+                        Project title will appear here.
+                    </dd>
+
+                </div>
+
+
+                <div class="brief-info-item">
+
+                    <dt>Current Status</dt>
+
+                    <dd>
+                        Status will appear here.
+                    </dd>
+
+                </div>
+
+
+                <div class="brief-info-item">
+
+                    <dt>Current Version</dt>
+
+                    <dd>
+                        Version information will
+                        appear here.
+                    </dd>
+
+                </div>
+
+
+                <div class="brief-info-item">
+
+                    <dt>Last Updated</dt>
+
+                    <dd>
+                        Last updated date will
+                        appear here.
+                    </dd>
+
+                </div>
+
+            </dl>
+
+        </section>
+
+
+        <!-- REVISION HISTORY TABLE -->
+
+        <section class="revision-records"
+                 aria-labelledby="history-title">
+
+            <div class="section-header">
+
+                <p class="section-label">
+                    CHANGE RECORDS
+                </p>
+
+                <h2 id="history-title">
+                    Recorded Revisions
+                </h2>
+
+                <p>
+                    View the details of changes
+                    made to your project brief.
+                </p>
+
+            </div>
+
+
+            <div class="table-container">
+
+                <table class="revision-table">
+
+                    <caption>
+                        Revision records for the
+                        selected project brief.
+                    </caption>
+
+                    <thead>
+
+                        <tr>
+
+                            <th scope="col">
+                                Version
+                            </th>
+
+                            <th scope="col">
+                                Date Modified
+                            </th>
+
+                            <th scope="col">
+                                Modified By
+                            </th>
+
+                            <th scope="col">
+                                Change Summary
+                            </th>
+
+                            <th scope="col">
+                                Action
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody>
+
+                        <!--
+                        Revision records will be
+                        loaded dynamically using
+                        Flask and SQLite.
+
+                        Each record will contain:
+                        - Revision version
+                        - Date and time
+                        - User responsible
+                        - Summary of changes
+                        - A link to revision details
+                        -->
+
+                        <tr>
+
+                            <td colspan="5">
+
+                                <div class="empty-state">
+
+                                    <h3>
+                                        No revisions recorded yet.
+                                    </h3>
+
+                                    <p>
+                                        Once changes to your
+                                        project brief are recorded,
+                                        they will appear here.
+                                    </p>
+
+                                </div>
+
+                            </td>
+
+                        </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </section>
+
+
+        <!-- REVISION DETAILS -->
+
+        <section class="revision-details"
+                 aria-labelledby="revision-details-title">
+
+            <div class="section-header">
+
+                <p class="section-label">
+                    A CLOSER LOOK
+                </p>
+
+                <h2 id="revision-details-title">
+                    Revision Details
+                </h2>
+
+                <p>
+                    Review the information changed
+                    in a selected revision.
+                </p>
+
+            </div>
+
+
+            <div class="revision-details-container">
+
+                <!-- SELECTED REVISION -->
+
+                <article class="revision-detail-card">
+
+                    <h3>Selected Revision</h3>
+
+                    <p>
+                        Select a revision record
+                        to view its details.
+                    </p>
+
+                </article>
+
+
+                <!-- CHANGES MADE -->
+
+                <article class="revision-detail-card">
+
+                    <h3>Changes Made</h3>
+
+                    <p>
+                        Modified questions and
+                        the recorded changes to
+                        their responses will
+                        appear here.
+                    </p>
+
+                    <!--
+                    The backend will retrieve
+                    the changes associated
+                    with the selected revision.
+                    -->
+
+                </article>
+
+
+                <!-- REASON FOR REVISION -->
+
+                <article class="revision-detail-card">
+
+                    <h3>Revision Notes</h3>
+
+                    <p>
+                        Available revision notes
+                        or related review feedback
+                        will appear here.
+                    </p>
+
+                </article>
+
+            </div>
+
+        </section>
+
+
+        <!-- REVISION INFORMATION -->
+
+        <aside class="revision-help"
+               aria-labelledby="revision-help-title">
+
+            <h2 id="revision-help-title">
+                Why track revisions?
+            </h2>
+
+            <p>
+                Revision tracking helps clients
+                and service providers understand
+                how project requirements have
+                changed over time.
+            </p>
+
+            <p>
+                Each recorded revision provides
+                a history of updates, supporting
+                transparency and accountability.
+            </p>
+
+        </aside>
+
+
+        <!-- PAGE ACTIONS -->
+
+        <section class="revision-actions"
+                 aria-label="Revision history navigation">
+
+            <a href="/briefs"
+               class="btn btn-secondary">
+                Back to My Briefs
+            </a>
+
+            <!--
+            A link back to the selected
+            brief's details page will
+            be added during Flask integration.
+            -->
+
+        </section>
+
+    </main>
+
+
+    <!-- FOOTER -->
+
+    <footer class="dashboard-footer">
+
+        <p>
+            &copy; 2026 Elunette. All rights reserved.
+        </p>
+
+    </footer>
+
+</body>
+
+</html>

@@ -1,0 +1,447 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Review Project Brief | Elunette</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body class="dashboard-page provider-page review-page">
+
+    <!-- HEADER -->
+
+    <header class="dashboard-header">
+
+        <a href="/dashboard/provider"
+           class="logo"
+           aria-label="Elunette Provider Dashboard">
+
+            <img
+                src="{{ url_for('static', filename='images/elunette-logo.png') }}"
+                alt="Elunette"
+                class="logo-img">
+        </a>
+
+        <nav class="dashboard-nav"
+             aria-label="Service provider navigation">
+
+            <ul>
+                <li>
+                    <a href="/dashboard/provider">Dashboard</a>
+                </li>
+
+                <li>
+                    <a href="/provider/questionnaires">
+                        Questionnaires
+                    </a>
+                </li>
+
+                <li>
+                    <a href="/provider/briefs"
+                       class="active"
+                       aria-current="page">
+                        Client Briefs
+                    </a>
+                </li>
+
+                <li>
+                    <a href="/notifications">Notifications</a>
+                </li>
+            </ul>
+
+        </nav>
+
+        action="/logout"
+
+    </header>
+
+
+    <!-- MAIN CONTENT -->
+
+    <main class="dashboard-main">
+
+        <!-- PAGE INTRODUCTION -->
+
+        <section class="review-intro">
+
+            <a href="/provider/briefs" class="back-link">
+                Back to Client Briefs
+            </a>
+
+            <p class="section-label">
+                PROJECT EVALUATION
+            </p>
+
+            <h1>Review Project Brief</h1>
+
+            <p>
+                Examine the submitted project
+                requirements and provide a clear,
+                informed review decision.
+            </p>
+
+        </section>
+
+
+        <!-- PROJECT INFORMATION -->
+
+        <section class="review-project-details"
+                 aria-labelledby="project-details-title">
+
+            <div class="section-header">
+
+                <h2 id="project-details-title">
+                    Project Information
+                </h2>
+
+            </div>
+
+            <dl class="brief-information">
+
+                <div class="brief-info-item">
+                    <dt>Project Title</dt>
+                    <dd>Project title will appear here.</dd>
+                </div>
+
+                <div class="brief-info-item">
+                    <dt>Client Name</dt>
+                    <dd>Client name will appear here.</dd>
+                </div>
+
+                <div class="brief-info-item">
+                    <dt>Questionnaire</dt>
+                    <dd>Questionnaire title will appear here.</dd>
+                </div>
+
+                <div class="brief-info-item">
+                    <dt>Questionnaire Version</dt>
+                    <dd>Version details will appear here.</dd>
+                </div>
+
+                <div class="brief-info-item">
+                    <dt>Submission Date</dt>
+                    <dd>Submission date will appear here.</dd>
+                </div>
+
+                <div class="brief-info-item">
+                    <dt>Brief Status</dt>
+                    <dd>
+                        <span class="status-badge">
+                            Status will appear here.
+                        </span>
+                    </dd>
+                </div>
+
+            </dl>
+
+        </section>
+
+
+        <!-- CLIENT REQUIREMENTS -->
+
+        <section class="review-requirements"
+                 aria-labelledby="requirements-title">
+
+            <div class="section-header">
+
+                <p class="section-label">
+                    CLIENT RESPONSES
+                </p>
+
+                <h2 id="requirements-title">
+                    Project Requirements
+                </h2>
+
+                <p>
+                    Review the client's answers
+                    to the applicable questionnaire
+                    questions.
+                </p>
+
+            </div>
+
+            <div class="requirements-container">
+
+                <!--
+                Actual question-and-answer records
+                will be displayed here.
+
+                Answers are read-only for providers.
+                Questions will come from the
+                questionnaire version used
+                by the client.
+                -->
+
+                <div class="empty-state">
+
+                    <h3>Project responses</h3>
+
+                    <p>
+                        The client's submitted answers
+                        will appear here when a
+                        brief is selected.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- COMPLETENESS INFORMATION -->
+
+        <section class="review-completeness"
+                 aria-labelledby="completeness-title">
+
+            <div class="section-header">
+
+                <p class="section-label">
+                    INFORMATION CHECK
+                </p>
+
+                <h2 id="completeness-title">
+                    Brief Completeness
+                </h2>
+
+            </div>
+
+            <div class="completeness-container">
+
+                <h3>Completeness Status</h3>
+
+                <p>
+                    The results of the mandatory
+                    information check will appear here.
+                </p>
+
+                <!--
+                The backend will verify all
+                applicable mandatory responses
+                before allowing approval.
+                -->
+
+            </div>
+
+        </section>
+
+
+        <!-- PREVIOUS REVIEW DECISIONS -->
+
+        <section class="review-history"
+                 aria-labelledby="history-title">
+
+            <div class="section-header">
+
+                <h2 id="history-title">
+                    Previous Review Decisions
+                </h2>
+
+                <p>
+                    View earlier feedback and
+                    decisions for this brief.
+                </p>
+
+            </div>
+
+            <div class="review-history-container">
+
+                <p>
+                    Previous review decisions
+                    will appear here.
+                </p>
+
+            </div>
+
+        </section>
+
+
+        <!-- APPROVAL SECTION -->
+
+        <section class="approval-section"
+                 aria-labelledby="approval-title">
+
+            <div class="section-header">
+
+                <p class="section-label">
+                    FINAL DECISION
+                </p>
+
+                <h2 id="approval-title">
+                    Review &amp; Approval
+                </h2>
+
+                <p>
+                    Approve the brief when its
+                    requirements are satisfactory,
+                    or request revisions when
+                    additional information is needed.
+                </p>
+
+            </div>
+
+
+            <div class="decision-container">
+
+                <!-- APPROVE BRIEF -->
+
+                <article class="decision-card">
+
+                    <h3>Approve Project Brief</h3>
+
+                    <p>
+                        Confirm that the submitted
+                        requirements have been reviewed
+                        and are acceptable.
+                    </p>
+
+                    <form action=""
+                          method="POST"
+                          class="approval-form">
+
+<!-- CSRF PROTECTION -->
+
+<input
+    type="hidden"
+    name="csrf_token"
+    value="{{ csrf_token() }}">
+
+                        <div class="form-group">
+
+                            <label for="approval-comment">
+                                Approval Comment (Optional)
+                            </label>
+
+                            <textarea
+                                id="approval-comment"
+                                name="approval_comment"
+                                rows="4"
+                                placeholder="Add an optional approval note"></textarea>
+
+                        </div>
+
+                        <button
+                            type="submit"
+                            name="decision"
+                            value="approve"
+                            class="btn btn-primary"
+                            disabled>
+                            Approve Brief
+                        </button>
+
+                    </form>
+
+                </article>
+
+
+                <!-- REQUEST REVISIONS -->
+
+                <article class="decision-card">
+
+                    <h3>Request Revisions</h3>
+
+                    <p>
+                        Explain which requirements
+                        need clarification or
+                        correction before approval.
+                    </p>
+
+                    <form action=""
+                          method="POST"
+                          class="revision-request-form">
+
+<!-- CSRF PROTECTION -->
+
+<input
+    type="hidden"
+    name="csrf_token"
+    value="{{ csrf_token() }}">
+
+                        <div class="form-group">
+
+                            <label for="revision-comments">
+                                Revision Feedback
+                            </label>
+
+                            <textarea
+                                id="revision-comments"
+                                name="revision_comments"
+                                rows="5"
+                                placeholder="Explain the changes required"
+                                required></textarea>
+
+                        </div>
+
+                        <button
+                            type="submit"
+                            name="decision"
+                            value="request_revision"
+                            class="btn btn-secondary"
+                            disabled>
+                            Request Revisions
+                        </button>
+
+                    </form>
+
+                </article>
+
+            </div>
+
+            <p class="form-hint">
+                Review decisions will become available
+                when the backend and permissions
+                are implemented.
+            </p>
+
+        </section>
+
+
+        <!-- REVIEW GUIDANCE -->
+
+        <aside class="review-guidance"
+               aria-labelledby="guidance-title">
+
+            <h2 id="guidance-title">
+                Before Making a Decision
+            </h2>
+
+            <p>
+                Review the project requirements
+                carefully and ensure all applicable
+                mandatory information is complete.
+            </p>
+
+            <p>
+                When requesting revisions, provide
+                specific comments to help the
+                client understand what to change.
+            </p>
+
+            <p>
+                Elunette will record each decision,
+                its date, and the responsible reviewer.
+            </p>
+
+        </aside>
+
+    </main>
+
+
+    <!-- FOOTER -->
+
+    <footer class="dashboard-footer">
+        <p>
+            &copy; 2026 Elunette. All rights reserved.
+        </p>
+    </footer>
+
+</body>
+
+</html>

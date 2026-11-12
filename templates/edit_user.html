@@ -1,0 +1,426 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Edit User | Elunette</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body class="dashboard-page admin-page">
+
+    <!-- HEADER -->
+
+    <header class="dashboard-header">
+
+        <a href="/dashboard/admin"
+           class="logo"
+           aria-label="Elunette Administrator Dashboard">
+
+            <img
+                src="{{ url_for('static', filename='images/elunette-logo.png') }}"
+                alt="Elunette"
+                class="logo-img">
+        </a>
+
+
+        <!-- ADMINISTRATOR NAVIGATION -->
+
+        <nav class="dashboard-nav"
+             aria-label="Administrator navigation">
+
+            <ul>
+
+                <li>
+                    <a href="/dashboard/admin">Dashboard</a>
+                </li>
+
+                <li>
+                    <a href="/admin/users"
+                       class="active"
+                       aria-current="page">
+                        User Management
+                    </a>
+                </li>
+
+                <li>
+                    <a href="/admin/users/new">Create User</a>
+                </li>
+
+                <li>
+                    <a href="/notifications">Notifications</a>
+                </li>
+
+            </ul>
+
+        </nav>
+
+
+        <!-- LOGOUT -->
+
+        action="/logout"
+    </header>
+
+
+    <!-- MAIN CONTENT -->
+
+    <main class="dashboard-main">
+
+        <!-- PAGE INTRODUCTION -->
+
+        <section class="edit-user-intro">
+
+            <a href="/admin/users" class="back-link">
+                Back to User Management
+            </a>
+
+            <p class="section-label">
+                ACCOUNT SETTINGS
+            </p>
+
+            <h1>Edit User Account</h1>
+
+            <p>
+                Update user information,
+                manage assigned roles, and
+                control account access.
+            </p>
+
+        </section>
+
+
+        <!-- SELECTED USER INFORMATION -->
+
+        <section class="user-summary"
+                 aria-labelledby="user-summary-title">
+
+            <div class="section-header">
+
+                <h2 id="user-summary-title">
+                    Selected Account
+                </h2>
+
+                <p>
+                    Review the account's existing
+                    information before making changes.
+                </p>
+
+            </div>
+
+
+            <dl class="brief-information">
+
+                <div class="brief-info-item">
+
+                    <dt>Account Holder</dt>
+
+                    <dd>
+                        User name will appear here.
+                    </dd>
+
+                </div>
+
+
+                <div class="brief-info-item">
+
+                    <dt>Email Address</dt>
+
+                    <dd>
+                        Email address will appear here.
+                    </dd>
+
+                </div>
+
+
+                <div class="brief-info-item">
+
+                    <dt>Date Created</dt>
+
+                    <dd>
+                        Account creation date
+                        will appear here.
+                    </dd>
+
+                </div>
+
+
+                <div class="brief-info-item">
+
+                    <dt>Current Role</dt>
+
+                    <dd>
+                        Assigned role will appear here.
+                    </dd>
+
+                </div>
+
+
+                <div class="brief-info-item">
+
+                    <dt>Account Status</dt>
+
+                    <dd>
+                        Account status will appear here.
+                    </dd>
+
+                </div>
+
+            </dl>
+
+        </section>
+
+
+        <!-- EDIT ACCOUNT FORM -->
+
+        <section class="edit-user-section"
+                 aria-labelledby="edit-user-title">
+
+            <div class="section-header">
+
+                <h2 id="edit-user-title">
+                    Update Account Information
+                </h2>
+
+                <p>
+                    Make the necessary changes
+                    to the selected user account.
+                </p>
+
+            </div>
+
+
+            <!--
+            During Flask implementation,
+            this form will use the selected
+            user's unique ID in its URL.
+            -->
+
+            <form action=""
+                  method="POST"
+                  class="admin-user-form">
+
+
+                <!-- PERSONAL INFORMATION -->
+
+                <fieldset class="form-section">
+
+                    <legend>
+                        Personal Information
+                    </legend>
+
+
+                    <!-- FULL NAME -->
+
+                    <div class="form-group">
+
+                        <label for="full-name">
+                            Full Name
+                        </label>
+
+                        <input
+                            type="text"
+                            id="full-name"
+                            name="full_name"
+                            placeholder="Current name will appear here"
+                            autocomplete="name"
+                            minlength="2"
+                            maxlength="100"
+                            required>
+
+                    </div>
+
+
+                    <!-- EMAIL -->
+
+                    <div class="form-group">
+
+                        <label for="email">
+                            Email Address
+                        </label>
+
+                        <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            placeholder="Current email will appear here"
+                            autocomplete="email"
+                            maxlength="254"
+                            required>
+
+                    </div>
+
+                </fieldset>
+
+
+                <!-- ROLE AND ACCOUNT STATUS -->
+
+                <fieldset class="form-section">
+
+                    <legend>
+                        Role and Account Status
+                    </legend>
+
+
+                    <!-- USER ROLE -->
+
+                    <div class="form-group">
+
+                        <label for="user-role">
+                            User Role
+                        </label>
+
+                        <select
+                            id="user-role"
+                            name="role"
+                            required>
+
+                            <option value=""
+                                    selected
+                                    disabled>
+                                Select account role
+                            </option>
+
+                            <option value="client">
+                                Client
+                            </option>
+
+                            <option value="service_provider">
+                                Service Provider
+                            </option>
+
+                            <option value="administrator">
+                                Administrator
+                            </option>
+
+                        </select>
+
+                        <small class="form-hint">
+                            Role changes affect
+                            which system features
+                            this user can access.
+                        </small>
+
+                    </div>
+
+
+                    <!-- ACCOUNT STATUS -->
+
+                    <div class="form-group">
+
+                        <label for="account-status">
+                            Account Status
+                        </label>
+
+                        <select
+                            id="account-status"
+                            name="status"
+                            required>
+
+                            <option value=""
+                                    selected
+                                    disabled>
+                                Select account status
+                            </option>
+
+                            <option value="active">
+                                Active
+                            </option>
+
+                            <option value="inactive">
+                                Inactive
+                            </option>
+
+                        </select>
+
+                        <small class="form-hint">
+                            Inactive accounts cannot
+                            access the application.
+                        </small>
+
+                    </div>
+
+                </fieldset>
+
+
+                <!-- FORM ACTIONS -->
+
+                <div class="form-actions">
+
+                    <a href="/admin/users"
+                       class="btn btn-secondary">
+                        Cancel
+                    </a>
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary"
+                        disabled>
+                        Save Changes
+                    </button>
+
+                </div>
+
+                <p class="form-hint">
+                    Changes can be saved after
+                    backend validation and
+                    administrator permissions
+                    are implemented.
+                </p>
+
+            </form>
+
+        </section>
+
+
+        <!-- ACCOUNT SECURITY -->
+
+        <aside class="admin-help"
+               aria-labelledby="security-title">
+
+            <h2 id="security-title">
+                Account Security
+            </h2>
+
+            <p>
+                Account changes must be performed
+                only by authorised administrators.
+                Elunette will record important
+                administrative actions.
+            </p>
+
+            <p>
+                Passwords will not be displayed
+                on this page. Password recovery
+                and changes will use a separate
+                secure process.
+            </p>
+
+            <p>
+                The system will prevent changes
+                that would leave Elunette without
+                an active administrator.
+            </p>
+
+        </aside>
+
+    </main>
+
+
+    <!-- FOOTER -->
+
+    <footer class="dashboard-footer">
+
+        <p>
+            &copy; 2026 Elunette. All rights reserved.
+        </p>
+
+    </footer>
+
+</body>
+
+</html>

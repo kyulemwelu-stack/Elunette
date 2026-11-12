@@ -1,0 +1,360 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Project Brief Details | Elunette</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body class="dashboard-page brief-details-page">
+
+    <!-- DASHBOARD HEADER -->
+
+    <header class="dashboard-header">
+
+        <a href="/dashboard/client"
+           class="logo"
+           aria-label="Elunette Dashboard">
+
+            <img
+                src="{{ url_for('static', filename='images/elunette-logo.png') }}"
+                alt="Elunette"
+                class="logo-img">
+        </a>
+
+        <nav class="dashboard-nav"
+             aria-label="Client navigation">
+
+            <ul>
+                <li>
+                    <a href="/dashboard/client">Dashboard</a>
+                </li>
+
+                <li>
+                    <a href="/briefs"
+                       class="active"
+                       aria-current="page">My Briefs</a>
+                </li>
+
+                <li>
+                    <a href="/notifications">Notifications</a>
+                </li>
+            </ul>
+
+        </nav>
+
+        action="/logout"
+
+    </header>
+
+
+    <!-- MAIN CONTENT -->
+
+    <main class="dashboard-main">
+
+        <!-- PAGE INTRODUCTION -->
+
+        <section class="brief-details-intro">
+
+            <a href="/briefs" class="back-link">
+                Back to My Briefs
+            </a>
+
+            <p class="section-label">
+                PROJECT OVERVIEW
+            </p>
+
+            <h1>Project Brief Details</h1>
+
+            <p>
+                Review your project information,
+                track its progress, and view
+                feedback from your service provider.
+            </p>
+
+        </section>
+
+
+        <!-- BRIEF INFORMATION -->
+
+        <section class="brief-details-section"
+                 aria-labelledby="details-title">
+
+            <div class="section-header">
+
+                <h2 id="details-title">
+                    Brief Information
+                </h2>
+
+            </div>
+
+            <dl class="brief-information">
+
+                <div class="brief-info-item">
+
+                    <dt>Project Title</dt>
+
+                    <dd>
+                        Project title will appear here.
+                    </dd>
+
+                </div>
+
+                <div class="brief-info-item">
+
+                    <dt>Questionnaire</dt>
+
+                    <dd>
+                        Questionnaire title will appear here.
+                    </dd>
+
+                </div>
+
+                <div class="brief-info-item">
+
+                    <dt>Date Created</dt>
+
+                    <dd>
+                        Creation date will appear here.
+                    </dd>
+
+                </div>
+
+                <div class="brief-info-item">
+
+                    <dt>Last Updated</dt>
+
+                    <dd>
+                        Last updated date will appear here.
+                    </dd>
+
+                </div>
+
+                <div class="brief-info-item">
+
+                    <dt>Current Status</dt>
+
+                    <dd>
+                        <span class="status-badge">
+                            Draft
+                        </span>
+                    </dd>
+
+                </div>
+
+            </dl>
+
+        </section>
+
+
+        <!-- PROJECT REQUIREMENTS -->
+
+        <section class="brief-requirements"
+                 aria-labelledby="requirements-title">
+
+            <div class="section-header">
+
+                <p class="section-label">
+                    YOUR PROJECT
+                </p>
+
+                <h2 id="requirements-title">
+                    Project Requirements
+                </h2>
+
+                <p>
+                    Information collected through
+                    your project questionnaire.
+                </p>
+
+            </div>
+
+            <div class="requirements-container">
+
+                <!--
+                Actual questionnaire questions
+                and their saved responses will
+                appear here dynamically.
+                -->
+
+                <p class="empty-message">
+                    Your saved project requirements
+                    will appear here.
+                </p>
+
+            </div>
+
+        </section>
+
+
+        <!-- REVIEW AND APPROVAL -->
+
+        <section class="brief-review"
+                 aria-labelledby="review-title">
+
+            <div class="section-header">
+
+                <p class="section-label">
+                    REVIEW STATUS
+                </p>
+
+                <h2 id="review-title">
+                    Review &amp; Approval
+                </h2>
+
+                <p>
+                    Follow the review progress
+                    of your submitted brief.
+                </p>
+
+            </div>
+
+            <div class="review-container">
+
+                <article class="review-card">
+
+                    <h3>Review Decision</h3>
+
+                    <p class="review-status">
+                        Not Yet Reviewed
+                    </p>
+
+                    <p>
+                        A review decision will appear
+                        here after the service provider
+                        reviews your submitted brief.
+                    </p>
+
+                </article>
+
+                <article class="review-card">
+
+                    <h3>Service Provider Feedback</h3>
+
+                    <p>
+                        No feedback is available yet.
+                    </p>
+
+                    <!--
+                    Review comments and revision
+                    requests will appear here.
+                    -->
+
+                </article>
+
+            </div>
+
+        </section>
+
+
+        <!-- REVISION HISTORY -->
+
+        <section class="brief-revisions"
+                 aria-labelledby="revisions-title">
+
+            <div class="section-header">
+
+                <p class="section-label">
+                    TRACKING CHANGES
+                </p>
+
+                <h2 id="revisions-title">
+                    Revision History
+                </h2>
+
+                <p>
+                    Keep track of changes and
+                    updates made to your brief.
+                </p>
+
+            </div>
+
+            <div class="revision-summary">
+
+                <p>
+                    Recorded revisions will appear
+                    here once changes are made.
+                </p>
+
+                <a href="/revision-history-preview"
+                   class="btn btn-secondary">
+                    View Revision History
+                </a>
+
+            </div>
+
+        </section>
+
+
+        <!-- BRIEF ACTIONS -->
+
+        <section class="brief-actions"
+                 aria-labelledby="brief-actions-title">
+
+            <h2 id="brief-actions-title">
+                Manage Your Brief
+            </h2>
+
+            <p>
+                Available actions will depend
+                on your brief's current status.
+            </p>
+
+            <div class="action-buttons">
+
+                <a href="#"
+                   class="btn btn-secondary">
+                    Edit Brief
+                </a>
+
+                <a href="/briefs"
+                   class="btn btn-primary">
+                    Back to My Briefs
+                </a>
+
+            </div>
+
+            <!--
+            BACKEND ACCESS RULES
+
+            Draft:
+            Client can edit or delete.
+
+            Submitted / Under Review:
+            Client can view but not edit.
+
+            Revision Requested:
+            Client can revise and resubmit.
+
+            Approved:
+            Client can view the approved brief.
+
+            Flask will display only the
+            permitted actions for each status.
+            -->
+
+        </section>
+
+    </main>
+
+
+    <!-- FOOTER -->
+
+    <footer class="dashboard-footer">
+
+        <p>
+            &copy; 2026 Elunette. All rights reserved.
+        </p>
+
+    </footer>
+
+</body>
+
+</html>

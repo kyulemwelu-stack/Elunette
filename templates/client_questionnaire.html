@@ -1,0 +1,539 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+    <title>{{ questionnaire["title"] }} | Elunette</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}">
+
+</head>
+
+<body class="dashboard-page client-questionnaire-page">
+
+    <!-- HEADER -->
+
+    <header class="dashboard-header">
+
+        <a href="/dashboard/client"
+           class="logo"
+           aria-label="Elunette Client Dashboard">
+
+            <img
+                src="{{ url_for('static', filename='images/elunette-logo.png') }}"
+                alt="Elunette"
+                class="logo-img">
+
+        </a>
+
+        <nav class="dashboard-nav"
+             aria-label="Client navigation">
+
+            <ul>
+                <li>
+                    <a href="/dashboard/client">Dashboard</a>
+                </li>
+
+                <li>
+                    <a href="/briefs">My Briefs</a>
+                </li>
+
+                <li>
+                    <a href="/notifications">Notifications</a>
+                </li>
+            </ul>
+
+        </nav>
+
+        action="/logout"
+
+    </header>
+
+
+    <!-- MAIN CONTENT -->
+
+    <main class="dashboard-main">
+
+        <!-- QUESTIONNAIRE INTRODUCTION -->
+
+        <section class="client-questionnaire-intro">
+
+            <p class="section-label">
+                YOUR PROJECT, YOUR VISION
+            </p>
+
+            <h1>{{ questionnaire["title"] }}</h1>
+
+            <p>
+                {{ questionnaire["description"] or
+                   "Tell us about your project requirements." }}
+            </p>
+
+            <span class="questionnaire-version">
+                Questionnaire Version
+                {{ questionnaire["version_number"] }}
+            </span>
+
+        </section>
+
+
+        <!-- COMPLETENESS PROGRESS -->
+
+        <section class="client-questionnaire-progress">
+
+            <div class="progress-heading">
+
+                <h2>Your Progress</h2>
+
+                <strong id="progress-percentage">
+                    0%
+                </strong>
+
+            </div>
+
+            <div class="progress-track"
+                 role="progressbar"
+                 aria-label="Required answers completed"
+                 aria-valuemin="0"
+                 aria-valuemax="100"
+                 aria-valuenow="0"
+                 id="questionnaire-progress-track">
+
+                <div
+                    class="progress-fill"
+                    id="questionnaire-progress-fill">
+                </div>
+
+            </div>
+
+            <p id="progress-description">
+                Complete the applicable required questions.
+            </p>
+
+        </section>
+
+
+        <!-- DYNAMIC QUESTIONNAIRE -->
+
+        <section class="client-questionnaire-content">
+
+            <div class="section-header">
+
+                <p class="section-label">
+                    PROJECT REQUIREMENTS
+                </p>
+
+                <h2>Tell Us About Your Project</h2>
+
+                <p>
+                    Answer the questions below.
+                    Additional questions may appear
+                    depending on your selections.
+                </p>
+
+            </div>
+
+
+            <form
+                id="client-questionnaire-form"
+                class="questionnaire-form">
+
+                {% for question in questions %}
+
+                <fieldset
+                    class="question-card adaptive-question"
+                    data-question-id="{{ question['id'] }}"
+                    data-required="{{ 1 if question['is_required'] else 0 }}">
+
+                    <legend>
+                        QUESTION {{ question["position"] }}
+                    </legend>
+
+                    <div class="question-content">
+
+                        <label for="answer-{{ question['id'] }}"
+                               class="question-text">
+
+                            {{ question["question_text"] }}
+
+                            {% if question["is_required"] %}
+
+                            <span class="required-mark"
+                                  aria-label="Required">
+                                *
+                            </span>
+
+                            {% endif %}
+
+                        </label>
+
+
+                        <!-- MULTIPLE CHOICE -->
+
+                        {% if question["question_type"] == "multiple_choice" %}
+
+                        <select
+                            id="answer-{{ question['id'] }}"
+                            name="answer_{{ question['id'] }}"
+                            class="answer-input"
+                            {% if question["is_required"] %}
+                                required
+                            {% endif %}>
+
+                            <option value="">
+                                Select your answer
+                            </option>
+
+                            <option value="{{ question['option_one'] }}">
+                                {{ question["option_one"] }}
+                            </option>
+
+                            <option value="{{ question['option_two'] }}">
+                                {{ question["option_two"] }}
+                            </option>
+
+                        </select>
+
+
+                        <!-- NUMBER -->
+
+                        {% elif question["question_type"] == "number" %}
+
+                        <input
+                            type="number"
+                            id="answer-{{ question['id'] }}"
+                            name="answer_{{ question['id'] }}"
+                            class="answer-input"
+                            placeholder="Enter a number"
+                            {% if question["is_required"] %}
+                                required
+                            {% endif %}>
+
+
+                        <!-- DATE -->
+
+                        {% elif question["question_type"] == "date" %}
+
+                        <input
+                            type="date"
+                            id="answer-{{ question['id'] }}"
+                            name="answer_{{ question['id'] }}"
+                            class="answer-input"
+                            {% if question["is_required"] %}
+                                required
+                            {% endif %}>
+
+
+                        <!-- TEXT -->
+
+                        {% else %}
+
+                        <textarea
+                            id="answer-{{ question['id'] }}"
+                            name="answer_{{ question['id'] }}"
+                            class="answer-input"
+                            rows="4"
+                            placeholder="Write your answer here"
+                            {% if question["is_required"] %}
+                                required
+                            {% endif %}></textarea>
+
+                        {% endif %}
+
+                    </div>
+
+                </fieldset>
+
+                {% endfor %}
+
+
+                <!-- FORM ACTIONS -->
+
+                <div class="client-questionnaire-actions">
+
+                    <a
+                        href="/briefs"
+                        class="btn btn-secondary">
+                        Back to My Briefs
+                    </a>
+
+                    <button
+                        type="button"
+                        id="check-questionnaire"
+                        class="btn btn-primary">
+                        Check Answers
+                    </button>
+
+                </div>
+
+                <p
+                    id="questionnaire-feedback"
+                    class="form-hint"
+                    role="status"
+                    aria-live="polite">
+                </p>
+
+                <p class="form-hint">
+                    This is the questionnaire interaction stage.
+                    Saving answers to your project brief
+                    will be connected next.
+                </p>
+
+            </form>
+
+        </section>
+
+    </main>
+
+
+    <!-- FOOTER -->
+
+    <footer class="dashboard-footer">
+
+        <p>
+            &copy; 2026 Elunette. All rights reserved.
+        </p>
+
+    </footer>
+
+
+    <!-- ADAPTIVE QUESTIONNAIRE LOGIC -->
+
+<script type="application/json" id="adaptive-rules-data">
+    {{ adaptive_rules | tojson }}
+</script>
+
+    <script>
+        document.addEventListener(
+            "DOMContentLoaded",
+            function () {
+
+
+const adaptiveRules = JSON.parse(
+    document.getElementById("adaptive-rules-data").textContent
+);
+
+
+                const form = document.getElementById(
+                    "client-questionnaire-form"
+                );
+
+form.addEventListener("submit", function (event) {
+    event.preventDefault();
+
+    document.getElementById(
+        "check-questionnaire"
+    ).click();
+});
+
+                const cards = Array.from(
+                    form.querySelectorAll(
+                        ".adaptive-question"
+                    )
+                );
+
+                const progressFill = document.getElementById(
+                    "questionnaire-progress-fill"
+                );
+
+                const progressPercentage = document.getElementById(
+                    "progress-percentage"
+                );
+
+                const progressDescription = document.getElementById(
+                    "progress-description"
+                );
+
+                const progressTrack = document.getElementById(
+                    "questionnaire-progress-track"
+                );
+
+                const feedback = document.getElementById(
+                    "questionnaire-feedback"
+                );
+
+
+                // FIND A QUESTION BY ITS ID
+
+                function getQuestionCard(questionId) {
+
+                    return cards.find(function (card) {
+
+                        return card.dataset.questionId ===
+                            String(questionId);
+
+                    });
+                }
+
+
+                // CHECK WHETHER AN ANSWER IS COMPLETE
+
+                function isAnswered(field) {
+
+                    return field.value.trim() !== "" &&
+                        field.validity.valid;
+                }
+
+
+                // UPDATE COMPLETENESS
+
+                function updateProgress() {
+
+                    const requiredFields = cards
+                        .filter(card => !card.hidden)
+                        .map(card => card.querySelector(".answer-input"))
+                        .filter(field => field && field.required);
+
+                    const total = requiredFields.length;
+
+                    const completed = requiredFields.filter(
+                        isAnswered
+                    ).length;
+
+                    const percentage = total
+                        ? Math.round((completed / total) * 100)
+                        : 100;
+
+                    progressFill.style.width =
+                        percentage + "%";
+
+                    progressPercentage.textContent =
+                        percentage + "%";
+
+                    progressTrack.setAttribute(
+                        "aria-valuenow",
+                        percentage
+                    );
+
+                    progressDescription.textContent =
+                        completed + " of " + total +
+                        " applicable required questions completed.";
+                }
+
+
+                // SHOW OR HIDE QUESTIONS
+
+                function updateAdaptiveQuestions() {
+
+                    cards.forEach(function (card) {
+
+                        const questionId =
+                            card.dataset.questionId;
+
+                        const rule = adaptiveRules.find(
+                            item => String(item.target_question_id) ===
+                                questionId
+                        );
+
+                        let shouldShow = true;
+
+                        if (rule) {
+
+                            const sourceCard = getQuestionCard(
+                                rule.source_question_id
+                            );
+
+                            const sourceInput = sourceCard
+                                ? sourceCard.querySelector(".answer-input")
+                                : null;
+
+                            shouldShow = Boolean(
+                                sourceCard &&
+                                !sourceCard.hidden &&
+                                sourceInput &&
+                                sourceInput.value ===
+                                    rule.expected_answer
+                            );
+                        }
+
+                        card.hidden = !shouldShow;
+
+                        const field = card.querySelector(
+                            ".answer-input"
+                        );
+
+                        if (field) {
+
+                            field.disabled = !shouldShow;
+
+                            field.required =
+                                shouldShow &&
+                                card.dataset.required === "1";
+
+                            if (!shouldShow) {
+                                field.value = "";
+                            }
+                        }
+
+                    });
+
+                    updateProgress();
+                }
+
+
+                // REACT TO CLIENT ANSWERS
+
+                form.addEventListener(
+                    "change",
+                    function () {
+
+                        feedback.textContent = "";
+                        updateAdaptiveQuestions();
+
+                    }
+                );
+
+                form.addEventListener(
+                    "input",
+                    function () {
+
+                        feedback.textContent = "";
+                        updateAdaptiveQuestions();
+
+                    }
+                );
+
+
+                // CHECK APPLICABLE REQUIRED ANSWERS
+
+                document.getElementById(
+                    "check-questionnaire"
+                ).addEventListener("click", function () {
+
+                    updateAdaptiveQuestions();
+
+                    if (form.reportValidity()) {
+
+                        feedback.textContent =
+                            "All applicable required questions " +
+                            "are complete. Your answers are ready " +
+                            "for the next stage.";
+
+                    } else {
+
+                        feedback.textContent =
+                            "Please complete the required " +
+                            "questions before continuing.";
+                    }
+
+                });
+
+
+                // INITIALISE
+
+                updateAdaptiveQuestions();
+
+            }
+        );
+    </script>
+
+</body>
+</html>

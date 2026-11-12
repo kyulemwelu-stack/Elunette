@@ -1,0 +1,485 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Administrator Dashboard | Elunette</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body class="dashboard-page admin-page">
+
+    <!-- ADMINISTRATOR HEADER -->
+
+    <header class="dashboard-header">
+
+        <a href="/dashboard/admin"
+           class="logo"
+           aria-label="Elunette Administrator Dashboard">
+
+            <img
+                src="{{ url_for('static', filename='images/elunette-logo.png') }}"
+                alt="Elunette"
+                class="logo-img">
+        </a>
+
+
+        <!-- ADMIN NAVIGATION -->
+
+        <nav class="dashboard-nav"
+             aria-label="Administrator navigation">
+
+            <ul>
+
+                <li>
+                    <a href="/dashboard/admin"
+                       class="active"
+                       aria-current="page">
+                        Dashboard
+                    </a>
+                </li>
+
+                <li>
+                    <a href="/admin/users">
+                        User Management
+                    </a>
+                </li>
+
+                <li>
+                    <a href="/admin/users/new">
+                        Create User
+                    </a>
+                </li>
+
+                <li>
+                    <a href="/notifications">
+                        Notifications
+                    </a>
+                </li>
+
+            </ul>
+
+        </nav>
+
+
+        <!-- LOGOUT -->
+
+        action="/logout"
+
+    </header>
+
+
+    <!-- MAIN CONTENT -->
+
+    <main class="dashboard-main">
+
+        <!-- WELCOME SECTION -->
+
+        <section class="admin-welcome">
+
+            <p class="section-label">
+                SYSTEM ADMINISTRATION
+            </p>
+
+            <h1>Welcome to the Admin Workspace.</h1>
+
+            <p>
+                Manage Elunette's user accounts,
+                access permissions, and overall
+                account administration.
+            </p>
+
+            <a href="/admin/users"
+               class="btn btn-primary">
+                Manage Users
+            </a>
+
+        </section>
+
+
+        <!-- USER OVERVIEW -->
+
+        <section class="admin-overview"
+                 aria-labelledby="overview-title">
+
+            <div class="section-header">
+
+                <h2 id="overview-title">
+                    User Overview
+                </h2>
+
+                <p>
+                    A summary of registered users
+                    and their account statuses.
+                </p>
+
+            </div>
+
+
+            <div class="overview-grid">
+
+                <article class="overview-card">
+
+                    <h3>Total Users</h3>
+
+                    <p class="overview-number">0</p>
+
+                    <p>All registered accounts</p>
+
+                </article>
+
+
+                <article class="overview-card">
+
+                    <h3>Clients</h3>
+
+                    <p class="overview-number">0</p>
+
+                    <p>Registered client accounts</p>
+
+                </article>
+
+
+                <article class="overview-card">
+
+                    <h3>Service Providers</h3>
+
+                    <p class="overview-number">0</p>
+
+                    <p>Authorised provider accounts</p>
+
+                </article>
+
+
+                <article class="overview-card">
+
+                    <h3>Inactive Accounts</h3>
+
+                    <p class="overview-number">0</p>
+
+                    <p>Accounts with disabled access</p>
+
+                </article>
+
+            </div>
+
+        </section>
+
+
+        <!-- USER MANAGEMENT -->
+
+        <section class="admin-management"
+                 aria-labelledby="management-title">
+
+            <div class="section-header">
+
+                <p class="section-label">
+                    ACCOUNT ADMINISTRATION
+                </p>
+
+                <h2 id="management-title">
+                    User Management
+                </h2>
+
+                <p>
+                    Create authorised accounts,
+                    manage roles, and control
+                    access to the platform.
+                </p>
+
+            </div>
+
+
+            <div class="management-grid">
+
+                <!-- CREATE USER -->
+
+                <article class="management-card">
+
+                    <h3>Create User Account</h3>
+
+                    <p>
+                        Create accounts for authorised
+                        service providers and
+                        administrators.
+                    </p>
+
+                    <a href="/admin/users/new"
+                       class="btn btn-primary">
+                        Create User
+                    </a>
+
+                </article>
+
+
+                <!-- MANAGE USERS -->
+
+                <article class="management-card">
+
+                    <h3>Manage Existing Users</h3>
+
+                    <p>
+                        View registered users,
+                        update account details,
+                        and manage access status.
+                    </p>
+
+                    <a href="/admin/users"
+                       class="btn btn-secondary">
+                        View All Users
+                    </a>
+
+                </article>
+
+
+                <!-- ROLE MANAGEMENT -->
+
+                <article class="management-card">
+
+                    <h3>Roles &amp; Permissions</h3>
+
+                    <p>
+                        Assign appropriate roles
+                        and maintain authorised
+                        access to system features.
+                    </p>
+
+                    <a href="/admin/users"
+                       class="btn btn-secondary">
+                        Manage Roles
+                    </a>
+
+                </article>
+
+            </div>
+
+        </section>
+
+
+        <!-- RECENT USER ACCOUNTS -->
+
+        <section class="admin-recent-users"
+                 aria-labelledby="users-title">
+
+            <div class="section-header">
+
+                <p class="section-label">
+                    USER DIRECTORY
+                </p>
+
+                <h2 id="users-title">
+                    Recent User Accounts
+                </h2>
+
+                <p>
+                    View recently created
+                    accounts and their roles.
+                </p>
+
+            </div>
+
+
+            <div class="table-container">
+
+                <table class="users-table">
+
+                    <thead>
+                        <tr>
+                            <th scope="col">Full Name</th>
+                            <th scope="col">Email</th>
+                            <th scope="col">Role</th>
+                            <th scope="col">Date Created</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Action</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        <!--
+                        Actual user records will
+                        be loaded from SQLite.
+
+                        Account actions will be
+                        restricted to administrators.
+                        -->
+
+                        <tr>
+
+                            <td colspan="6">
+
+                                <div class="empty-state">
+
+                                    <h3>No user records displayed.</h3>
+
+                                    <p>
+                                        Registered user accounts
+                                        will appear here after
+                                        database integration.
+                                    </p>
+
+                                </div>
+
+                            </td>
+
+                        </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+
+            <div class="section-actions">
+
+                <a href="/admin/users"
+                   class="btn btn-secondary">
+                    View All Users
+                </a>
+
+            </div>
+
+        </section>
+
+
+        <!-- ACCOUNT SECURITY -->
+
+        <section class="admin-security"
+                 aria-labelledby="security-title">
+
+            <div class="section-header">
+
+                <p class="section-label">
+                    SYSTEM ACCESS
+                </p>
+
+                <h2 id="security-title">
+                    Account Security
+                </h2>
+
+                <p>
+                    Maintain appropriate
+                    access to Elunette.
+                </p>
+
+            </div>
+
+
+            <div class="security-container">
+
+                <article class="security-card">
+
+                    <h3>Role-Based Access</h3>
+
+                    <p>
+                        Users can access only
+                        the features permitted
+                        by their assigned roles.
+                    </p>
+
+                </article>
+
+
+                <article class="security-card">
+
+                    <h3>Account Status</h3>
+
+                    <p>
+                        Administrators can manage
+                        whether user accounts
+                        are active or inactive.
+                    </p>
+
+                </article>
+
+
+                <article class="security-card">
+
+                    <h3>Protected Accounts</h3>
+
+                    <p>
+                        Service provider and
+                        administrator accounts
+                        are created through
+                        authorised administration.
+                    </p>
+
+                </article>
+
+            </div>
+
+        </section>
+
+
+        <!-- RECENT ADMINISTRATION ACTIVITY -->
+
+        <section class="admin-activity"
+                 aria-labelledby="activity-title">
+
+            <div class="section-header">
+
+                <p class="section-label">
+                    RECENT UPDATES
+                </p>
+
+                <h2 id="activity-title">
+                    Administration Activity
+                </h2>
+
+                <p>
+                    Review recent account
+                    management activities.
+                </p>
+
+            </div>
+
+
+            <div class="activity-container">
+
+                <!--
+                Future activity records may include:
+                - Account creation
+                - Role changes
+                - Account activation
+                - Account deactivation
+                -->
+
+                <div class="empty-state">
+
+                    <h3>No recent activity.</h3>
+
+                    <p>
+                        Account management
+                        activities will appear
+                        here when available.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <!-- FOOTER -->
+
+    <footer class="dashboard-footer">
+
+        <p>
+            &copy; 2026 Elunette. All rights reserved.
+        </p>
+
+    </footer>
+
+</body>
+
+</html>

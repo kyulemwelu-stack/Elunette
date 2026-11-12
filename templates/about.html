@@ -1,0 +1,561 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>About Us | Elunette</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body class="about-page">
+
+    <!-- NAVIGATION -->
+
+    <header class="site-header">
+
+        <nav class="navbar" aria-label="Main navigation">
+
+            <a href="/" class="logo"
+               aria-label="Elunette Home">
+
+                <img
+                    src="{{ url_for('static', filename='images/elunette-logo.png') }}"
+                    alt="Elunette"
+                    class="logo-img">
+
+            </a>
+
+            <ul class="nav-links">
+
+                <li>
+                    <a href="/">Home</a>
+                </li>
+
+                <li>
+                    <a href="/about"
+                       class="active"
+                       aria-current="page">
+                        About
+                    </a>
+                </li>
+
+                <li>
+                    <a href="/#how-it-works">
+                        How It Works
+                    </a>
+                </li>
+
+                <li>
+                    <a href="/login">Log In</a>
+                </li>
+
+                <li>
+                    <a href="/register"
+                       class="nav-btn">
+                        Sign Up
+                    </a>
+                </li>
+
+            </ul>
+
+        </nav>
+
+    </header>
+
+
+    <main>
+
+        <!-- EDITORIAL HERO -->
+
+        <section class="about-stage"
+                 aria-labelledby="about-title">
+
+            <div class="about-stage-copy">
+
+                <p class="section-label">
+                    THE STORY BEHIND ELUNETTE
+                </p>
+
+                <h1 id="about-title">
+                    The best ideas don't arrive
+                    <em>perfectly formed.</em>
+                </h1>
+
+                <p class="about-lead">
+                    They begin with questions,
+                    conversations, possibilities,
+                    and a little beautiful chaos.
+                </p>
+
+                <p class="about-support">
+                    Elunette helps bring it all together,
+                    turning scattered ideas into clear,
+                    meaningful project briefs.
+                </p>
+
+                <a href="#our-story"
+                   class="about-discover">
+                    Discover Our Story
+                    <span aria-hidden="true">↗</span>
+                </a>
+
+            </div>
+
+
+            <!-- DECORATIVE BRIEF ILLUSTRATION -->
+
+            <div class="about-stage-visual"
+                 aria-hidden="true">
+
+                <div class="visual-backdrop"></div>
+
+                <div class="paper paper-back">
+
+                    <span class="paper-corner">
+                        NOTES / 01
+                    </span>
+
+                    <div class="paper-lines">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+
+                </div>
+
+
+                <div class="paper paper-front">
+
+                    <div class="paper-heading">
+
+                        <span>ELUNETTE</span>
+
+                        <span>01 — BRIEF</span>
+
+                    </div>
+
+                    <div class="paper-content">
+
+                        <p class="paper-label">
+                            YOUR NEXT BIG IDEA
+                        </p>
+
+                        <p class="paper-title">
+                            A little more
+                            <em>clarity.</em>
+                        </p>
+
+                        <div class="paper-field">
+
+                            <span>01</span>
+
+                            <p>Understand the idea</p>
+
+                            <span>✓</span>
+
+                        </div>
+
+                        <div class="paper-field">
+
+                            <span>02</span>
+
+                            <p>Define the details</p>
+
+                            <span>✓</span>
+
+                        </div>
+
+                        <div class="paper-field">
+
+                            <span>03</span>
+
+                            <p>Bring it together</p>
+
+                            <span>✓</span>
+
+                        </div>
+
+                    </div>
+
+                    <div class="paper-bottom">
+                        THOUGHTFULLY ORGANISED
+                    </div>
+
+                </div>
+
+
+                <div class="visual-sticker">
+
+                    <span class="sticker-symbol">✳</span>
+
+                    <span>
+                        FROM IDEA
+                        TO CLARITY
+                    </span>
+
+                </div>
+
+                <span class="visual-caption">
+                    GOOD IDEAS GROW HERE
+                </span>
+
+            </div>
+
+        </section>
+
+
+        <!-- OUR STORY -->
+
+        <section id="our-story"
+                 class="story-band"
+                 aria-labelledby="story-title">
+
+            <div class="story-band-heading">
+
+                <p class="section-label">
+                    01 / THE WHY
+                </p>
+
+                <h2 id="story-title">
+                    Less confusion.
+                    <em>More clarity.</em>
+                </h2>
+
+                <span class="story-asterisk"
+                      aria-hidden="true">
+                    ✳
+                </span>
+
+            </div>
+
+            <div class="story-band-content">
+
+                <p class="story-opening">
+                    A great project deserves
+                    a better starting point.
+                </p>
+
+                <p>
+                    Project requirements often begin
+                    as scattered conversations,
+                    messages, and incomplete
+                    questionnaires.
+                </p>
+
+                <p>
+                    Important details can be missed,
+                    leading to repeated clarification
+                    and unnecessary revisions.
+                </p>
+
+                <p>
+                    Elunette was created to make
+                    this process simpler through
+                    guided questions, completeness
+                    checking, and organised reviews.
+                </p>
+
+                <span class="story-signature">
+                    THE ELUNETTE APPROACH — 2026
+                </span>
+
+            </div>
+
+        </section>
+
+
+        <!-- MISSION AND VISION -->
+
+        <section class="purpose-section"
+                 aria-labelledby="purpose-title">
+
+            <div class="purpose-heading">
+
+                <p class="section-label">
+                    02 / WHAT MOVES US
+                </p>
+
+                <h2 id="purpose-title">
+                    Thoughtful by design.
+                    <em>Purposeful by nature.</em>
+                </h2>
+
+            </div>
+
+
+            <div class="purpose-layout">
+
+                <!-- OUR MISSION -->
+
+                <article class="purpose-panel mission-panel">
+
+                    <div class="purpose-topline">
+
+                        <span>01</span>
+
+                        <span>OUR MISSION</span>
+
+                    </div>
+
+                    <h3>
+                        Make things
+                        <em>simpler.</em>
+                    </h3>
+
+                    <p>
+                        To simplify how client
+                        requirements are collected
+                        and managed through a clear,
+                        structured, and accessible
+                        digital platform.
+                    </p>
+
+                    <span class="purpose-symbol"
+                          aria-hidden="true">✳</span>
+
+                </article>
+
+
+                <!-- OUR VISION -->
+
+                <article class="purpose-panel vision-panel">
+
+                    <div class="purpose-topline">
+
+                        <span>02</span>
+
+                        <span>OUR VISION</span>
+
+                    </div>
+
+                    <h3>
+                        Make room for
+                        <em>better ideas.</em>
+                    </h3>
+
+                    <p>
+                        To make project briefing
+                        a more organised, transparent,
+                        and collaborative experience
+                        for clients and service
+                        providers.
+                    </p>
+
+                    <span class="purpose-symbol"
+                          aria-hidden="true">↗</span>
+
+                </article>
+
+            </div>
+
+        </section>
+
+
+        <!-- VALUES SECTION -->
+
+        <section class="values-section"
+                 aria-labelledby="values-title">
+
+            <div class="values-heading">
+
+                <p class="section-label">
+                    03 / WHAT WE BELIEVE
+                </p>
+
+                <h2 id="values-title">
+                    The little things
+                    <em>make a big difference.</em>
+                </h2>
+
+                <p>
+                    Four principles shaping
+                    the Elunette experience.
+                </p>
+
+            </div>
+
+
+            <ol class="values-list">
+
+                <li class="value-row">
+
+                    <span class="value-index">01</span>
+
+                    <h3>Clarity</h3>
+
+                    <p>
+                        Helping ideas become
+                        understandable requirements.
+                    </p>
+
+                    <span class="value-mark"
+                          aria-hidden="true">↗</span>
+
+                </li>
+
+
+                <li class="value-row">
+
+                    <span class="value-index">02</span>
+
+                    <h3>Simplicity</h3>
+
+                    <p>
+                        Making every step easier
+                        to understand and follow.
+                    </p>
+
+                    <span class="value-mark"
+                          aria-hidden="true">↗</span>
+
+                </li>
+
+
+                <li class="value-row">
+
+                    <span class="value-index">03</span>
+
+                    <h3>Organisation</h3>
+
+                    <p>
+                        Keeping important project
+                        information together.
+                    </p>
+
+                    <span class="value-mark"
+                          aria-hidden="true">↗</span>
+
+                </li>
+
+
+                <li class="value-row">
+
+                    <span class="value-index">04</span>
+
+                    <h3>Collaboration</h3>
+
+                    <p>
+                        Supporting meaningful
+                        communication and feedback.
+                    </p>
+
+                    <span class="value-mark"
+                          aria-hidden="true">↗</span>
+
+                </li>
+
+            </ol>
+
+        </section>
+
+
+        <!-- FINAL CALL TO ACTION -->
+
+        <section class="about-final"
+                 aria-labelledby="final-title">
+
+            <div class="final-content">
+
+                <p class="section-label">
+                    SOMETHING GOOD STARTS HERE
+                </p>
+
+                <h2 id="final-title">
+                    Every great project
+                    starts with
+                    <em>a little clarity.</em>
+                </h2>
+
+                <p>
+                    Your next idea deserves
+                    a beautiful beginning.
+                </p>
+
+                <a href="/register"
+                   class="btn about-final-btn">
+                    Get Started
+                    <span aria-hidden="true">↗</span>
+                </a>
+
+            </div>
+
+            <span class="final-decoration"
+                  aria-hidden="true">
+                ✳
+            </span>
+
+        </section>
+
+    </main>
+
+
+
+
+<!-- MINIMAL ABOUT FOOTER -->
+
+<footer class="about-footer">
+
+    <div class="about-footer-inner">
+
+        <!-- BRAND AND NAVIGATION -->
+
+        <div class="about-footer-main">
+
+            <div class="about-footer-brand">
+
+                <a href="/" class="about-footer-logo"
+                   aria-label="Elunette Home">
+
+                    <span class="about-footer-wordmark">
+                        elunette.
+                    </span>
+
+                    <img
+                        src="{{ url_for('static', filename='images/elunette-icon.png') }}"
+                        alt=""
+                        class="about-footer-icon">
+
+                </a>
+
+                <p>Clearer briefs. Better beginnings.</p>
+
+            </div>
+
+
+            <!-- FOOTER LINKS -->
+
+            <nav class="about-footer-links"
+                 aria-label="Footer navigation">
+
+                <a href="/">Home</a>
+                <a href="/about">About</a>
+                <a href="/#how-it-works">How It Works</a>
+                <a href="/login">Log In</a>
+                <a href="/register">Get Started ↗</a>
+
+            </nav>
+
+        </div>
+
+
+        <!-- COPYRIGHT -->
+
+        <div class="about-footer-bottom">
+
+            <p>
+                &copy; 2026 Elunette. All rights reserved.
+            </p>
+
+            <p>Made for clearer beginnings.</p>
+
+        </div>
+
+    </div>
+
+</footer>

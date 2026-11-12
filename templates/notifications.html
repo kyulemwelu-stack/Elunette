@@ -1,0 +1,307 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Notifications | Elunette</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body class="dashboard-page notifications-page">
+
+    <!-- DASHBOARD HEADER -->
+
+    <header class="dashboard-header">
+
+        <a href="/dashboard/client"
+           class="logo"
+           aria-label="Elunette Dashboard">
+
+            <img
+                src="{{ url_for('static', filename='images/elunette-logo.png') }}"
+                alt="Elunette"
+                class="logo-img">
+
+        </a>
+
+
+        <!-- NAVIGATION -->
+
+        <nav class="dashboard-nav"
+             aria-label="Dashboard navigation">
+
+            <ul>
+
+                <li>
+                    <a href="/dashboard/client">
+                        Dashboard
+                    </a>
+                </li>
+
+                <li>
+                    <a href="/briefs">
+                        My Briefs
+                    </a>
+                </li>
+
+                <li>
+                    <a href="/notifications"
+                       class="active"
+                       aria-current="page">
+                        Notifications
+                    </a>
+                </li>
+
+            </ul>
+
+        </nav>
+
+
+        <!-- LOGOUT -->
+
+        action="/logout"
+
+    </header>
+
+
+    <!-- MAIN CONTENT -->
+
+    <main class="dashboard-main">
+
+        <!-- PAGE INTRODUCTION -->
+
+        <section class="notifications-intro">
+
+            <p class="section-label">
+                STAY IN THE LOOP
+            </p>
+
+            <h1>Notifications</h1>
+
+            <p>
+                Keep up with important updates,
+                review decisions, and changes
+                to your project briefs.
+            </p>
+
+        </section>
+
+
+        <!-- NOTIFICATION SUMMARY -->
+
+        <section class="notifications-overview"
+                 aria-labelledby="notifications-overview-title">
+
+            <div class="section-header">
+
+                <h2 id="notifications-overview-title">
+                    Your Updates
+                </h2>
+
+                <p>
+                    View recent activity and
+                    important notifications.
+                </p>
+
+            </div>
+
+
+            <div class="notification-summary">
+
+                <article class="summary-card">
+
+                    <h3>Total Notifications</h3>
+
+                    <p class="summary-number">0</p>
+
+                </article>
+
+
+                <article class="summary-card">
+
+                    <h3>Unread Notifications</h3>
+
+                    <p class="summary-number">0</p>
+
+                </article>
+
+            </div>
+
+        </section>
+
+
+        <!-- NOTIFICATION FILTERS -->
+
+        <section class="notification-filters"
+                 aria-label="Filter notifications">
+
+            <form action="/notifications"
+                  method="GET"
+                  class="notification-filter-form">
+
+                <div class="form-group">
+
+                    <label for="notification-filter">
+                        Show Notifications
+                    </label>
+
+                    <select
+                        id="notification-filter"
+                        name="filter">
+
+                        <option value="all">
+                            All Notifications
+                        </option>
+
+                        <option value="unread">
+                            Unread
+                        </option>
+
+                        <option value="read">
+                            Read
+                        </option>
+
+                    </select>
+
+                </div>
+
+                <button
+                    type="submit"
+                    class="btn btn-secondary">
+                    Apply Filter
+                </button>
+
+            </form>
+
+        </section>
+
+
+        <!-- NOTIFICATION LIST -->
+
+        <section class="notifications-list"
+                 aria-labelledby="notifications-list-title">
+
+            <div class="section-header">
+
+                <h2 id="notifications-list-title">
+                    Recent Notifications
+                </h2>
+
+            </div>
+
+
+            <!--
+            Notification records will be
+            displayed dynamically through Flask.
+
+            Each notification will contain:
+            - Notification title
+            - Message
+            - Date and time
+            - Read or unread status
+            - Related project brief link
+
+            Clients may receive:
+            - Approval notifications
+            - Revision request notifications
+
+            Service providers may receive:
+            - New brief submission notifications
+            - Brief resubmission notifications
+            -->
+
+
+            <div class="notifications-container">
+
+                <!-- EMPTY STATE -->
+
+                <div class="empty-state">
+
+                    <h3>You're all caught up!</h3>
+
+                    <p>
+                        You don't have any
+                        notifications yet.
+                        Important updates will
+                        appear here.
+                    </p>
+
+                    <a href="/dashboard/client"
+                       class="btn btn-secondary">
+                        Back to Dashboard
+                    </a>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- NOTIFICATION ACTIONS -->
+
+        <section class="notification-actions"
+                 aria-labelledby="notification-actions-title">
+
+            <h2 id="notification-actions-title">
+                Manage Notifications
+            </h2>
+
+            <p>
+                Keep your notification list organised
+                as you work on your projects.
+            </p>
+
+            <div class="action-buttons">
+
+                <form action="/notifications/read-all"
+                      method="POST">
+
+<!-- CSRF PROTECTION -->
+
+<input
+    type="hidden"
+    name="csrf_token"
+    value="{{ csrf_token() }}">
+
+                    <button
+                        type="submit"
+                        class="btn btn-secondary"
+                        disabled>
+                        Mark All as Read
+                    </button>
+
+                </form>
+
+            </div>
+
+            <p class="form-hint">
+                Notification actions will become
+                available when the application
+                functionality is implemented.
+            </p>
+
+        </section>
+
+    </main>
+
+
+    <!-- FOOTER -->
+
+    <footer class="dashboard-footer">
+
+        <p>
+            &copy; 2026 Elunette. All rights reserved.
+        </p>
+
+    </footer>
+
+</body>
+
+</html>

@@ -1,0 +1,818 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Questionnaire Editor | Elunette</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body class="dashboard-page provider-page">
+
+    <!-- HEADER -->
+
+    <header class="dashboard-header">
+
+        <a href="/dashboard/provider"
+           class="logo"
+           aria-label="Elunette Provider Dashboard">
+
+            <img
+                src="{{ url_for('static', filename='images/elunette-logo.png') }}"
+                alt="Elunette"
+                class="logo-img">
+        </a>
+
+        <nav class="dashboard-nav"
+             aria-label="Service provider navigation">
+
+            <ul>
+                <li>
+                    <a href="/dashboard/provider">Dashboard</a>
+                </li>
+
+                <li>
+                    <a href="/provider/questionnaires"
+                       class="active"
+                       aria-current="page">
+                        Questionnaires
+                    </a>
+                </li>
+
+                <li>
+                    <a href="/provider/briefs">Client Briefs</a>
+                </li>
+
+                <li>
+                    <a href="/notifications">Notifications</a>
+                </li>
+            </ul>
+
+        </nav>
+
+        action="/logout"
+
+    </header>
+
+
+    <!-- MAIN CONTENT -->
+
+    <main class="dashboard-main">
+
+        <!-- INTRODUCTION -->
+
+        <section class="editor-intro">
+
+            <a href="/provider/questionnaires"
+               class="back-link">
+                Back to Questionnaires
+            </a>
+
+            <p class="section-label">
+                BUILD WITH PURPOSE
+            </p>
+
+            <h1>Questionnaire Editor</h1>
+
+            <p>
+                Design a questionnaire that helps
+                clients communicate their project
+                requirements clearly and completely.
+            </p>
+
+        </section>
+
+
+        <!-- QUESTIONNAIRE DETAILS -->
+
+        <section class="editor-details"
+                 aria-labelledby="details-title">
+
+<!-- QUESTIONNAIRE FEEDBACK -->
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+
+    {% if messages %}
+
+        <div class="editor-alerts">
+
+            {% for category, message in messages %}
+
+                <p
+                    class="editor-alert editor-alert--{{ category }}"
+                    role="{{ 'alert' if category == 'error' else 'status' }}">
+
+                    {{ message }}
+
+                </p>
+
+            {% endfor %}
+
+        </div>
+
+    {% endif %}
+
+{% endwith %}
+
+            <div class="section-header">
+
+                <h2 id="details-title">
+                    Questionnaire Information
+                </h2>
+
+                <p>
+                    Start by entering the basic
+                    details of your questionnaire.
+                </p>
+
+            </div>
+
+            <!--
+            This template will support:
+            /provider/questionnaires/new
+            /provider/questionnaires/<id>/edit
+
+            Flask will process the form at
+            the current page URL.
+            -->
+
+
+<form
+    action="{{ url_for('edit_questionnaire', questionnaire_id=questionnaire['id']) if questionnaire is defined and questionnaire else url_for('create_questionnaire') }}"
+    method="POST"
+    class="questionnaire-editor-form">
+
+
+<!-- CSRF PROTECTION -->
+
+<input
+    type="hidden"
+    name="csrf_token"
+    value="{{ csrf_token() }}">
+
+                <!-- QUESTIONNAIRE TITLE -->
+
+                <div class="form-group">
+
+                    <label for="questionnaire-title">
+                        Questionnaire Title
+                    </label>
+
+                    <input
+                        type="text"
+                        id="questionnaire-title"
+                        name="title"
+                        placeholder="Enter questionnaire title"
+                        maxlength="150"
+                        required
+                        value="{{ questionnaire['title'] if questionnaire is defined and questionnaire else '' }}">
+
+
+                </div>
+
+
+                <!-- DESCRIPTION -->
+
+                <div class="form-group">
+
+                    <label for="questionnaire-description">
+                        Description
+                    </label>
+
+
+                <textarea
+                    id="questionnaire-description"
+                    name="description"
+                    rows="4"
+                    maxlength="1000"
+                    placeholder="Describe the questionnaire's purpose"
+                    required>{{ questionnaire['description'] if questionnaire is defined and questionnaire else '' }}</textarea>
+
+                >
+
+                </div>
+
+
+                <!-- SAVE TEMPLATE -->
+
+                <div class="form-actions">
+
+                    <a href="/provider/questionnaires"
+                       class="btn btn-secondary">
+                        Cancel
+                    </a>
+
+
+
+<!-- SAVE QUESTIONNAIRE -->
+
+<button
+    type="submit"
+    name="form_action"
+    value="save_template"
+    class="btn btn-primary"
+    {% if questionnaire is defined and questionnaire and not (can_edit | default(false)) %}
+        disabled
+    {% endif %}>
+
+    Save Questionnaire
+
+</button>
+
+
+
+                </div>
+
+                <p class="form-hint">
+                    Saving will be enabled when
+                    the backend is connected.
+                </p>
+
+            </form>
+
+        </section>
+
+
+        <!-- QUESTION MANAGEMENT -->
+
+        <section class="editor-questions"
+                 aria-labelledby="questions-title">
+
+            <div class="section-header">
+
+                <p class="section-label">
+                    QUESTION BUILDER
+                </p>
+
+                <h2 id="questions-title">
+                    Manage Questions
+                </h2>
+
+                <p>
+                    Add, edit, reorder, or deactivate
+                    questions within this questionnaire.
+                </p>
+
+            </div>
+
+
+<!-- CREATE A NEW EDITABLE VERSION -->
+
+{% if questionnaire is defined
+   and questionnaire
+   and questionnaire["status"] == "inactive"
+   and not (can_edit | default(false)) %}
+
+    <form
+        action="{{ url_for('create_new_questionnaire_version', questionnaire_id=questionnaire['id']) }}"
+        method="POST"
+        class="new-version-form">
+
+        <input
+            type="hidden"
+            name="csrf_token"
+            value="{{ csrf_token() }}">
+
+        <p>
+            This questionnaire version has already
+            been published. Create a new version
+            to make changes without affecting
+            the original.
+        </p>
+
+        <button
+            type="submit"
+            class="btn btn-primary">
+            Create New Version
+        </button>
+
+    </form>
+
+{% endif %}
+
+            <!-- EXISTING QUESTIONS -->
+
+            <div class="table-container">
+
+
+<!-- ==========================================
+     EXISTING QUESTIONS TABLE
+========================================== -->
+
+<table class="questions-table">
+
+    <thead>
+        <tr>
+            <th scope="col">Order</th>
+            <th scope="col">Question</th>
+            <th scope="col">Type</th>
+            <th scope="col">Required</th>
+            <th scope="col">Options</th>
+            <th scope="col">Actions</th>
+        </tr>
+    </thead>
+
+    <tbody>
+
+        {% if questions is defined and questions %}
+
+            {% for question in questions %}
+
+            <tr>
+
+                <!-- QUESTION ORDER -->
+                <td>
+                    {{ question["position"] }}
+                </td>
+
+                <!-- QUESTION TEXT -->
+                <td>
+                    <strong>
+                        {{ question["question_text"] }}
+                    </strong>
+                </td>
+
+                <!-- QUESTION TYPE -->
+                <td>
+                    {{ question["question_type"]
+                       | replace("_", " ")
+                       | title }}
+                </td>
+
+                <!-- REQUIRED STATUS -->
+                <td>
+                    {% if question["is_required"] %}
+                        Yes
+                    {% else %}
+                        No
+                    {% endif %}
+                </td>
+
+                <!-- MULTIPLE CHOICE OPTIONS -->
+                <td>
+
+                    {% if question["question_type"] == "multiple_choice" %}
+
+                        {{ question["option_one"] }}
+                        /
+                        {{ question["option_two"] }}
+
+                    {% else %}
+
+                        Not applicable
+
+                    {% endif %}
+
+                </td>
+
+                <!-- ACTIONS -->
+
+
+<!-- QUESTION ACTIONS -->
+
+
+<td>
+    
+{% if can_edit | default(false) %}
+
+
+    <div class="question-action-buttons">
+
+        <a
+            href="{{ url_for('edit_question', questionnaire_id=questionnaire['id'], question_id=question['id']) }}"
+            class="btn btn-secondary">
+            Edit
+        </a>
+
+        <button
+            type="button"
+            class="btn btn-delete"
+            data-dialog-target="delete-{{ question['id'] }}">
+            Delete
+        </button>
+
+    </div>
+
+    <!-- DELETE CONFIRMATION -->
+
+    <dialog
+        id="delete-{{ question['id'] }}"
+        class="simple-delete-dialog"
+        aria-labelledby="delete-title-{{ question['id'] }}"
+        aria-describedby="delete-text-{{ question['id'] }}">
+
+        <h3 id="delete-title-{{ question['id'] }}">
+            Delete question?
+        </h3>
+
+        <p id="delete-text-{{ question['id'] }}">
+            Are you sure you want to delete this question?
+            This action cannot be undone.
+        </p>
+
+        <div class="simple-delete-actions">
+
+            <form method="dialog">
+                <button type="submit" class="cancel-btn">
+                    Cancel
+                </button>
+            </form>
+
+            <form
+                action="{{ url_for('delete_question', questionnaire_id=questionnaire['id'], question_id=question['id']) }}"
+                method="POST">
+
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ csrf_token() }}">
+
+                <button type="submit" class="confirm-delete-btn">
+                    Delete
+                </button>
+            </form>
+
+        </div>
+
+    </dialog>
+
+    {% else %}
+
+    <span class="action-pending">Locked</span>
+
+    {% endif %}
+</td>
+
+
+
+
+            </tr>
+
+            {% endfor %}
+
+        {% else %}
+
+            <!-- EMPTY STATE -->
+            <tr>
+                <td colspan="6">
+
+                    <div class="empty-state">
+
+                        <h3>
+                            No questions added yet.
+                        </h3>
+
+                        <p>
+                            Start building your questionnaire
+                            by adding your first question below.
+                        </p>
+
+                    </div>
+
+                </td>
+            </tr>
+
+        {% endif %}
+
+    </tbody>
+
+</table>
+
+
+            </div>
+
+
+            <!-- ADD QUESTION FORM -->
+
+            <div class="question-builder">
+
+                <h3>Add a Question</h3>
+
+                {% if questionnaire is defined and questionnaire and (can_edit | default(false)) %}
+
+
+<form
+    action="{{ url_for('add_question', questionnaire_id=questionnaire['id']) }}"
+    method="POST"
+    class="question-builder-form">
+
+
+            <!-- CSRF PROTECTION -->
+
+                <input
+                type="hidden"
+                name="csrf_token"
+            value="{{ csrf_token() }}">
+
+                    <!-- QUESTION TEXT -->
+
+                    <div class="form-group">
+
+                        <label for="question-text">
+                            Question Text
+                        </label>
+
+                        <textarea
+                            id="question-text"
+                            name="question_text"
+                            rows="3"
+                            placeholder="Enter your question"
+                            required></textarea>
+
+                    </div>
+
+
+                    <!-- QUESTION TYPE -->
+
+                    <div class="form-group">
+
+                        <label for="question-type">
+                            Question Type
+                        </label>
+
+                        <select
+                            id="question-type"
+                            name="question_type"
+                            required>
+
+                            <option value="">
+                                Select Question Type
+                            </option>
+
+                            <option value="text">
+                                Text
+                            </option>
+
+                            <option value="multiple_choice">
+                                Multiple Choice
+                            </option>
+
+                            <option value="number">
+                                Number
+                            </option>
+
+                            <option value="date">
+                                Date
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <!-- MULTIPLE CHOICE OPTIONS -->
+
+                    <fieldset class="question-options">
+
+                        <legend>
+                            Multiple Choice Options
+                        </legend>
+
+                        <p class="form-hint">
+                            Use these fields if the
+                            question type is multiple choice.
+                            Additional options will be
+                            supported during implementation.
+                        </p>
+
+                        <div class="form-group">
+
+                            <label for="option-one">
+                                Option 1
+                            </label>
+
+                            <input
+                                type="text"
+                                id="option-one"
+                                name="option_one"
+                                placeholder="First option">
+
+                        </div>
+
+                        <div class="form-group">
+
+                            <label for="option-two">
+                                Option 2
+                            </label>
+
+                            <input
+                                type="text"
+                                id="option-two"
+                                name="option_two"
+                                placeholder="Second option">
+
+                        </div>
+
+                    </fieldset>
+
+
+                    <!-- QUESTION POSITION -->
+
+                    <div class="form-group">
+
+                        <label for="question-position">
+                            Question Position
+                        </label>
+
+                        <input
+                            type="number"
+                            id="question-position"
+                            name="position"
+                            min="1"
+                            step="1"
+                            placeholder="Enter question order">
+
+                    </div>
+
+
+                    <!-- REQUIRED SETTING -->
+
+                    <div class="checkbox-group">
+
+                        <input
+                            type="checkbox"
+                            id="is-required"
+                            name="is_required"
+                            value="1">
+
+                        <label for="is-required">
+                            This question is mandatory
+                        </label>
+
+                    </div>
+
+
+                    <!-- ACTIVE SETTING -->
+
+                    <div class="checkbox-group">
+
+                        <input
+                            type="checkbox"
+                            id="is-active"
+                            name="is_active"
+                            value="1"
+                            checked>
+
+                        <label for="is-active">
+                            Question is active
+                        </label>
+
+                    </div>
+
+
+                    <!-- ADD QUESTION BUTTON -->
+
+                    <div class="form-actions">
+
+
+<button
+    type="submit"
+    name="form_action"
+    value="add_question"
+    class="btn btn-primary">
+    Add Question
+</button>
+
+
+                    </div>
+
+                </form>
+
+{% elif questionnaire is defined and questionnaire %}
+
+<p class="form-hint">
+    This questionnaire version is locked.
+    Deactivate the questionnaire and create
+    a new version before making changes.
+</p>
+
+{% else %}
+
+<p class="form-hint">
+    Save the questionnaire first before
+    adding questions.
+</p>
+
+{% endif %}
+               
+
+            </div>
+
+        </section>
+
+
+        <!-- ADAPTIVE RULES -->
+
+        <section class="editor-rules"
+                 aria-labelledby="rules-title">
+
+            <div class="section-header">
+
+                <p class="section-label">
+                    SMART QUESTIONNAIRES
+                </p>
+
+                <h2 id="rules-title">
+                    Adaptive Rules
+                </h2>
+
+                <p>
+                    Configure when follow-up questions
+                    should appear based on earlier
+                    client responses.
+                </p>
+
+            </div>
+
+            <div class="rules-actions">
+
+                
+{% if questionnaire is defined and questionnaire %}
+
+    <a
+        href="{{ url_for('manage_adaptive_rules', questionnaire_id=questionnaire['id']) }}"
+        class="btn btn-primary">
+
+        Configure Adaptive Rules
+
+    </a>
+
+{% else %}
+
+    <button
+        type="button"
+        class="btn btn-primary"
+        disabled>
+
+        Configure Adaptive Rules
+
+    </button>
+
+{% endif %}
+
+                <p class="form-hint">
+                    Save a questionnaire first to
+                    access its adaptive rule settings.
+                </p>
+
+            </div>
+
+        </section>
+
+
+        <!-- EDITOR HELP -->
+
+        <aside class="editor-help"
+               aria-labelledby="editor-help-title">
+
+            <h2 id="editor-help-title">
+                A Note About Questionnaire Versions
+            </h2>
+
+            <p>
+                Questionnaire changes must preserve
+                the versions previously used by
+                submitted project briefs.
+            </p>
+
+            <p>
+                Version management will be handled
+                when the database and application
+                logic are implemented.
+            </p>
+
+        </aside>
+
+    </main>
+
+
+    <!-- FOOTER -->
+
+    <footer class="dashboard-footer">
+        <p>
+            &copy; 2026 Elunette. All rights reserved.
+        </p>
+    </footer>
+
+</body>
+
+</html>
+
+<script>
+    document.querySelectorAll("[data-dialog-target]")
+        .forEach(button => {
+            button.addEventListener("click", () => {
+                const dialog = document.getElementById(
+                    button.dataset.dialogTarget
+                );
+
+                if (dialog) dialog.showModal();
+            });
+        });
+</script>

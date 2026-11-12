@@ -1,0 +1,497 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Service Provider Dashboard | Elunette</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body class="dashboard-page provider-dashboard-page">
+
+    <!-- DASHBOARD HEADER -->
+
+    <header class="dashboard-header">
+
+        <!-- ELUNETTE LOGO -->
+
+        <a href="/dashboard/provider"
+           class="logo"
+           aria-label="Elunette Provider Dashboard">
+
+            <img
+                src="{{ url_for('static', filename='images/elunette-logo.png') }}"
+                alt="Elunette"
+                class="logo-img">
+
+        </a>
+
+
+        <!-- PROVIDER NAVIGATION -->
+
+        <nav class="dashboard-nav"
+             aria-label="Service provider navigation">
+
+            <ul>
+
+                <li>
+                    <a href="/dashboard/provider"
+                       class="active"
+                       aria-current="page">
+                        Dashboard
+                    </a>
+                </li>
+
+                <li>
+                    <a href="/provider/questionnaires">
+                        Questionnaires
+                    </a>
+                </li>
+
+                <li>
+                    <a href="/provider/briefs">
+                        Client Briefs
+                    </a>
+                </li>
+
+                <li>
+                    <a href="/notifications">
+                        Notifications
+                    </a>
+                </li>
+
+            </ul>
+
+        </nav>
+
+
+        <!-- LOGOUT -->
+
+        action="/logout"
+
+    </header>
+
+
+    <!-- MAIN DASHBOARD -->
+
+    <main class="dashboard-main">
+
+        <!-- WELCOME SECTION -->
+
+        <section class="dashboard-welcome">
+
+            <div class="welcome-content">
+
+                <p class="section-label">
+                    SERVICE PROVIDER WORKSPACE
+                </p>
+
+                <h1>Welcome to your workspace.</h1>
+
+                <p>
+                    Manage client requirements,
+                    organise questionnaires, and
+                    review project briefs in one place.
+                </p>
+
+                <a href="/provider/briefs"
+                   class="btn btn-primary">
+                    View Client Briefs
+                </a>
+
+            </div>
+
+        </section>
+
+
+        <!-- DASHBOARD OVERVIEW -->
+
+        <section class="dashboard-overview"
+                 aria-labelledby="overview-title">
+
+            <div class="section-header">
+
+                <h2 id="overview-title">
+                    Workspace Overview
+                </h2>
+
+                <p>
+                    A quick summary of your
+                    questionnaire and review activities.
+                </p>
+
+            </div>
+
+
+            <div class="overview-grid">
+
+                <!-- TOTAL SUBMITTED BRIEFS -->
+
+                <article class="overview-card">
+
+                    <h3>Submitted Briefs</h3>
+
+                    <p class="overview-number">0</p>
+
+                    <p>
+                        All briefs submitted
+                        for provider review.
+                    </p>
+
+                </article>
+
+
+                <!-- PENDING REVIEWS -->
+
+                <article class="overview-card">
+
+                    <h3>Pending Reviews</h3>
+
+                    <p class="overview-number">0</p>
+
+                    <p>
+                        Briefs awaiting
+                        your review decision.
+                    </p>
+
+                </article>
+
+
+                <!-- APPROVED BRIEFS -->
+
+                <article class="overview-card">
+
+                    <h3>Approved Briefs</h3>
+
+                    <p class="overview-number">0</p>
+
+                    <p>
+                        Briefs successfully
+                        reviewed and approved.
+                    </p>
+
+                </article>
+
+
+                <!-- ACTIVE QUESTIONNAIRES -->
+
+                <article class="overview-card">
+
+                    <h3>Active Questionnaires</h3>
+
+                    <p class="overview-number">0</p>
+
+                    <p>
+                        Questionnaires currently
+                        available to clients.
+                    </p>
+
+                </article>
+
+            </div>
+
+        </section>
+
+
+        <!-- BRIEFS AWAITING REVIEW -->
+
+        <section class="provider-pending-briefs"
+                 aria-labelledby="pending-title">
+
+            <div class="section-header">
+
+                <div class="section-heading">
+
+                    <p class="section-label">
+                        REQUIRES YOUR ATTENTION
+                    </p>
+
+                    <h2 id="pending-title">
+                        Briefs Awaiting Review
+                    </h2>
+
+                    <p>
+                        Review submitted project briefs
+                        and provide the appropriate
+                        decision or feedback.
+                    </p>
+
+                </div>
+
+                <a href="/provider/briefs"
+                   class="text-link">
+                    View All Briefs
+                </a>
+
+            </div>
+
+
+            <!-- PENDING BRIEFS TABLE -->
+
+            <div class="table-container">
+
+                <table class="briefs-table">
+
+                    <caption>
+                        Client briefs awaiting
+                        service provider review.
+                    </caption>
+
+                    <thead>
+
+                        <tr>
+
+                            <th scope="col">
+                                Project Title
+                            </th>
+
+                            <th scope="col">
+                                Client
+                            </th>
+
+                            <th scope="col">
+                                Date Submitted
+                            </th>
+
+                            <th scope="col">
+                                Status
+                            </th>
+
+                            <th scope="col">
+                                Action
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody>
+
+                        <!--
+                        Actual submitted brief records
+                        will be loaded from SQLite
+                        through Flask.
+
+                        Each row will display:
+                        - Project title
+                        - Client name
+                        - Submission date
+                        - Review status
+                        - Link to review the brief
+                        -->
+
+                        <tr>
+
+                            <td colspan="5">
+
+                                <div class="empty-state">
+
+                                    <h3>
+                                        No briefs awaiting review.
+                                    </h3>
+
+                                    <p>
+                                        Newly submitted client
+                                        briefs will appear here
+                                        when they are available.
+                                    </p>
+
+                                </div>
+
+                            </td>
+
+                        </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </section>
+
+
+        <!-- QUESTIONNAIRE MANAGEMENT -->
+
+        <section class="provider-questionnaires"
+                 aria-labelledby="questionnaires-title">
+
+            <div class="section-header">
+
+                <p class="section-label">
+                    COLLECTING REQUIREMENTS
+                </p>
+
+                <h2 id="questionnaires-title">
+                    Questionnaire Management
+                </h2>
+
+                <p>
+                    Create and maintain the
+                    questionnaires clients use
+                    to describe their projects.
+                </p>
+
+            </div>
+
+
+            <div class="questionnaire-management-grid">
+
+                <!-- CREATE QUESTIONNAIRE -->
+
+                <article class="management-card">
+
+                    <h3>Create a Questionnaire</h3>
+
+                    <p>
+                        Build a new questionnaire
+                        with questions designed
+                        to collect relevant
+                        client requirements.
+                    </p>
+
+                    <a href="/provider/questionnaires/new"
+                       class="btn btn-primary">
+                        Create Questionnaire
+                    </a>
+
+                </article>
+
+
+                <!-- MANAGE QUESTIONNAIRES -->
+
+                <article class="management-card">
+
+                    <h3>Manage Questionnaires</h3>
+
+                    <p>
+                        Edit questions, configure
+                        adaptive rules, and manage
+                        questionnaire availability.
+                    </p>
+
+                    <a href="/provider/questionnaires"
+                       class="btn btn-secondary">
+                        View Questionnaires
+                    </a>
+
+                </article>
+
+            </div>
+
+        </section>
+
+
+        <!-- RECENT ACTIVITY -->
+
+        <section class="provider-activity"
+                 aria-labelledby="activity-title">
+
+            <div class="section-header">
+
+                <p class="section-label">
+                    STAY UP TO DATE
+                </p>
+
+                <h2 id="activity-title">
+                    Recent Activity
+                </h2>
+
+                <p>
+                    Keep track of important
+                    developments in your workspace.
+                </p>
+
+            </div>
+
+
+            <div class="activity-container">
+
+                <!--
+                Recent activities will be loaded
+                from application records.
+
+                Activities may include:
+                - New brief submissions
+                - Brief resubmissions
+                - Approval decisions
+                - Revision requests
+                -->
+
+                <div class="empty-state">
+
+                    <h3>No recent activity.</h3>
+
+                    <p>
+                        Activity involving client
+                        briefs and reviews will
+                        appear here.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- NOTIFICATIONS -->
+
+        <section class="provider-notifications"
+                 aria-labelledby="notifications-title">
+
+            <div class="section-header">
+
+                <h2 id="notifications-title">
+                    Notifications
+                </h2>
+
+                <p>
+                    Important updates about
+                    client submissions and
+                    project brief reviews.
+                </p>
+
+            </div>
+
+
+            <div class="notifications-content">
+
+                <p>
+                    You're all caught up!
+                    New notifications will
+                    appear here.
+                </p>
+
+                <a href="/notifications"
+                   class="text-link">
+                    View All Notifications
+                </a>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <!-- FOOTER -->
+
+    <footer class="dashboard-footer">
+
+        <p>
+            &copy; 2026 Elunette. All rights reserved.
+        </p>
+
+    </footer>
+
+</body>
+
+</html>
