@@ -1,0 +1,36 @@
+@import url('https://fonts.googleapis.com/css2?family=Pinyon+Script&display=swap');
+
+/* A transient invitation layered over the approved Studio, never a page redesign. */
+.studio-invitation { --invitation-cover: #6B1F2F; --invitation-ink: #F1E7D3; box-sizing: border-box; width: min(640px, calc(100% - 32px)); max-height: calc(100dvh - 40px); padding: 0; margin: auto; overflow: auto; border: 1px solid #D8CDBB; border-radius: 18px; background: #FFFFFF; color: #5C3A26; }
+.studio-invitation *, .studio-invitation *::before, .studio-invitation *::after { box-sizing: border-box; }
+.studio-invitation::backdrop { background: rgba(40,25,20,.38); }
+.studio-invitation--returning { --invitation-cover: #A3B18A; --invitation-ink: #5C3A26; }
+.studio-invitation .invitation-layout { display: grid; grid-template-columns: 210px minmax(0, 1fr); }
+.studio-invitation .invitation-cover { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 340px; padding: 28px 20px; background: var(--invitation-cover); color: var(--invitation-ink); }
+.studio-invitation .invitation-edition { font: 600 8px/1.6 "Manrope", Arial, sans-serif; letter-spacing: 1.7px; }
+.studio-invitation .invitation-emblem { width: 78px; height: 78px; margin: 28px 0 16px; }
+.studio-invitation .invitation-script { font: 400 39px/1.4 "Pinyon Script", cursive; white-space: nowrap; }
+.studio-invitation .invitation-wordmark { margin-top: 24px; font: 400 22px/1.2 "Bodoni Moda", Georgia, serif; letter-spacing: -.6px; }
+.studio-invitation .invitation-copy { padding: 54px 34px 36px; align-self: center; }
+.studio-invitation .invitation-label { margin: 0 0 18px; color: #6B1F2F; font: 600 9px/1.5 "Manrope", Arial, sans-serif; letter-spacing: 1.7px; }
+.studio-invitation #invitation-title { margin: 0 0 18px; font: 400 33px/1.12 "Bodoni Moda", Georgia, serif; letter-spacing: -.8px; text-wrap: balance; }
+.studio-invitation #invitation-description { margin: 0 0 28px; color: #756052; font: 400 12px/1.9 "Manrope", Arial, sans-serif; }
+.studio-invitation .invitation-action { display: inline-flex; justify-content: space-between; align-items: center; gap: 24px; min-height: 44px; padding: 12px 18px; border-radius: 24px; background: #6B1F2F; color: #FFFFFF; text-decoration: none; font: 600 11px/1.5 "Manrope", Arial, sans-serif; }
+.studio-invitation .invitation-action:hover { background: #5C3A26; }
+.studio-invitation .invitation-close { position: absolute; z-index: 1; top: 10px; right: 10px; display: grid; place-items: center; width: 36px; height: 36px; padding: 8px; border: 0; border-radius: 50%; background: #FFFFFF; color: #5C3A26; cursor: pointer; }
+.studio-invitation :is(a, button):focus-visible { outline: 2px solid #6B1F2F; outline-offset: 4px; }
+@keyframes invitation-reveal { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes invitation-stamp { from { opacity: 0; transform: rotate(-10deg) scale(.94); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: no-preference) {
+    .studio-invitation[open] { animation: invitation-reveal 260ms ease-out; }
+    .studio-invitation[open] .invitation-emblem { animation: invitation-stamp 360ms 60ms ease-out both; }
+}
+@media (max-width: 560px) {
+    .studio-invitation .invitation-layout { grid-template-columns: minmax(0, 1fr); }
+    .studio-invitation .invitation-cover { position: relative; align-items: flex-start; min-height: 136px; padding: 22px 26px; }
+    .studio-invitation .invitation-emblem { position: absolute; right: 25px; top: 36px; width: 56px; height: 56px; margin: 0; }
+    .studio-invitation .invitation-script { font-size: 36px; margin-top: 10px; }
+    .studio-invitation .invitation-wordmark { position: absolute; right: 30px; bottom: 17px; font-size: 18px; margin: 0; }
+    .studio-invitation .invitation-copy { padding: 28px 26px; }
+    .studio-invitation #invitation-title { font-size: 31px; }
+}

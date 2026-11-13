@@ -1,348 +1,41 @@
-{% import '_brief_components.html' as brief_ui %}
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>My Project Briefs | Elunette</title>
-
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='css/style.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/signature-footer.css') }}">
-</head>
-
-<body class="dashboard-page client-workspace my-briefs-page">
-
-    <!-- DASHBOARD HEADER -->
-
-    <header class="dashboard-header">
-
-        <a href="/dashboard/client" class="logo"
-           aria-label="Elunette Dashboard">
-
-            <img
-                src="{{ url_for('static', filename='images/elunette-logo.png') }}"
-                alt="Elunette"
-                class="logo-img">
-
-        </a>
-
-        <!-- NAVIGATION -->
-
-        <nav class="dashboard-nav"
-             aria-label="Client navigation">
-
-            <ul>
-
-                <li>
-                    <a href="/dashboard/client">Dashboard</a>
-                </li>
-
-                <li>
-                    <a href="/briefs"
-                       class="active"
-                       aria-current="page">My Briefs</a>
-                </li>
-
-                <li>
-                    <a href="/notifications">Notifications</a>
-                </li>
-
-            </ul>
-
-        </nav>
-
- 
-<!-- ==========================================
-     SERVICE PROVIDER LOGOUT
-========================================== -->
-
-<form
-    action="{{ url_for('logout') }}"
-    method="POST"
-    class="logout-form">
-
-    <input
-        type="hidden"
-        name="csrf_token"
-        value="{{ csrf_token() }}">
-
-    <button
-        type="submit"
-        class="logout-btn">
-        Log Out
-    </button>
-
+{% extends 'studio_provider_base.html' %}
+{% set active_navigation = 'my_briefs' %}
+{% block title %}My Project Briefs | The Elunette Studio{% endblock %}
+{% block breadcrumb %}Project Collection{% endblock %}
+{% block page_class %}collection-page{% endblock %}
+{% block page_styles %}<link rel="stylesheet" href="{{ url_for('static', filename='css/collection.css') }}">{% endblock %}
+{% block content %}
+<section class="collection-intro" aria-labelledby="collection-title">
+    <div><p class="studio-eyebrow">YOUR CREATIVE COLLECTION</p><h1 id="collection-title">My Project Briefs<span>.</span></h1><p>Every great idea deserves a place of its own.</p></div>
+    <a class="studio-button studio-button--burgundy" href="{{ url_for('new_brief') }}">{{ icon('plus') }} Create New Brief</a>
+</section>
+<form class="collection-filters" action="{{ url_for('my_briefs') }}" method="GET" role="search" aria-label="Search and filter project briefs">
+    <div><label for="brief-search">Search Briefs</label><input type="search" id="brief-search" name="search" maxlength="150" value="{{ search_query }}" placeholder="Find a project by title"></div>
+    <div><label for="brief-status">Filter by Status</label><select id="brief-status" name="status">
+        <option value="">All Statuses</option>
+        {% for value,label in [('draft','Draft'),('submitted','Submitted'),('under_review','Under Review'),('revision_requested','Revision Requested'),('approved','Approved')] %}<option value="{{ value }}"{% if status_filter == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select></div>
+    <button class="studio-button studio-button--burgundy" type="submit">Apply Filters</button>
+    {% if search_query or status_filter %}<a class="studio-text-link" href="{{ url_for('my_briefs') }}">Clear filters</a>{% endif %}
 </form>
-
-    </header>
-
-
-    <!-- MAIN CONTENT -->
-
-    <main class="dashboard-main">
-
-        {{ brief_ui.feedback() }}
-
-        <!-- PAGE INTRODUCTION -->
-
-        <section class="briefs-intro">
-
-            <div class="briefs-intro-content">
-
-                <p class="section-label">
-                    YOUR PROJECTS
-                </p>
-
-                <h1>My Project Briefs</h1>
-
-                <p>
-                    Keep track of your ideas, manage
-                    your project briefs, and follow
-                    their progress in one place.
-                </p>
-
-            </div>
-
-            <a href="/briefs/new" class="btn btn-primary">
-                Create New Brief
-            </a>
-
-        </section>
-
-
-        <!-- BRIEF FILTERS -->
-
-        <section class="briefs-filter-section"
-                 aria-label="Search and filter project briefs">
-
-            <form action="/briefs"
-                  method="GET"
-                  class="briefs-filter-form">
-
-                <!-- SEARCH FIELD -->
-
-                <div class="filter-group">
-
-                    <label for="brief-search">
-                        Search Briefs
-                    </label>
-
-                    <input
-                        type="search"
-                        id="brief-search"
-                        name="search"
-                        value="{{ search_query }}"
-                        placeholder="Search by project title">
-
-                </div>
-
-
-                <!-- STATUS FILTER -->
-
-                <div class="filter-group">
-
-                    <label for="brief-status">
-                        Filter by Status
-                    </label>
-
-                    <select id="brief-status" name="status">
-
-                        <option value="">All Statuses</option>
-
-                        <option value="draft" {% if status_filter == "draft" %}selected{% endif %}>
-                            Draft
-                        </option>
-
-                        <option value="submitted" {% if status_filter == "submitted" %}selected{% endif %}>
-                            Submitted
-                        </option>
-
-                        <option value="under_review" {% if status_filter == "under_review" %}selected{% endif %}>
-                            Under Review
-                        </option>
-
-                        <option value="revision_requested" {% if status_filter == "revision_requested" %}selected{% endif %}>
-                            Revision Requested
-                        </option>
-
-                        <option value="approved" {% if status_filter == "approved" %}selected{% endif %}>
-                            Approved
-                        </option>
-
-                    </select>
-
-                </div>
-
-                <div class="brief-filter-actions">
-                    <button type="submit" class="btn btn-secondary">Apply Filters</button>
-                    {% if search_query or status_filter %}
-                    <a href="{{ url_for('my_briefs') }}" class="brief-action">Clear filters</a>
-                    {% endif %}
-                </div>
-
-            </form>
-
-        </section>
-
-
-        <!-- PROJECT BRIEFS LIST -->
-
-        <section class="briefs-list-section"
-                 aria-labelledby="briefs-list-title">
-
-            <div class="section-header">
-
-                <h2 id="briefs-list-title">
-                    All Project Briefs
-                </h2>
-
-                <p>
-                    {{ briefs | length }} {{ 'project' if briefs | length == 1 else 'projects' }}{{ ' matching your filters' if search_query or status_filter else ' in your workspace' }}.
-                </p>
-
-            </div>
-
-
-            <!-- BRIEFS TABLE -->
-
-            <p class="brief-table-hint" id="brief-table-hint">On smaller screens, scroll across to see all project details and actions.</p>
-            <div class="table-container" role="region" aria-label="Your project briefs"
-                 aria-describedby="brief-table-hint" tabindex="0">
-
-                <table class="briefs-table client-briefs-table">
-                    <caption>Project briefs, progress and available actions</caption>
-
-                    <thead>
-
-                        <tr>
-                            <th scope="col">Project Title</th>
-                            <th scope="col">Questionnaire</th>
-                            <th scope="col">Last Updated</th>
-                            <th scope="col">Status</th>
-                            <th scope="col">Progress</th>
-                            <th scope="col">Actions</th>
-                        </tr>
-
-                    </thead>
-
-                    <tbody>
-
-                        {% for brief in briefs %}
-                        <tr>
-                            <th scope="row" class="brief-project-title">{{ brief['title'] }}</th>
-                            <td>{{ brief['questionnaire_title'] }}<span class="brief-version">Version {{ brief['version_number'] }}</span></td>
-                            <td><time datetime="{{ brief['updated_at'] | replace(' ', 'T') }}Z" title="{{ brief['updated_at'] }} UTC">{{ brief['updated_at'][:10] }}</time></td>
-                            <td>{{ brief_ui.status_badge(brief) }}</td>
-                            <td>{{ brief_ui.progress(brief) }}</td>
-                            <td>{{ brief_ui.actions(brief) }}</td>
-                        </tr>
-                        {% else %}
-                        <tr><td colspan="6"><div class="empty-state">
-                            <p class="section-label">{{ 'A FRESH PERSPECTIVE' if search_query or status_filter else 'YOUR NEXT PROJECT STARTS HERE' }}</p>
-                            <h3>{{ 'No briefs match your filters.' if search_query or status_filter else 'No project briefs yet.' }}</h3>
-                            <p>{{ 'Try a different project title or clear your filters to see every brief.' if search_query or status_filter else 'Give your next idea a home. Create a brief and return whenever inspiration strikes.' }}</p>
-                            {% if search_query or status_filter %}
-                            <a href="{{ url_for('my_briefs') }}" class="btn btn-secondary">Clear Filters</a>
-                            {% else %}
-                            <a href="{{ url_for('new_brief') }}" class="btn btn-primary">Create Your First Brief</a>
-                            {% endif %}
-                        </div></td></tr>
-                        {% endfor %}
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-        </section>
-
-
-        <!-- HELPFUL INFORMATION -->
-
-        <section class="briefs-help"
-                 aria-labelledby="briefs-help-title">
-
-            <div class="help-container">
-
-                <h2 id="briefs-help-title">
-                    Understanding Your Brief Status
-                </h2>
-
-                <div class="status-guide">
-
-                    <article class="status-item">
-
-                        <h3>Draft</h3>
-
-                        <p>
-                            Your brief is still being prepared.
-                            You can continue editing it.
-                        </p>
-
-                    </article>
-
-                    <article class="status-item">
-
-                        <h3>Submitted</h3>
-
-                        <p>
-                            Your brief has been submitted
-                            and is awaiting review.
-                        </p>
-
-                    </article>
-
-                    <article class="status-item">
-
-                        <h3>Under Review</h3>
-
-                        <p>
-                            The service provider is reviewing
-                            your project requirements.
-                        </p>
-
-                    </article>
-
-                    <article class="status-item">
-
-                        <h3>Revision Requested</h3>
-
-                        <p>
-                            Changes or additional information
-                            have been requested.
-                        </p>
-
-                    </article>
-
-                    <article class="status-item">
-
-                        <h3>Approved</h3>
-
-                        <p>
-                            Your project brief has been
-                            reviewed and approved.
-                        </p>
-
-                    </article>
-
-                </div>
-
-            </div>
-
-        </section>
-
-    </main>
-
-
-    <!-- FOOTER -->
-
-    {% include '_signature_footer.html' %}
-
-    {{ brief_ui.deletion_dialog('briefs', search_query, status_filter) }}
-</body>
-
-</html>
+<section aria-labelledby="collection-list-title">
+    <div class="collection-section-heading"><h2 id="collection-list-title">Your project files</h2><p>{{ briefs | length }} {{ 'project' if briefs | length == 1 else 'projects' }}{{ ' matching your filters' if search_query or status_filter else ' in your workspace' }}.</p></div>
+    {% if briefs %}
+    <div class="collection-grid{% if briefs | length == 1 %} collection-grid--single{% endif %}">
+        {% for brief in briefs %}
+        <article class="collection-dossier collection-dossier--{{ brief['status'] }}" data-brief-id="{{ brief['id'] }}" aria-labelledby="project-{{ brief['id'] }}">
+            <div class="collection-fileline"><span>PROJECT FILE {{ '%03d' | format(brief['id']) }}</span>{{ brief_ui.status_badge(brief) }}</div>
+            <h3 id="project-{{ brief['id'] }}">{{ brief['title'] }}</h3>
+            <p class="collection-questionnaire">{{ brief['questionnaire_title'] }} <span>Version {{ brief['version_number'] }}</span></p>
+            <p class="collection-status-note">{{ 'Shape your ideas at your own pace.' if brief['status'] == 'draft' else 'Your provider has requested a little more detail.' if brief['status'] == 'revision_requested' else 'Finalised and available for viewing.' if brief['status'] == 'approved' else 'Your brief is with your service provider.' }}</p>
+            {{ brief_ui.progress(brief) }}
+            <div class="collection-dossier-bottom"><p>Updated <time datetime="{{ brief['updated_at'] | replace(' ', 'T') }}Z" title="{{ brief['updated_at'] }} UTC">{{ brief['updated_at'][:10] }}</time></p>{{ brief_ui.actions(brief) }}</div>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="collection-empty"><span class="collection-empty-icon" aria-hidden="true">{{ icon('brief') }}</span><p class="studio-eyebrow">{{ 'A FRESH PERSPECTIVE' if search_query or status_filter else 'YOUR NEXT PROJECT STARTS HERE' }}</p><h3>{{ 'No briefs match your filters.' if search_query or status_filter else 'A space for your next idea.' }}</h3><p>{{ 'Try a different project title or clear your filters to see every brief.' if search_query or status_filter else 'Give your next idea a home. Create a brief and return whenever inspiration strikes.' }}</p><a class="studio-button studio-button--burgundy" href="{{ url_for('my_briefs') if search_query or status_filter else url_for('new_brief') }}">{{ 'Clear Filters' if search_query or status_filter else 'Create Your First Brief' }} {{ icon('arrow') }}</a></div>
+    {% endif %}
+</section>
+{% endblock %}
+{% block page_scripts %}{{ brief_ui.deletion_dialog('briefs', search_query, status_filter) }}{% endblock %}

@@ -8,18 +8,24 @@ from contextlib import closing
 from pathlib import Path
 import re
 import sqlite3
+import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
 from html.parser import HTMLParser
+from html import unescape
 
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask import Flask
+from database import init_app
 
 
 _temporary = tempfile.TemporaryDirectory()
 _old_database = os.environ.get("ELUNETTE_DATABASE")
 os.environ["ELUNETTE_DATABASE"] = str(Path(_temporary.name) / "bootstrap.db")
 from app import app
+from migrate_provider_assignment import migrate
 if _old_database is None:
     os.environ.pop("ELUNETTE_DATABASE")
 else:
@@ -63,7 +69,7 @@ class Workflows(unittest.TestCase):
         self.db.execute("INSERT INTO adaptive_rules (questionnaire_version_id,source_question_id,target_question_id,expected_answer) VALUES (1,1,2,'Yes')")
         self.db.execute("INSERT INTO questionnaire_publications (questionnaire_id,questionnaire_version_id,title_snapshot,description_snapshot) VALUES (1,1,'Published Design','Published requirements')")
         for i in range(1, 9):
-            self.db.execute("INSERT INTO project_briefs (id,client_id,questionnaire_version_id,title) VALUES (?,1,1,?)", (i, f"Project {i}"))
+            self.db.execute("INSERT INTO project_briefs (id,client_id,questionnaire_version_id,assigned_provider_id,title) VALUES (?,1,1,2,?)", (i, f"Project {i}"))
         self.db.commit()
         self.client = app.test_client()
         self.login(1)
@@ -192,6 +198,248 @@ class Workflows(unittest.TestCase):
         self.assertEqual(self.client.get("/briefs").status_code, 302)
         self.assertEqual(self.login(1).location, "/login")
 
+    def test_registration_roles_validation_and_tampering(self):
+        client = app.test_client()
+        for hint in ('', '?role=client', '?role=administrator', '?role=invalid'):
+            html = client.get('/register' + hint).get_data(as_text=True)
+            self.assertIn('Create your Client account.', html)
+            self.assertIn('name="confirm_password"', html)
+            self.assertNotIn('name="role"', html)
+        html = client.get('/register?role=service_provider').get_data(as_text=True)
+        self.assertIn('Create your Service Provider account.', html)
+        self.assertIn('class="auth-form"', html)
+        self.assertIn('/login?role=service_provider', html)
+        self.assertIn('/register?role=client', client.get('/login?role=client').get_data(as_text=True))
+        self.assertIn('/register?role=service_provider', client.get('/login?role=service_provider').get_data(as_text=True))
+        data = dict(full_name='New Client', email='NEW@example.test', password='A-secure-password-123', confirm_password='A-secure-password-123')
+        before = self.db.execute('SELECT COUNT(*) FROM users').fetchone()[0]
+        self.assertEqual(client.post('/register', data=data).status_code, 400)
+        for hint in ('administrator', 'invalid'):
+            self.assertEqual(self.post('/register', {**data, 'role':hint}, client).status_code, 400)
+            self.assertEqual(self.post('/register?role='+hint, data, client).status_code, 400)
+        for invalid in ({'full_name':''}, {'full_name':'X'}, {'email':'broken'}, {'password':'short','confirm_password':'short'}, {'confirm_password':'mismatch'}):
+            response=self.post('/register', {**data, **invalid}, client, follow=True)
+            self.assertIn('role="alert"', response.get_data(as_text=True))
+        self.assertEqual(self.db.execute('SELECT COUNT(*) FROM users').fetchone()[0], before)
+        self.assertEqual(self.post('/register?role=client', data, client).status_code, 302)
+        user = self.db.execute("SELECT * FROM users WHERE email='new@example.test'").fetchone()
+        self.assertEqual(user['role'], 'client')
+        self.assertEqual(user['status'], 'active')
+        self.assertTrue(check_password_hash(user['password_hash'], data['password']))
+        self.assertNotEqual(user['password_hash'], data['password'])
+        self.post('/register', data, client)
+        self.assertEqual(self.db.execute('SELECT COUNT(*) FROM users').fetchone()[0], before+1)
+        response=self.post('/login?role=service_provider', {'email':data['email'],'password':data['password']}, client)
+        self.assertTrue(response.location.startswith('/dashboard/client'))
+        with client.session_transaction() as session:
+            self.assertEqual(session['user_role'], 'client')
+        self.assertEqual(client.get('/admin/users/new').status_code, 403)
+        self.login(5)
+        self.assertEqual(self.client.get('/admin/users/new').status_code, 200)
+        self.assertEqual(self.post('/admin/users/new', data).status_code, 405)
+        self.db.execute("UPDATE users SET status='inactive' WHERE id=4")
+        self.db.commit()
+        self.post('/register?role=service_provider',{**data,'email':'user4@example.test'},client)
+        self.assertEqual(tuple(self.db.execute('SELECT role,status FROM users WHERE id=4').fetchone()),('service_provider','inactive'))
+        self.assertEqual(self.post('/register?role=client',{**data,'role':'service_provider'},client).status_code,400)
+
+    def test_multi_provider_trial_end_to_end(self):
+        accounts = {}
+        for name, role in (('Trial Client A','client'),('Trial Client B','client'),('Trial Provider A','service_provider'),('Trial Provider B','service_provider')):
+            browser = app.test_client()
+            email = name.replace(' ','').lower()+'@example.test'
+            payload = {'full_name':name,'email':email,'password':'Trial-password-123','confirm_password':'Trial-password-123'}
+            self.assertEqual(self.post('/register?role='+role,payload,browser).status_code,302)
+            row = self.db.execute('SELECT * FROM users WHERE email=?',(email,)).fetchone()
+            self.assertEqual((row['role'],row['status']),(role,'active'))
+            response = self.post('/login',{'email':email,'password':payload['password']},browser)
+            self.assertIn('/dashboard/'+('provider' if role=='service_provider' else 'client'),response.location)
+            self.assertEqual(browser.get(response.location).status_code,200)
+            accounts[name[-1]+role]=(row['id'],browser)
+        aid,a=accounts['Aservice_provider']; bid,b=accounts['Bservice_provider']
+        client_id,c=accounts['Aclient']; _,other=accounts['Bclient']
+        questionnaires=[]
+        for owner,browser,label in ((aid,a,'Trial Questionnaire A'),(bid,b,'Trial Questionnaire B')):
+            self.assertEqual(self.post('/provider/questionnaires/new',{'form_action':'save_template','title':label,'description':'Trial questions','created_by':'5'},browser).status_code,302)
+            q=self.db.execute('SELECT * FROM questionnaires WHERE title=?',(label,)).fetchone()
+            self.assertEqual(q['created_by'],owner)
+            qid=q['id']
+            self.assertEqual(self.post(f'/provider/questionnaires/{qid}/questions/add',{'question_text':'Describe your project','question_type':'text','is_required':'1'},browser).status_code,302)
+            self.assertEqual(self.post(f'/provider/questionnaires/{qid}/activate',client=browser).status_code,302)
+            question=self.db.execute('SELECT id FROM questions WHERE questionnaire_version_id IN (SELECT id FROM questionnaire_versions WHERE questionnaire_id=?)',(qid,)).fetchone()[0]
+            questionnaires.append((qid,question))
+        qid,question=questionnaires[0]
+        html=c.get(f'/briefs/new?provider_id={aid}').get_data(as_text=True)
+        self.assertIn('Trial Questionnaire A',html)
+        self.assertNotIn('Trial Questionnaire B',html)
+        for payload in ({'provider_id':bid,'questionnaire_id':qid},{'provider_id':5,'questionnaire_id':qid},{'questionnaire_id':qid}):
+            self.assertEqual(self.post('/briefs/new',{'project_title':'Wrong selection',**payload},c).status_code,400)
+        self.assertEqual(self.post('/briefs/new',{'project_title':'Trial project','provider_id':aid,'questionnaire_id':qid,'client_id':3},c).status_code,302)
+        brief=self.db.execute("SELECT * FROM project_briefs WHERE title='Trial project'").fetchone()
+        self.assertEqual((brief['client_id'],brief['assigned_provider_id']),(client_id,aid))
+        brief_id=brief['id']; review=f'/provider/briefs/{brief_id}/review'
+        self.assertEqual(a.get(review).status_code,404)  # Drafts remain private.
+        self.assertEqual(other.get(f'/client/questionnaires/{qid}?brief_id={brief_id}').status_code,404)
+        for browser in (a,b):
+            self.assertEqual(browser.get('/briefs').status_code,403)
+        response=self.post(f'/briefs/{brief_id}/submit',{'save_answers':'1',f'answer_{question}':'Original brief','provider_id':bid},c)
+        self.assertEqual(response.status_code,302)
+        self.assertEqual(a.get(review).status_code,200)
+        self.assertEqual(b.get(review).status_code,404)
+        self.assertEqual(self.post(review,{'decision':'approve'},b).status_code,404)
+        self.assertNotIn('Trial project',b.get('/provider/briefs').get_data(as_text=True))
+        self.assertNotIn('Trial project',b.get('/dashboard/provider').get_data(as_text=True))
+        for suffix in ('edit','rules'):
+            self.assertEqual(b.get(f'/provider/questionnaires/{qid}/{suffix}').status_code,404)
+        self.assertEqual(b.get(f'/provider/questionnaires/{qid}').status_code,404)
+        for suffix in ('activate','deactivate','versions/new','questions/add','rules','edit'):
+            self.assertEqual(self.post(f'/provider/questionnaires/{qid}/{suffix}',client=b).status_code,404)
+        self.assertEqual(b.get(f'/provider/questionnaires/{qid}/questions/{question}/edit').status_code,404)
+        self.assertEqual(self.post(f'/provider/questionnaires/{qid}/questions/{question}/delete',client=b).status_code,404)
+        self.assertEqual(self.post(review,{'decision':'request_revision','revision_comments':'Please add scope.'},a).status_code,302)
+        review_id=self.db.execute('SELECT MAX(id) FROM brief_reviews WHERE brief_id=?',(brief_id,)).fetchone()[0]
+        changes={'revision_review_id':review_id,'revision_response':'Added scope.',f'answer_{question}':'Revised scope','provider_id':bid}
+        self.assertEqual(self.post(f'/briefs/{brief_id}/answers',changes,c).status_code,302)
+        self.assertEqual(self.post(f'/briefs/{brief_id}/resubmit',{**changes,'confirm_resubmission':'yes'},c).status_code,302)
+        self.assertIn('Added scope.',a.get(review).get_data(as_text=True))
+        self.assertEqual(self.post(review,{'decision':'approve','approval_comment':'Approved trial.'},a).status_code,302)
+        readonly=c.get(f'/client/questionnaires/{qid}?brief_id={brief_id}').get_data(as_text=True)
+        for text in ('approved and finalised','Original brief','Revised scope','Added scope.'):
+            self.assertIn(text,readonly)
+        for action,code in (('answers',404),('submit',409),('resubmit',409),('delete',409)):
+            self.assertEqual(self.post(f'/briefs/{brief_id}/{action}',{'confirm_delete':'delete'},c).status_code,code)
+        self.assertEqual(self.db.execute('SELECT assigned_provider_id FROM project_briefs WHERE id=?',(brief_id,)).fetchone()[0],aid)
+        self.assertEqual(self.db.execute("SELECT COUNT(*) FROM project_briefs WHERE title='Trial project'").fetchone()[0],1)
+        self.assertEqual(self.db.execute('SELECT COUNT(*) FROM brief_reviews WHERE brief_id=?',(brief_id,)).fetchone()[0],2)
+        self.assertIn('All caught up, lovely.',c.get('/notifications').get_data(as_text=True))
+
+    def test_assignment_migration_repeatable_and_preserves_legacy_history(self):
+        schema=Path('schema.sql').read_text(encoding='utf-8')
+        schema=schema.replace('    assigned_provider_id INTEGER REFERENCES users(id),','')
+        schema=schema.replace('CREATE INDEX IF NOT EXISTS idx_briefs_assigned_provider\nON project_briefs (assigned_provider_id, status);','')
+        path=Path(self.directory.name)/'old.db'
+        with closing(sqlite3.connect(path)) as db:
+            db.executescript(schema)
+            db.execute('ATTACH DATABASE ? AS fixture',(self.path,))
+            for table in ('users','questionnaires','questionnaire_versions','questions','questionnaire_publications','project_briefs'):
+                columns=[row[1] for row in db.execute('PRAGMA table_info('+table+')')]
+                names=','.join(columns)
+                db.execute(f'INSERT INTO {table} ({names}) SELECT {names} FROM fixture.{table}')
+            db.execute("UPDATE project_briefs SET status='approved' WHERE id=1")
+            db.execute("INSERT INTO brief_reviews (brief_id,reviewer_id,decision,comment) VALUES (1,2,'approved','Legacy approval')")
+            db.execute("INSERT INTO brief_responses (brief_id,question_id,answer_text) VALUES (1,1,'No')")
+            db.execute("INSERT INTO questionnaires (id,title,description,created_by) VALUES (99,'Unknown legacy owner','Legacy questionnaire',1)")
+            db.execute('INSERT INTO questionnaire_versions (id,questionnaire_id,version_number) VALUES (99,99,1)')
+            db.execute("INSERT INTO project_briefs (id,client_id,questionnaire_version_id,title) VALUES (99,1,99,'Needs reconciliation')")
+            db.commit()
+            before=db.execute('SELECT * FROM project_briefs ORDER BY id').fetchall()
+            with patch.dict(os.environ,{'ELUNETTE_DATABASE':str(path)}):
+                with self.assertRaisesRegex(RuntimeError,'migration required'):
+                    init_app(Flask('migration-test',root_path=str(Path.cwd())))
+            db.executescript("CREATE TRIGGER fail_assignment BEFORE UPDATE OF assigned_provider_id ON project_briefs BEGIN SELECT RAISE(ABORT,'Simulated migration failure'); END;")
+            with self.assertRaises(sqlite3.IntegrityError):
+                migrate(db)
+            self.assertNotIn('assigned_provider_id',[row[1] for row in db.execute('PRAGMA table_info(project_briefs)')])
+            self.assertEqual(db.execute('SELECT * FROM project_briefs ORDER BY id').fetchall(),before)
+            db.execute('DROP TRIGGER fail_assignment')
+            db.commit()
+            self.assertEqual(migrate(db),[99])
+            self.assertEqual(migrate(db),[99])
+            after=db.execute('SELECT * FROM project_briefs ORDER BY id').fetchall()
+            self.assertEqual([row[:-1] for row in after],before)
+            self.assertEqual([row[-1] for row in after],[2]*8+[None])
+            self.assertEqual(db.execute('SELECT comment FROM brief_reviews').fetchone()[0],'Legacy approval')
+            self.assertEqual(db.execute('SELECT answer_text FROM brief_responses').fetchone()[0],'No')
+            self.assertEqual(db.execute('PRAGMA foreign_key_check').fetchall(),[])
+        result = subprocess.run([sys.executable,'migrate_provider_assignment.py','--database',str(path)],capture_output=True,text=True,check=True)
+        self.assertIn('[99]',result.stdout)
+        backups=list(path.parent.glob('old.db.backup-*'))
+        self.assertEqual(len(backups),1)
+        with closing(sqlite3.connect(backups[0])) as backup:
+            self.assertEqual(backup.execute('SELECT COUNT(*) FROM project_briefs').fetchone()[0],9)
+            self.assertEqual(backup.execute('SELECT comment FROM brief_reviews').fetchone()[0],'Legacy approval')
+
+    def test_provider_eligibility_assignment_is_fixed_and_legacy_is_blocked(self):
+        self.assertNotIn('Published Design',self.client.get('/briefs/new').get_data(as_text=True))
+        for provider in ('invalid','5','3','999'):
+            self.assertNotIn('Published Design',self.client.get('/briefs/new?provider_id='+provider).get_data(as_text=True))
+        self.assertEqual(self.post('/briefs/new',{'provider_id':str(2**80),'questionnaire_id':1,'project_title':'Invalid identifier'}).status_code,400)
+        self.db.execute("UPDATE questionnaires SET status='inactive' WHERE id=1")
+        self.db.commit()
+        self.assertEqual(self.post('/briefs/new',{'provider_id':2,'questionnaire_id':1,'project_title':'Unavailable'}).status_code,400)
+        self.db.execute("UPDATE questionnaires SET status='active' WHERE id=1")
+        self.db.execute("UPDATE users SET status='inactive' WHERE id=2")
+        self.db.commit()
+        self.assertEqual(self.post('/briefs/new',{'provider_id':2,'questionnaire_id':1,'project_title':'Unavailable'}).status_code,400)
+        self.db.execute("UPDATE users SET status='active' WHERE id=2")
+        self.db.execute('UPDATE project_briefs SET assigned_provider_id=NULL WHERE id=1')
+        self.db.commit()
+        self.assertEqual(self.post('/briefs/1/submit',{'save_answers':'1','answer_1':'No'}).status_code,409)
+        self.assertEqual(self.answers(),{})
+        self.db.execute("UPDATE project_briefs SET status='approved' WHERE id=1")
+        self.db.commit()
+        self.assertEqual(self.client.get('/client/questionnaires/1?brief_id=1').status_code,200)
+        self.assertEqual(self.post('/briefs/1/answers',{'answer_1':'No'}).status_code,404)
+        self.db.execute("UPDATE project_briefs SET assigned_provider_id=2,status='submitted' WHERE id=1")
+        self.db.execute('UPDATE questionnaires SET created_by=4 WHERE id=1')
+        self.db.commit()
+        self.login(4)
+        self.assertEqual(self.client.get('/provider/briefs/1/review').status_code,404)
+        self.assertNotIn('Project 1',self.client.get('/provider/briefs').get_data(as_text=True))
+        self.login(2)
+        self.assertEqual(self.client.get('/provider/briefs/1/review').status_code,200)
+        self.assertIn('Project 1',self.client.get('/provider/briefs').get_data(as_text=True))
+
+    def test_project_collection_statuses_filters_actions_and_empty(self):
+        for brief_id, status in enumerate(('draft', 'submitted', 'under_review', 'revision_requested', 'approved'), 1):
+            self.db.execute('UPDATE project_briefs SET status=?,completeness_percentage=? WHERE id=?', (status, brief_id * 20, brief_id))
+        self.db.commit()
+        for url in ('/briefs', '/briefs-preview'):
+            html = self.client.get(url).get_data(as_text=True)
+            self.assertEqual(html.count('class="collection-dossier collection-dossier--'), 8)
+            self.assertIn('href="/briefs-preview" aria-current="page"', html)
+            self.assertNotIn('dashboard-header', html)
+            self.assertIn('Published Design', html)
+            self.assertIn('Version 1', html)
+            self.assertEqual(html.count('<footer class="signature-footer"'), 1)
+            for brief_id, status in enumerate(('draft', 'submitted', 'under_review', 'revision_requested', 'approved'), 1):
+                self.assertIn(f'collection-dossier--{status}', html)
+                self.assertIn(f'value="{brief_id * 20}"', html)
+                page = self.client.get(f'/briefs?search=Project+{brief_id}&status={status}').get_data(as_text=True)
+                self.assertEqual(page.count('class="collection-dossier collection-dossier--'), 1)
+                self.assertIn('collection-grid--single', page)
+                self.assertEqual('data-delete-draft ' in page, status == 'draft')
+                for tag, attrs in Page(page).elements:
+                    if tag == 'a' and 'brief-action' in attrs.get('class', ''):
+                        self.assertEqual(self.client.get(attrs['href']).status_code, 200)
+        self.login(3)
+        html = self.client.get('/briefs').get_data(as_text=True)
+        self.assertIn('Create Your First Brief', html)
+        self.assertNotIn('data-brief-id=', html)
+        self.login(2)
+        self.assertEqual(self.client.get('/briefs').status_code, 403)
+
+    def test_postroom_role_shell_empty_state_and_security(self):
+        for user_id, navigation, destination in ((1, 'Client navigation', '/dashboard/client'), (2, 'Service provider navigation', '/dashboard/provider'), (5, 'Administrator navigation', '/dashboard/admin')):
+            self.login(user_id)
+            response = self.client.get('/notifications')
+            self.assertEqual(response.status_code, 200)
+            html = response.get_data(as_text=True)
+            self.assertIn('All caught up, lovely.', html)
+            self.assertIn(navigation, html)
+            self.assertIn('postroom.css', html)
+            self.assertIn('href="/notifications" aria-current="page"', html)
+            self.assertTrue(any(a.get('href', '').startswith(destination) for tag, a in Page(html).elements if tag == 'a'))
+            self.assertNotIn('Mark All as Read', html)
+            self.assertNotIn('type="search"', html)
+            self.assertEqual(html.count('<footer class="signature-footer"'), 1)
+            if user_id == 1:
+                self.assertNotIn('Client Briefs', html)
+            self.assertEqual(self.client.post('/logout').status_code, 400)
+        with self.client.session_transaction() as session:
+            session.clear()
+        self.assertEqual(self.client.get('/notifications').status_code, 302)
+
     def test_questionnaire_form_posts_and_role_navigation(self):
         html = self.client.get("/client/questionnaires/1?brief_id=1").get_data(as_text=True)
         elements = Page(html).elements
@@ -210,7 +458,7 @@ class Workflows(unittest.TestCase):
                 self.assertLess(self.client.get(link).status_code, 400, link)
 
     def test_new_brief_uses_published_version(self):
-        response = self.post("/briefs/new", {"project_title": "New project", "questionnaire_id": "1"})
+        response = self.post("/briefs/new", {"project_title": "New project", "provider_id":"2", "questionnaire_id": "1"})
         self.assertEqual(response.status_code, 302)
         self.assertIn("brief_id=9", response.location)
         self.assertEqual(self.client.get(response.location).status_code, 200)
@@ -234,7 +482,7 @@ class Workflows(unittest.TestCase):
         self.db.execute("INSERT INTO questionnaire_versions (id,questionnaire_id,version_number) VALUES (2,2,1)")
         self.db.execute("INSERT INTO questions (id,questionnaire_version_id,question_text,question_type,position) VALUES (5,2,'Optional answer','text',1)")
         self.db.execute("INSERT INTO questionnaire_publications (questionnaire_id,questionnaire_version_id,title_snapshot,description_snapshot) VALUES (2,2,'Optional','Optional answers')")
-        self.db.execute("INSERT INTO project_briefs (id,client_id,questionnaire_version_id,title) VALUES (9,1,2,'Optional project')")
+        self.db.execute("INSERT INTO project_briefs (id,client_id,questionnaire_version_id,assigned_provider_id,title) VALUES (9,1,2,2,'Optional project')")
         self.db.commit()
         self.assertEqual(self.post("/briefs/9/submit").status_code, 302)
         self.assertEqual(self.db.execute("SELECT status FROM project_briefs WHERE id=9").fetchone()[0], "draft")
@@ -303,7 +551,7 @@ class Workflows(unittest.TestCase):
         self.assertIn("search=Project+3", response.location)
         self.assertIn("status=draft", response.location)
 
-    def test_project_components_actions_and_accessible_table(self):
+    def test_project_components_actions_and_accessible_collection(self):
         self.db.execute("UPDATE project_briefs SET status='submitted',completeness_percentage=100 WHERE id=1")
         self.db.commit()
         for url in ("/briefs", "/dashboard/client"):
@@ -317,9 +565,9 @@ class Workflows(unittest.TestCase):
             self.assertIn("aria-labelledby", dialog)
             self.assertIn("aria-describedby", dialog)
         elements = Page(self.client.get("/briefs").get_data(as_text=True)).elements
-        self.assertEqual(sum(tag == "th" and a.get("scope") == "col" for tag, a in elements), 6)
-        self.assertEqual(sum(tag == "th" and a.get("scope") == "row" for tag, a in elements), 8)
-        self.assertTrue(any(tag == "div" and a.get("role") == "region" and a.get("tabindex") == "0" for tag, a in elements))
+        self.assertEqual(sum(tag == "article" and a.get("aria-labelledby", "").startswith("project-") for tag, a in elements), 8)
+        self.assertTrue(any(tag == "label" and a.get("for") == "brief-search" for tag, a in elements))
+        self.assertTrue(any(tag == "label" and a.get("for") == "brief-status" for tag, a in elements))
 
     def test_filtered_and_first_project_empty_states(self):
         html = self.client.get("/briefs?search=missing-project").get_data(as_text=True)
@@ -327,7 +575,7 @@ class Workflows(unittest.TestCase):
         self.assertIn("Clear Filters", html)
         self.login(3)
         html = self.client.get("/briefs").get_data(as_text=True)
-        self.assertIn("No project briefs yet.", html)
+        self.assertIn("A space for your next idea.", html)
         self.assertIn("Create Your First Brief", html)
 
     def test_dashboard_shows_six_latest_brief_cards(self):
@@ -659,6 +907,81 @@ class Workflows(unittest.TestCase):
                                "password": "Test-password-123", "csrf_token": self.token(client)})
         self.assertTrue(response.location.startswith("/dashboard/client"))
 
+    def test_studio_invitations_are_authenticated_exclusive_and_once(self):
+        for role, dashboard in (('client','/dashboard/client'),('service_provider','/dashboard/provider')):
+            browser=app.test_client()
+            data={'full_name':'Invitation Guest','email':role+'-invitation@example.test','password':'Invitation-password-123','confirm_password':'Invitation-password-123'}
+            self.assertEqual(self.post('/register?role='+role,data,browser).status_code,302)
+            self.assertNotIn('id="studio-invitation"',browser.get('/login?role='+role).get_data(as_text=True))
+            with browser.session_transaction() as state:
+                self.assertNotIn('user_id',state)  # Registration does not bypass login.
+                self.assertIn('pending_registration_user_id',state)
+            self.assertEqual(self.post('/login',{'email':data['email'],'password':'wrong'},browser).status_code,302)
+            self.assertEqual(browser.get(dashboard).status_code,302)
+            self.assertEqual(self.post('/login',{'email':data['email'],'password':data['password']},browser).status_code,302)
+            html=browser.get(dashboard).get_data(as_text=True)
+            self.assertEqual(html.count('id="studio-invitation"'),1)
+            self.assertIn('studio-invitation--registration',html)
+            self.assertNotIn('studio-invitation--returning',html)
+            self.assertIn("It's official. You're part of elunette.",unescape(html))
+            action=next(attrs for tag,attrs in Page(html).elements if attrs.get('class')=='invitation-action')
+            self.assertEqual(app.url_map.bind('').match(action['href'])[0], 'client_dashboard' if role=='client' else 'provider_dashboard')
+            for path in (dashboard,'/notifications',dashboard):
+                self.assertNotIn('id="studio-invitation"',browser.get(path).get_data(as_text=True))
+            self.post('/logout',client=browser)
+            self.post('/login',{'email':data['email'],'password':data['password']},browser)
+            html=browser.get(dashboard).get_data(as_text=True)
+            self.assertIn('studio-invitation--returning',html)
+            self.assertNotIn('studio-invitation--registration',html)
+            self.assertIn("Look who's back.",unescape(html))
+            self.assertNotIn('id="studio-invitation"',browser.get(dashboard).get_data(as_text=True))
+        # A pending registration belonging to someone else cannot change the greeting.
+        browser=app.test_client()
+        with browser.session_transaction() as state:
+            state['pending_registration_user_id']=99999
+        self.login(1,browser)
+        self.assertIn('studio-invitation--returning',browser.get('/dashboard/client').get_data(as_text=True))
+        self.login(5,browser)
+        self.assertNotIn('id="studio-invitation"',browser.get('/dashboard/admin').get_data(as_text=True))
+        anonymous=app.test_client()
+        with anonymous.session_transaction() as state:
+            self.assertNotIn('studio_invitation',state)
+        self.assertEqual(anonymous.post('/register',data={}).status_code,400)
+        with anonymous.session_transaction() as state:
+            self.assertNotIn('pending_registration_user_id',state)
+
+    def test_illustrated_login_paths_links_and_failed_feedback(self):
+        for role,heading,asset in (('client','Welcome back, lovely.','client-login.png'),('service_provider','Welcome back to your studio.','provider-login.png')):
+            client=app.test_client()
+            response=client.get('/login?role='+role)
+            self.assertEqual(response.status_code,200)
+            html=response.get_data(as_text=True)
+            self.assertIn(heading,html)
+            self.assertIn('/static/images/welcome/'+asset,html)
+            self.assertIn('/register?role='+role,html)
+            self.assertIn('autocomplete="current-password"',html)
+            self.assertIn('name="csrf_token"',html)
+            for url in ('/static/images/welcome/'+asset,'/register?role='+role,'/forgot-password'):
+                response=client.get(url)
+                self.assertEqual(response.status_code,200)
+                response.close()
+            self.assertEqual(client.post('/login?role='+role,data={'email':'unknown@example.test','password':'invalid'}).status_code,400)
+            failed=self.post('/login?role='+role,{'email':'unknown@example.test','password':'invalid'},client,follow=True)
+            self.assertIn(heading,failed.get_data(as_text=True))
+            self.assertIn('role="alert"',failed.get_data(as_text=True))
+            with client.session_transaction() as session:
+                self.assertNotIn('user_id',session)
+        admin=app.test_client()
+        html=admin.get('/login?role=administrator').get_data(as_text=True)
+        self.assertIn('Administrator sign in.',html)
+        self.assertNotIn('Create a Provider Account',html)
+        self.assertTrue(self.login(5,admin).location.startswith('/dashboard/admin'))
+        # A Client credential on a Provider-themed form grants only Client access.
+        response=self.post('/login?role=service_provider',{'email':'user1@example.test','password':'Test-password-123'},admin)
+        self.assertTrue(response.location.startswith('/dashboard/client'))
+        self.assertEqual(admin.get('/dashboard/provider').status_code,403)
+        self.assertEqual(admin.get('/admin/users').status_code,403)
+
     def test_studio_real_counts_statuses_revision_links_and_navigation(self):
         updates = {1: "revision_requested", 2: "approved", 3: "submitted", 4: "under_review",
                    5: "revision_requested", 6: "approved"}
@@ -695,7 +1018,8 @@ class Workflows(unittest.TestCase):
         self.assertNotIn('class="studio-flow-list"', html)
         self.assertIn("Good to see you, User.", html)
         # The new theme is confined to the dashboard.
-        self.assertNotIn('css/studio.css', self.client.get('/briefs').get_data(as_text=True))
+        self.assertIn('css/studio.css', self.client.get('/briefs').get_data(as_text=True))
+        self.assertNotIn('css/collection.css', html)
 
     def test_provider_studio_empty_and_single_pending_brief(self):
         self.login(2)

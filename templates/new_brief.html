@@ -64,7 +64,7 @@
 
         <!-- LOGOUT -->
 
-        action="/logout"
+        <form action="{{ url_for('logout') }}" method="POST"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="logout-btn" type="submit">Log Out</button></form>
 
     </header>
 
@@ -127,11 +127,20 @@
      CREATE NEW PROJECT BRIEF FORM
 ========================================== -->
 
+<form action="{{ url_for('new_brief') }}" method="GET" class="new-brief-form">
+    <div class="form-group"><label for="provider">Choose your Service Provider</label>
+        <select id="provider" name="provider_id" required><option value="">Choose your Service Provider</option>
+        {% for provider in providers %}<option value="{{ provider['id'] }}"{% if selected_provider == provider['id'] %} selected{% endif %}>{{ provider['full_name'] }}</option>{% endfor %}</select>
+        <small class="form-hint">Show your selected Provider's questionnaires before creating your brief. The Provider is fixed when the brief is created.</small>
+        {% if not providers %}<p>No Service Providers are currently available. Please return later.</p>{% endif %}
+    </div><button type="submit" class="btn btn-secondary">Show questionnaires</button>
+</form>
 <form
     action="{{ url_for('new_brief') }}"
     method="POST"
     class="new-brief-form">
 
+    <input type="hidden" name="provider_id" value="{{ selected_provider or '' }}">
     <!-- CSRF PROTECTION -->
 
     <input
@@ -139,6 +148,7 @@
         name="csrf_token"
         value="{{ csrf_token() }}">
 
+    {% with messages = get_flashed_messages(with_categories=true) %}{% for category,message in messages %}<p role="alert">{{ message }}</p>{% endfor %}{% endwith %}
     <!-- PROJECT TITLE -->
 
                     <!-- PROJECT TITLE -->
@@ -152,7 +162,7 @@
                         <input
                             type="text"
                             id="project-title"
-                            name="project_title"
+                            name="project_title" value="{{ project_title }}"
                             placeholder="Enter your project title"
                             maxlength="150"
                             required>
@@ -177,7 +187,7 @@
 <select
     id="questionnaire"
     name="questionnaire_id"
-    required>
+    required{% if not questionnaires %} disabled{% endif %}>
 
     <option value="" selected disabled>
         Select a Questionnaire
@@ -193,13 +203,14 @@
     {% else %}
 
         <option value="" disabled>
-            No active questionnaires available yet
+            {{ 'No questionnaires are currently available for this Provider' if selected_provider else 'Choose a Service Provider first' }}
         </option>
 
     {% endfor %}
 
 </select>
 
+{% if not questionnaires %}<p class="form-hint" role="status">{{ 'No questionnaires are currently available for this Provider. Choose another Provider or return later.' if selected_provider else 'Choose a Service Provider and show their questionnaires to continue.' }}</p>{% endif %}
 
                         <small class="form-hint">
                             Questionnaires are created
@@ -222,7 +233,7 @@
                         
 <button
     type="submit"
-    class="btn btn-primary">
+    class="btn btn-primary"{% if not questionnaires %} disabled{% endif %}>
     Continue to Questionnaire
 </button>
 

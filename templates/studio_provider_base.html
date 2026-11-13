@@ -1,6 +1,9 @@
 {% import '_brief_components.html' as brief_ui %}
 {% from '_studio_icons.html' import icon, paper_motif %}
 {% set initials = user['full_name'].split()[0][0] ~ (user['full_name'].split()[-1][0] if user['full_name'].split() | length > 1 else '') %}
+{% set workspace_role = user['role'] %}
+{% set workspace_endpoint = 'client_dashboard' if workspace_role == 'client' else 'provider_dashboard' if workspace_role == 'service_provider' else 'admin_dashboard' %}
+{% set collection_endpoint = 'my_briefs' if workspace_role == 'client' else 'provider_briefs' if workspace_role == 'service_provider' else 'user_management' %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -19,8 +22,9 @@
     <a href="#studio-main" class="studio-skip">Skip to workspace</a>
     <aside class="studio-rail" aria-label="Studio sidebar">
         <a class="studio-brand" href="{{ url_for('home') }}" aria-label="Elunette Home"><img src="{{ url_for('static', filename='images/elunette-icon.png') }}" alt="" width="34" height="34"></a>
-        <nav class="studio-navigation" aria-label="Service provider navigation">
-            {% for endpoint, symbol, label in [('provider_dashboard', 'overview', 'Overview'), ('provider_briefs', 'brief', 'Client Briefs'), ('questionnaire_management', 'brief', 'Questionnaires'), ('notifications', 'bell', 'Updates')] %}
+        <nav class="studio-navigation" aria-label="{{ 'Client' if workspace_role == 'client' else 'Service provider' if workspace_role == 'service_provider' else 'Administrator' }} navigation">
+            {% set navigation_items = [('client_dashboard', 'overview', 'Overview'), ('my_briefs', 'brief', 'My Briefs'), ('new_brief', 'plus', 'New Brief'), ('notifications', 'bell', 'Updates')] if workspace_role == 'client' else [('provider_dashboard', 'overview', 'Overview'), ('provider_briefs', 'brief', 'Client Briefs'), ('questionnaire_management', 'brief', 'Questionnaires'), ('notifications', 'bell', 'Updates')] if workspace_role == 'service_provider' else [('admin_dashboard', 'overview', 'Overview'), ('user_management', 'brief', 'Users'), ('notifications', 'bell', 'Updates')] %}
+            {% for endpoint, symbol, label in navigation_items %}
             <a href="{{ url_for(endpoint) }}"{% if active_navigation | default('provider_briefs') == endpoint %} aria-current="page"{% endif %}>{{ icon(symbol) }}<span>{{ label }}</span></a>
             {% endfor %}
         </nav>
@@ -36,7 +40,7 @@
                 <a class="studio-notifications" href="{{ url_for('notifications') }}" aria-label="View notifications">{{ icon('bell') }}</a>
                 <details class="studio-account">
                     <summary aria-label="Account controls for {{ user['full_name'] }}"><span class="studio-avatar">{{ initials | upper }}</span><span class="studio-account-name">{{ user['full_name'] }}</span>{{ icon('chevron') }}</summary>
-                    <div class="studio-account-menu"><strong>{{ user['full_name'] }}</strong><p>Provider workspace</p><a href="{{ url_for('provider_briefs') }}">Your review workspace {{ icon('arrow') }}</a><form action="{{ url_for('logout') }}" method="POST"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit">Log out {{ icon('logout') }}</button></form></div>
+                    <div class="studio-account-menu"><strong>{{ user['full_name'] }}</strong><p>{{ 'Client' if workspace_role == 'client' else 'Provider' if workspace_role == 'service_provider' else 'Administrator' }} workspace</p><a href="{{ url_for(collection_endpoint) }}">{{ 'Your review workspace' if workspace_role == 'service_provider' else 'Manage your briefs' if workspace_role == 'client' else 'Manage users' }} {{ icon('arrow') }}</a><form action="{{ url_for('logout') }}" method="POST"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit">Log out {{ icon('logout') }}</button></form></div>
                 </details>
             </div>
         </header>

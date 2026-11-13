@@ -1,0 +1,22 @@
+{% if studio_invitation %}
+{% set first_visit = studio_invitation['kind'] == 'registration' %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/invitation.css') }}">
+<dialog id="studio-invitation" class="studio-invitation studio-invitation--{{ studio_invitation['kind'] }}" aria-labelledby="invitation-title" aria-describedby="invitation-description">
+    <button class="invitation-close" type="button" aria-label="Close invitation"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6"/></svg></button>
+    <div class="invitation-layout">
+        <div class="invitation-cover" aria-hidden="true">
+            <span class="invitation-edition">THE ELUNETTE STUDIO</span>
+            <svg class="invitation-emblem" viewBox="0 0 100 100" fill="none"><rect x="14" y="14" width="72" height="72" rx="8" transform="rotate(-9 50 50)" stroke="currentColor" stroke-opacity=".5"/><circle cx="50" cy="50" r="26" stroke="currentColor" stroke-opacity=".5"/><path d="M50 23c3 18 9 24 27 27-18 3-24 9-27 27-3-18-9-24-27-27 18-3 24-9 27-27Z" fill="currentColor"/><circle cx="50" cy="50" r="5" fill="{{ '#6B1F2F' if first_visit else '#A3B18A' }}"/></svg>
+            <span class="invitation-script">{{ "you're in." if first_visit else 'hello again.' }}</span>
+            <span class="invitation-wordmark">elunette.</span>
+        </div>
+        <div class="invitation-copy">
+            <p class="invitation-label">YOU'RE INVITED.</p>
+            <h2 id="invitation-title">{{ "It's official. You're part of elunette." if first_visit else "Look who's back." }}</h2>
+            <p id="invitation-description">{{ 'Your space is ready. Make yourself at home.' if first_visit else "Everything's right where you left it. Ready to jump back in?" }}</p>
+            <a class="invitation-action" href="{{ url_for('client_dashboard' if user['role'] == 'client' else 'provider_dashboard') }}" autofocus>{{ 'Take me in' if first_visit else 'Back to my studio' }} <span aria-hidden="true">&rarr;</span></a>
+        </div>
+    </div>
+</dialog>
+<script src="{{ url_for('static', filename='js/invitation.js') }}" defer></script>
+{% endif %}

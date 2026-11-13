@@ -143,9 +143,100 @@ WELCOME_CHECK = """(() => {
         const roles = Array.from(document.querySelectorAll('.welcome-role'));
         if (roles.length !== 2 || roles.some(role => role.getBoundingClientRect().height > 56 || role.getBoundingClientRect().width > 260)) throw Error('Oversized or missing role controls');
         if (roles.some(role => role.tabIndex < 0 || !role.href.includes('/login?role='))) throw Error('Role links are not accessible');
+        const header = document.querySelector('.welcome-header').getBoundingClientRect();
+        const copy = document.querySelector('.welcome-copy').getBoundingClientRect();
+        if (innerWidth > 750 && roles.some(role => role.getBoundingClientRect().bottom > innerHeight)) throw Error('Role actions fall below the laptop viewport');
+        if (copy.top - header.bottom > 95) throw Error('Excessive gap beneath navigation');
+        if (innerWidth <= 750 && document.querySelector('.welcome-art').getBoundingClientRect().top < copy.bottom) throw Error('Mobile copy overlaps illustration');
+        if (!getComputedStyle(title).fontFamily.includes('Bodoni Moda') || !getComputedStyle(document.querySelector('.welcome-script')).fontFamily.includes('Pinyon Script')) throw Error('Welcome font styling missing');
+        if (matchMedia('(prefers-reduced-motion: reduce)').matches && document.getAnimations().length) throw Error('Reduced-motion preference ignored');
         if (window.browserErrors.length) throw Error(window.browserErrors.join('; '));
         document.body.dataset.browserCheck = 'passed';
     } catch(error) { document.body.dataset.browserCheck = 'failed: ' + error.message; }
+})();"""
+
+REGISTRATION_CHECK = """(() => {
+    try {
+        if (document.documentElement.scrollWidth > innerWidth + 1) throw Error('Registration overflow');
+        const provider = location.pathname.includes('provider');
+        const form = document.querySelector('.auth-form');
+        const artwork = document.querySelector('.registration-bloom');
+        if (!artwork.complete || artwork.naturalWidth !== 1122 || artwork.naturalHeight !== 1402) throw Error('Registration artwork failed to load');
+        if (getComputedStyle(artwork).objectFit !== 'cover') throw Error('Registration artwork may be distorted');
+        const intro = document.querySelector('.auth-intro').getBoundingClientRect();
+        const panel = document.querySelector('.auth-form-container').getBoundingClientRect();
+        if (innerWidth <= 900 && panel.bottom > intro.top + 1) throw Error('Mobile layout does not prioritise form');
+        if (innerWidth > 900 && intro.right > panel.left + 1) throw Error('Registration panels overlap');
+        if (!document.querySelector('.registration-form-title').textContent.includes(provider ? 'Create your Service Provider account.' : 'Create your Client account.')) throw Error('Role heading missing');
+        if (!form || !form.action.endsWith(provider ? 'role=service_provider' : 'role=client')) throw Error('Wrong registration pathway');
+        const active = document.querySelector('.registration-roles [aria-current=page]');
+        if (!active || !active.href.endsWith(provider ? 'role=service_provider' : 'role=client')) throw Error('Wrong selected role');
+        if (provider && !document.querySelector('.auth-switch a').href.endsWith('/login?role=service_provider')) throw Error('Wrong provider destination');
+        if (form && (!form.querySelector('[name=csrf_token]') || form.querySelectorAll('input:not([type=hidden])').length !== 4 || form.querySelector('[name=role]'))) throw Error('Registration security fields changed');
+        if (window.browserErrors.length) throw Error(window.browserErrors.join('; '));
+        document.body.dataset.browserCheck='passed';
+    } catch (error) { document.body.dataset.browserCheck='failed: '+error.message; }
+})();"""
+
+PROVIDER_SELECTION_CHECK = """(() => {
+    try {
+        if (document.documentElement.scrollWidth > innerWidth + 1) throw Error('Provider selection page overflows');
+        const chosen = document.querySelector('#provider').value;
+        const questionnaire = document.querySelector('#questionnaire');
+        const form = questionnaire.form;
+        if (!form.querySelector('[name=csrf_token]') || form.querySelector('[name=provider_id]').value !== chosen) throw Error('Provider assignment or CSRF missing');
+        const values = [...questionnaire.options].filter(o => o.value).map(o => o.value);
+        if (chosen === '2' ? values.length !== 1 || values[0] !== '1' : values.length !== 0) throw Error('Questionnaires are not provider-scoped');
+        if (form.querySelector('[type=submit]').disabled !== (values.length === 0)) throw Error('Invalid submit state');
+        if (document.querySelectorAll('footer.signature-footer').length !== 1) throw Error('Wrong footer count');
+        if (window.browserErrors.length) throw Error(window.browserErrors.join('; '));
+        document.body.dataset.browserCheck='passed';
+    } catch(error) { document.body.dataset.browserCheck='failed: '+error.message; }
+})();"""
+
+INVITATION_CHECK = """(() => {
+    try {
+        const dialog=document.querySelector('#studio-invitation');
+        if (!dialog?.open || !dialog.matches(':modal')) throw Error('Invitation is not modal');
+        if (document.querySelectorAll('#studio-invitation').length !== 1) throw Error('Duplicate invitations');
+        if (!dialog.getAttribute('aria-labelledby') || !dialog.getAttribute('aria-describedby')) throw Error('Missing accessible name/description');
+        const close=dialog.querySelector('.invitation-close');
+        const closeBounds=close.getBoundingClientRect();
+        if (!close.contains(document.elementFromPoint(closeBounds.x+closeBounds.width/2,closeBounds.y+closeBounds.height/2))) throw Error('Close button is covered');
+        if (!document.activeElement.matches('.invitation-action')) throw Error('Initial focus is not on the Studio action');
+        const bounds=dialog.getBoundingClientRect();
+        if (bounds.width>641 || bounds.left<0 || bounds.right>innerWidth || bounds.top<0 || bounds.bottom>innerHeight) throw Error('Invitation overflows viewport');
+        const registered=dialog.classList.contains('studio-invitation--registration');
+        if (getComputedStyle(dialog.querySelector('.invitation-cover')).backgroundColor !== (registered ? 'rgb(107, 31, 47)' : 'rgb(163, 177, 138)')) throw Error('Wrong invitation palette');
+        if (dialog.querySelector('.invitation-wordmark').textContent !== 'elunette.') throw Error('Wordmark changed');
+        if (matchMedia('(prefers-reduced-motion: reduce)').matches && getComputedStyle(dialog).animationName !== 'none') throw Error('Reduced motion ignored');
+        if (window.browserErrors.length) throw Error(window.browserErrors.join('; '));
+        document.body.dataset.browserCheck='passed';
+    } catch(error) { document.body.dataset.browserCheck='failed: '+error.message; }
+})();"""
+
+LOGIN_CHECK = """(() => {
+    try {
+        if (document.documentElement.scrollWidth > innerWidth + 1) throw Error('Login page overflow');
+        const provider = document.body.classList.contains('login-page--service_provider');
+        const admin = document.body.classList.contains('login-page--administrator');
+        const image = document.querySelector('.login-illustration');
+        if (!admin) {
+            if (!image.complete || image.naturalWidth !== 1254 || image.naturalHeight !== 1254) throw Error('Login illustration failed to load');
+            if (!image.src.endsWith(provider ? '/provider-login.png' : '/client-login.png')) throw Error('Wrong role illustration');
+            const bounds=image.getBoundingClientRect();
+            if (Math.abs(bounds.width/bounds.height-1)>.01) throw Error('Illustration distorted');
+            if (innerWidth <= 900 && document.querySelector('.login-panel').getBoundingClientRect().bottom > document.querySelector('.login-art').getBoundingClientRect().top) throw Error('Form must precede mobile artwork');
+        } else if (image) throw Error('Unexpected administrator illustration');
+        const role=admin ? 'administrator' : provider ? 'service_provider' : 'client';
+        const form=document.querySelector('#login-form');
+        if (form.method !== 'post' || !form.action.endsWith('/login?role='+role) || !form.querySelector('[name=csrf_token]')) throw Error('Login action or CSRF changed');
+        if (!document.querySelector('.login-recovery').href.endsWith('/forgot-password')) throw Error('Recovery link missing');
+        if (!admin && !document.querySelector('.login-registration a').href.endsWith('/register?role='+role)) throw Error('Registration pathway wrong');
+        if (matchMedia('(prefers-reduced-motion: reduce)').matches && getComputedStyle(document.querySelector('.login-submit')).transitionDuration !== '0s') throw Error('Reduced motion ignored');
+        if (window.browserErrors.length) throw Error(window.browserErrors.join('; '));
+        document.body.dataset.browserCheck='passed';
+    } catch(error) { document.body.dataset.browserCheck='failed: '+error.message; }
 })();"""
 
 STUDIO_CHECK = """(() => {
@@ -229,9 +320,30 @@ ATELIER_FOOTER_CHECK = """(() => {
         const footers = document.querySelectorAll('footer.signature-footer');
         if (footers.length !== 1 || document.querySelector('footer.studio-footer, footer.dashboard-footer')) throw Error('Missing or duplicated site footer');
         const footer = footers[0];
-        if (getComputedStyle(footer).backgroundColor !== 'rgb(92, 58, 38)' || getComputedStyle(footer).position !== 'static') throw Error('Incorrect footer styling');
+        const footerStyle = getComputedStyle(footer);
+        if (footerStyle.backgroundColor !== 'rgba(0, 0, 0, 0)' || footerStyle.position !== 'static' || footerStyle.borderTopWidth !== '1px' || footerStyle.borderRadius !== '0px') throw Error('Incorrect minimal footer styling');
+        if (parseFloat(footerStyle.paddingTop) > 8 || parseFloat(footerStyle.paddingBottom) > 8) throw Error('Footer padding is too large');
         if (footer.querySelector('.signature-footer-wordmark').textContent !== 'elunette.') throw Error('Wordmark changed');
         if (footer.querySelectorAll('nav a').length !== 2) throw Error('Unexpected footer links');
+        if (document.body.classList.contains('collection-page')) {
+            const expected = location.pathname.includes('empty') || location.pathname.includes('no-match') ? 0 : location.pathname.includes('one') || location.pathname.includes('filtered') ? 1 : 8;
+            const cards = [...document.querySelectorAll('.collection-dossier')];
+            if (cards.length !== expected) throw Error('Wrong project collection count');
+            if (!document.querySelector('.studio-navigation [aria-current="page"]').textContent.includes('My Briefs')) throw Error('Wrong collection navigation');
+            if (document.querySelector('.dashboard-header, .dashboard-nav')) throw Error('Old navigation remains');
+            for (const card of cards) {
+                const isDraft = card.classList.contains('collection-dossier--draft');
+                if (Boolean(card.querySelector('[data-delete-draft]')) !== isDraft) throw Error('Incorrect deletion permissions in UI');
+                if (!card.querySelector('progress') || !card.querySelector('time')) throw Error('Missing recorded metadata');
+            }
+        }
+        if (document.body.classList.contains('postroom-page')) {
+            if (!document.querySelector('.postroom-empty') || document.querySelector('input[type="search"],button[disabled]')) throw Error('Incorrect Postroom empty state');
+            if (!document.querySelector('.studio-navigation [aria-current="page"]').href.endsWith('/notifications')) throw Error('Postroom navigation is not active');
+            const heading = document.querySelector('.postroom-intro h1').getBoundingClientRect();
+            const art = document.querySelector('.postroom-header-art').getBoundingClientRect();
+            if (heading.right > art.left) throw Error('Postroom header elements overlap');
+        }
         if (document.body.classList.contains('atelier-page')) {
             const expected = location.pathname.includes('empty') ? 0 : location.pathname.includes('filtered') ? 2 : 4;
             const cards = document.querySelectorAll('.atelier-card');
@@ -337,10 +449,16 @@ def main():
         revision_only = "--revision-only" in sys.argv
         approved_only = "--approved-only" in sys.argv
         welcome_only = "--welcome-only" in sys.argv
+        registration_only = "--registration-only" in sys.argv
+        login_only = "--login-only" in sys.argv
+        invitation_only = "--invitation-only" in sys.argv
+        provider_selection_only = "--provider-selection-only" in sys.argv or "--provider-selection-live-only" in sys.argv
         studio_only = "--studio-only" in sys.argv
         provider_studio_only = "--provider-studio-only" in sys.argv
         library_only = "--library-only" in sys.argv
-        atelier_only = "--atelier-only" in sys.argv
+        postroom_only = "--postroom-only" in sys.argv
+        collection_only = "--collection-only" in sys.argv
+        atelier_only = "--atelier-only" in sys.argv or postroom_only or collection_only
         if atelier_only:
             fixture.prepare_atelier()
             fixture.db.execute("UPDATE questionnaires SET title='Project foundations',description='A thoughtful starting point for project vision, scope and priorities.' WHERE id=1")
@@ -360,6 +478,16 @@ def main():
             for name,url in (('footer-client','/dashboard/client'), ('footer-briefs','/briefs'), ('footer-questionnaire','/client/questionnaires/1?brief_id=2')):
                 html=fixture.client.get(url).get_data(as_text=True).replace('/static/','/assets/')
                 (root/(name+'.html')).write_text(html,encoding='utf-8')
+            html=fixture.client.get('/notifications').get_data(as_text=True).replace('/static/','/assets/')
+            (root/'postroom-client.html').write_text(html,encoding='utf-8')
+            if collection_only:
+                for brief_id, status in enumerate(('draft','submitted','under_review','revision_requested','approved'),1):
+                    fixture.db.execute('UPDATE project_briefs SET status=?,completeness_percentage=? WHERE id=?',(status,brief_id*20,brief_id))
+                fixture.db.commit()
+                for name,url in (('collection','/briefs'),('collection-one','/briefs?search=Project+1'),('collection-filtered','/briefs?search=Project+4&status=revision_requested'),('collection-no-match','/briefs?search=absent')):
+                    (root/(name+'.html')).write_text(fixture.client.get(url).get_data(as_text=True).replace('/static/','/assets/'),encoding='utf-8')
+                fixture.login(3)
+                (root/'collection-empty.html').write_text(fixture.client.get('/briefs').get_data(as_text=True).replace('/static/','/assets/'),encoding='utf-8')
             fixture.login(2)
         if provider_studio_only or library_only:
             fixture.db.execute("UPDATE users SET full_name='Iris Njeri' WHERE id=2")
@@ -406,6 +534,17 @@ def main():
         if welcome_only:
             html = fixture.client.get("/").get_data(as_text=True).replace("/static/", "/assets/")
             (root / "welcome.html").write_text(html, encoding="utf-8")
+        if registration_only:
+            for role in ('client','service_provider'):
+                html=fixture.client.get('/register?role='+role).get_data(as_text=True).replace('/static/','/assets/')
+                (root/('registration-'+role+'.html')).write_text(html,encoding='utf-8')
+        if login_only:
+            for role in ('client','service_provider','administrator'):
+                html=fixture.client.get('/login?role='+role).get_data(as_text=True).replace('/static/','/assets/')
+                (root/('login-'+role+'.html')).write_text(html,encoding='utf-8')
+        if provider_selection_only:
+            for name,url in (('provider-select','/briefs/new?provider_id=2'),('provider-select-empty','/briefs/new?provider_id=4'),('provider-select-start','/briefs/new')):
+                (root/(name+'.html')).write_text(fixture.client.get(url).get_data(as_text=True).replace('/static/','/assets/'),encoding='utf-8')
         if approved_only:
             fixture.approved_revision()
             # A legacy conditional answer remains visible even if its source changed.
@@ -438,7 +577,7 @@ def main():
                 (root / (name + ".html")).write_text(html, encoding="utf-8")
         class PreviewHandler(QuietHandler):
             def do_GET(self):
-                if (library_only and urlsplit(self.path).path == '/provider/briefs') or (atelier_only and urlsplit(self.path).path == '/provider/questionnaires'):
+                if (library_only and urlsplit(self.path).path == '/provider/briefs') or (atelier_only and urlsplit(self.path).path == '/provider/questionnaires') or (provider_selection_only and urlsplit(self.path).path == '/briefs/new') or (invitation_only and urlsplit(self.path).path.startswith(('/dashboard/client','/dashboard/provider'))):
                     # Exercise real GET filtering against the temporary Flask fixture.
                     response = fixture.client.get(self.path)
                     content = response.get_data(as_text=True).replace('/static/', '/assets/').encode('utf-8')
@@ -466,7 +605,9 @@ def main():
             cases = (("approved", "1440,1400", ""), ("approved-mobile", "390,1200", ""))
         if welcome_only:
             cases = (("welcome", "1440,1100", ""), ("welcome-tablet", "820,1180", ""),
-                     ("welcome-mobile", "390,1150", ""), ("welcome-small", "320,1100", ""))
+                     ("welcome-mobile", "390,1150", ""), ("welcome-small", "320,1100", ""),
+                     ("welcome-laptop", "1366,768", ""), ("welcome-compact-laptop", "1280,720", ""),
+                     ("welcome-landscape", "1024,768", ""), ("welcome-reduced-motion", "390,844", ""))
         if studio_only:
             cases = (("studio", "1440,1400", ""), ("studio-tablet", "820,1400", ""),
                      ("studio-mobile", "390,1300", ""), ("studio-small", "320,1200", ""),
@@ -486,8 +627,33 @@ def main():
                      ('atelier-small','320,1300',''), ('atelier-filtered','1440,1200',''), ('atelier-empty','390,1200',''),
                      ('footer-client','1440,1500',''), ('footer-provider','390,1400',''), ('footer-library','1440,1400',''),
                      ('footer-notifications','390,1400',''), ('footer-briefs','390,1400',''), ('footer-questionnaire','390,1400',''),
-                     ('footer-review','390,1400',''))
+                     ('footer-review','390,1400',''), ('postroom-client','1440,1000',''),
+                     ('postroom-client-tablet','820,1100',''), ('postroom-client-mobile','390,1100',''),
+                     ('postroom-client-small','320,1100',''), ('postroom-provider','1440,1000',''))
+        if postroom_only:
+            cases = tuple(case for case in cases if case[0].startswith('postroom-') or case[0] == 'footer-notifications')
+        if registration_only:
+            cases = tuple(('registration-'+role+suffix,size,'') for role in ('client','service_provider') for suffix,size in (('','1440,1100'),('-tablet','820,1200'),('-mobile','390,1200'),('-small','320,1200')))
+        if provider_selection_only:
+            cases = (('provider-select','1440,1300',''),('provider-select-tablet','820,1200',''),('provider-select-mobile','390,1200',''),('provider-select-small','320,1200',''),('provider-select-empty','390,1200',''),('provider-select-start','1440,1200',''))
+            if '--provider-selection-live-only' in sys.argv:
+                cases = (('provider-select-start','390,1200',''),)
+        if login_only:
+            cases = tuple(('login-'+role+suffix,size,'') for role in ('client','service_provider') for suffix,size in (('','1440,1000'),('-tablet','820,1100'),('-mobile','390,1000'),('-small','320,1000'))) + (('login-administrator','1280,900',''),('login-client-reduced','390,1000',''))
+        if invitation_only:
+            cases = tuple(('invitation-'+kind+'-'+role+suffix,size,'') for kind in ('registration','returning') for role in ('client','provider') for suffix,size in (('','1440,1000'),('-mobile','320,844'))) + (('invitation-returning-client-reduced','390,844',''),)
+        if collection_only:
+            cases = (('collection','1440,1200',''),('collection-tablet','820,1200',''),('collection-mobile','390,1200',''),('collection-small','320,1200',''),('collection-one','1440,1000',''),('collection-filtered','390,1000',''),('collection-no-match','390,1000',''),('collection-empty','1440,1000',''))
         for name, size, query in cases:
+            if invitation_only:
+                is_provider = '-provider' in name
+                if '-registration-' in name:
+                    role='service_provider' if is_provider else 'client'
+                    data={'full_name':'Invitation Guest','email':name+'@example.test','password':'Invitation-password-123','confirm_password':'Invitation-password-123'}
+                    fixture.post('/register?role='+role,data)
+                    fixture.post('/login',{'email':data['email'],'password':data['password']})
+                else:
+                    fixture.login(2 if is_provider else 1)
             page = "briefs" if name in ("briefs-mobile", "dialog") else "dashboard" if name == "dashboard-mobile" else name
             if review_only:
                 page = name.removesuffix("-mobile")
@@ -497,6 +663,12 @@ def main():
                 page = "approved"
             if welcome_only:
                 page = "welcome"
+            if registration_only:
+                page = 'registration-service_provider' if 'service_provider' in name else 'registration-client'
+            if login_only:
+                page = 'login-administrator' if 'administrator' in name else 'login-service_provider' if 'service_provider' in name else 'login-client'
+            if provider_selection_only and name in ('provider-select-tablet','provider-select-mobile','provider-select-small'):
+                page = 'provider-select'
             if studio_only:
                 page = "studio-empty" if 'empty' in name else "studio"
             if provider_studio_only:
@@ -505,6 +677,12 @@ def main():
                 page = name if name in ('library-filtered', 'library-empty', 'library-new') else 'library'
             if atelier_only:
                 page = 'atelier' if name in ('atelier-tablet','atelier-mobile','atelier-small') else name
+                if name.startswith('postroom-client'):
+                    page = 'postroom-client'
+                elif name == 'postroom-provider':
+                    page = 'footer-notifications'
+                if name in ('collection-tablet','collection-mobile','collection-small'):
+                    page = 'collection'
             profile = root / (name + "-profile")
             command = [chrome, "--headless", "--disable-gpu", "--no-first-run",
                        "--no-default-browser-check", "--disable-background-networking",
@@ -530,24 +708,77 @@ def main():
                     target = next(t for t in json.load(response) if t["type"] == "page")
                 devtools = DevTools(target["webSocketDebuggerUrl"])
                 devtools.call("Page.enable")
+                if name in ('welcome-reduced-motion','login-client-reduced','invitation-returning-client-reduced'):
+                    devtools.call('Emulation.setEmulatedMedia', {'features':[{'name':'prefers-reduced-motion','value':'reduce'}]})
                 devtools.call("Page.addScriptToEvaluateOnNewDocument", {"source": "window.browserErrors = []; window.addEventListener('error', event => window.browserErrors.push(event.message));"})
                 width, height = map(int, size.split(","))
                 devtools.call("Emulation.setDeviceMetricsOverride", {"width": width, "height": height, "deviceScaleFactor": 1, "mobile": width < 600})
-                devtools.call("Page.navigate", {"url": f"http://127.0.0.1:{server.server_port}/{page}.html{query}"})
+                target_path=('/dashboard/provider' if is_provider else '/dashboard/client') if invitation_only else '/'+page+'.html'+query
+                devtools.call("Page.navigate", {"url": f"http://127.0.0.1:{server.server_port}{target_path}"})
                 for _ in range(100):
-                    selector = ".signature-footer" if atelier_only else ".edit-library" if library_only else ".studio-bento" if studio_only or provider_studio_only else ".welcome-hero-image" if welcome_only else ".approved-brief-notice" if approved_only else ".revision-cycle-history" if revision_only and "provider" in name else "#revision-response" if revision_only else ".review-progress" if review_only else "#delete-draft-dialog"
+                    selector = "#studio-invitation" if invitation_only else "#login-form" if login_only else "#provider" if provider_selection_only else ".registration-roles" if registration_only else ".signature-footer" if atelier_only else ".edit-library" if library_only else ".studio-bento" if studio_only or provider_studio_only else ".welcome-hero-image" if welcome_only else ".approved-brief-notice" if approved_only else ".revision-cycle-history" if revision_only and "provider" in name else "#revision-response" if revision_only else ".review-progress" if review_only else "#delete-draft-dialog"
                     ready = devtools.call("Runtime.evaluate", {"expression": f"document.readyState === 'complete' && Boolean(document.querySelector('{selector}'))"})
                     if ready.get("result", {}).get("value"):
                         break
                     time.sleep(0.1)
                 devtools.call("Runtime.evaluate", {"expression": "document.fonts.ready", "awaitPromise": True})
-                devtools.call("Runtime.evaluate", {"expression": ATELIER_FOOTER_CHECK if atelier_only else LIBRARY_CHECK if library_only else PROVIDER_STUDIO_CHECK if provider_studio_only else STUDIO_CHECK if studio_only else WELCOME_CHECK if welcome_only else APPROVED_CHECK if approved_only else REVISION_CHECK if revision_only else REVIEW_CHECK if review_only else CHECK.removeprefix("<script>").removesuffix("</script>")})
+                if not invitation_only:
+                    devtools.call('Runtime.evaluate', {'expression': "document.querySelector('#studio-invitation[open]')?.close()"})
+                if welcome_only or invitation_only:
+                    devtools.call('Runtime.evaluate', {'expression':'Promise.all(document.getAnimations().map(animation => animation.finished))', 'awaitPromise': True})
+                devtools.call("Runtime.evaluate", {"expression": INVITATION_CHECK if invitation_only else LOGIN_CHECK if login_only else PROVIDER_SELECTION_CHECK if provider_selection_only else REGISTRATION_CHECK if registration_only else ATELIER_FOOTER_CHECK if atelier_only else LIBRARY_CHECK if library_only else PROVIDER_STUDIO_CHECK if provider_studio_only else STUDIO_CHECK if studio_only else WELCOME_CHECK if welcome_only else APPROVED_CHECK if approved_only else REVISION_CHECK if revision_only else REVIEW_CHECK if review_only else CHECK.removeprefix("<script>").removesuffix("</script>")})
                 result = devtools.call("Runtime.evaluate", {"expression": "document.body.dataset.browserCheck"})
                 if result.get("result", {}).get("value") != "passed":
                     raise RuntimeError(f"{name}: {result}")
                 actual_width = devtools.call("Runtime.evaluate", {"expression": "innerWidth"})
                 if actual_width["result"]["value"] != width:
                     raise RuntimeError("Incorrect browser viewport width")
+                if collection_only:
+                    reached = False
+                    for _ in range(24):
+                        devtools.call('Input.dispatchKeyEvent', {'type':'keyDown','key':'Tab','code':'Tab','windowsVirtualKeyCode':9})
+                        devtools.call('Input.dispatchKeyEvent', {'type':'keyUp','key':'Tab','code':'Tab','windowsVirtualKeyCode':9})
+                        focus = devtools.call('Runtime.evaluate', {'expression': "document.activeElement.id === 'brief-search' && getComputedStyle(document.activeElement).outlineStyle !== 'none'"})
+                        if focus.get('result',{}).get('value'):
+                            reached = True
+                            break
+                    if not reached:
+                        raise RuntimeError('Project search is not keyboard accessible')
+                    state = devtools.call('Runtime.evaluate', {'expression': "(() => { const link=document.querySelector('[data-delete-draft]'); if (!link) return true; link.click(); const d=document.querySelector('#delete-draft-dialog'); const ok=d.open && d.querySelector('[name=csrf_token]').value.length>0 && d.querySelector('[name=search]')!==null; d.querySelector('.cancel-btn').click(); return ok && !d.open; })()"})
+                    if not state.get('result',{}).get('value'):
+                        raise RuntimeError('Secure deletion dialog or cancellation failed')
+                if name.startswith('postroom-'):
+                    reached = False
+                    for _ in range(24):
+                        devtools.call('Input.dispatchKeyEvent', {'type': 'keyDown', 'key': 'Tab', 'code': 'Tab', 'windowsVirtualKeyCode': 9})
+                        devtools.call('Input.dispatchKeyEvent', {'type': 'keyUp', 'key': 'Tab', 'code': 'Tab', 'windowsVirtualKeyCode': 9})
+                        focused = devtools.call('Runtime.evaluate', {'expression': "document.activeElement.matches('.postroom-empty a') && getComputedStyle(document.activeElement).outlineStyle !== 'none'"})
+                        if focused.get('result', {}).get('value'):
+                            reached = True
+                            break
+                    if not reached:
+                        raise RuntimeError('Postroom return action cannot be reached with visible keyboard focus')
+                    devtools.call('Runtime.evaluate', {'expression': 'document.activeElement.blur()'})
+                if registration_only:
+                    reached = set()
+                    for _ in range(16):
+                        devtools.call('Input.dispatchKeyEvent', {'type':'keyDown','key':'Tab','code':'Tab','windowsVirtualKeyCode':9})
+                        devtools.call('Input.dispatchKeyEvent', {'type':'keyUp','key':'Tab','code':'Tab','windowsVirtualKeyCode':9})
+                        active=devtools.call('Runtime.evaluate', {'expression': "document.activeElement.closest('.registration-roles a')?.textContent.trim() || ''"})
+                        reached.add(active.get('result',{}).get('value',''))
+                    if not all(any(label in item for item in reached) for label in ("I'm a Client", "I'm a Service Provider")):
+                        raise RuntimeError('Registration role links are not keyboard accessible')
+                    devtools.call('Runtime.evaluate', {'expression':'document.activeElement.blur()'})
+                if login_only:
+                    reached=set()
+                    for _ in range(16):
+                        devtools.call('Input.dispatchKeyEvent', {'type':'keyDown','key':'Tab','code':'Tab','windowsVirtualKeyCode':9})
+                        devtools.call('Input.dispatchKeyEvent', {'type':'keyUp','key':'Tab','code':'Tab','windowsVirtualKeyCode':9})
+                        active=devtools.call('Runtime.evaluate', {'expression': "getComputedStyle(document.activeElement).outlineStyle !== 'none' ? document.activeElement.id || document.activeElement.className : ''"})
+                        reached.add(active.get('result',{}).get('value',''))
+                    if not {'email','password','login-submit'} <= reached:
+                        raise RuntimeError('Login fields/button are not keyboard accessible with visible focus')
+                    devtools.call('Runtime.evaluate', {'expression':'document.activeElement.blur()'})
                 if welcome_only:
                     reached = set()
                     for _ in range(16):
@@ -567,11 +798,63 @@ def main():
                     devtools.call("Runtime.evaluate", {"expression": "document.querySelector('[data-delete-draft]').click()"})
                 elif name != "revision-dialog":
                     devtools.call("Runtime.evaluate", {"expression": "new Promise(resolve => setTimeout(() => { scrollTo(0, 0); requestAnimationFrame(() => requestAnimationFrame(resolve)); }, 100))", "awaitPromise": True})
-                    if (width < 600 or review_only or revision_only) and not welcome_only and not studio_only and not provider_studio_only and not library_only and not atelier_only:
-                        section = ".approved-brief-notice" if approved_only else ".revision-cycle-history" if revision_only and "provider" in name else ".revision-response-card" if revision_only else ".review-requirements" if review_only else ".dashboard-briefs" if page == "dashboard" else ".briefs-list-section"
+                    if (width < 600 or review_only or revision_only) and not invitation_only and not login_only and not provider_selection_only and not welcome_only and not registration_only and not studio_only and not provider_studio_only and not library_only and not atelier_only:
+                        section = ".approved-brief-notice" if approved_only else ".revision-cycle-history" if revision_only and "provider" in name else ".revision-response-card" if revision_only else ".review-requirements" if review_only else ".dashboard-briefs" if page == "dashboard" else ".collection-intro"
                         devtools.call("Runtime.evaluate", {"expression": f"document.querySelector('{section}').scrollIntoView()"})
                 image = devtools.call("Page.captureScreenshot", {"format": "png"})
                 (root / (name + ".png")).write_bytes(base64.b64decode(image["data"]))
+                if invitation_only:
+                    for _ in range(4):
+                        devtools.call('Input.dispatchKeyEvent', {'type':'keyDown','key':'Tab','code':'Tab','windowsVirtualKeyCode':9})
+                        devtools.call('Input.dispatchKeyEvent', {'type':'keyUp','key':'Tab','code':'Tab','windowsVirtualKeyCode':9})
+                        focus=devtools.call('Runtime.evaluate', {'expression': "document.activeElement === document.body || document.querySelector('#studio-invitation').contains(document.activeElement)"})
+                        if not focus.get('result',{}).get('value'):
+                            raise RuntimeError('Keyboard focus escaped invitation')
+                    if '-registration-' in name:
+                        devtools.call('Runtime.evaluate', {'expression': "document.querySelector('.invitation-close').click()"})
+                    else:
+                        devtools.call('Input.dispatchKeyEvent', {'type':'keyDown','key':'Escape','code':'Escape','windowsVirtualKeyCode':27})
+                        devtools.call('Input.dispatchKeyEvent', {'type':'keyUp','key':'Escape','code':'Escape','windowsVirtualKeyCode':27})
+                    time.sleep(.1)
+                    closed=devtools.call('Runtime.evaluate', {'expression': "!document.querySelector('#studio-invitation').open && document.activeElement.matches('#studio-main h1')"})
+                    if not closed.get('result',{}).get('value'):
+                        raise RuntimeError('Invitation dismissal/focus restoration failed')
+                    devtools.call('Runtime.evaluate', {'expression': "document.querySelector('.invitation-action').click()"})
+                    for _ in range(100):
+                        result=devtools.call('Runtime.evaluate', {'expression': "document.readyState === 'complete' && !document.querySelector('#studio-invitation') && Boolean(document.querySelector('.studio-bento'))"})
+                        if result.get('result',{}).get('value'):
+                            break
+                        time.sleep(.1)
+                    else:
+                        raise RuntimeError('Studio action did not navigate without repeating invitation')
+                    if name == 'invitation-returning-client':
+                        devtools.call('Runtime.evaluate', {'expression':'history.back()'})
+                        for _ in range(100):
+                            result=devtools.call('Runtime.evaluate', {'expression': "document.readyState === 'complete' && location.pathname === '/dashboard/client' && !document.querySelector('#studio-invitation')?.open"})
+                            if result.get('result',{}).get('value'):
+                                break
+                            time.sleep(.1)
+                        else:
+                            raise RuntimeError('Invitation replayed on back navigation')
+                    devtools.call('Page.reload')
+                    for _ in range(100):
+                        result=devtools.call('Runtime.evaluate', {'expression': "document.readyState === 'complete' && !document.querySelector('#studio-invitation')"})
+                        if result.get('result',{}).get('value'):
+                            break
+                        time.sleep(.1)
+                    else:
+                        raise RuntimeError('Invitation repeated on refresh')
+                if provider_selection_only and name == 'provider-select-start':
+                    devtools.call('Runtime.evaluate', {'expression': "document.querySelector('#provider').value='2'; document.querySelector('#provider').form.querySelector('button').focus()"})
+                    devtools.call('Input.dispatchKeyEvent', {'type':'keyDown','key':'Enter','code':'Enter','windowsVirtualKeyCode':13,'text':'\r'})
+                    devtools.call('Input.dispatchKeyEvent', {'type':'keyUp','key':'Enter','code':'Enter','windowsVirtualKeyCode':13})
+                    for _ in range(100):
+                        result=devtools.call('Runtime.evaluate', {'expression': "document.readyState === 'complete' && location.pathname === '/briefs/new' && document.querySelector('#provider')?.value === '2' && Boolean(document.querySelector('#questionnaire option[value=\"1\"]'))"})
+                        if result.get('result',{}).get('value'):
+                            break
+                        time.sleep(.1)
+                    else:
+                        raise RuntimeError('Provider questionnaire GET selection failed with keyboard')
                 if atelier_only:
                     devtools.call('Runtime.evaluate', {'expression': "scrollTo(0, document.documentElement.scrollHeight)"})
                     time.sleep(.1)

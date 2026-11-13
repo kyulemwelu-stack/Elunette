@@ -338,6 +338,7 @@ CREATE TABLE IF NOT EXISTS project_briefs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
 
     client_id INTEGER NOT NULL,
+    assigned_provider_id INTEGER REFERENCES users(id),
 
     questionnaire_version_id INTEGER NOT NULL,
 
@@ -463,6 +464,9 @@ CREATE INDEX IF NOT EXISTS idx_brief_reviews_brief
 ON brief_reviews (brief_id, created_at);
 
 -- Step 85.3: additive revision history; existing briefs and answers are retained.
+CREATE INDEX IF NOT EXISTS idx_briefs_assigned_provider
+ON project_briefs (assigned_provider_id, status);
+
 CREATE UNIQUE INDEX IF NOT EXISTS idx_brief_reviews_identity
 ON brief_reviews (id, brief_id);
 

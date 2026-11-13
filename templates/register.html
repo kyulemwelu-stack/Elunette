@@ -7,12 +7,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>Create an Account | Elunette</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:wght@400;500&amp;family=Manrope:wght@400;500;600&amp;family=Pinyon+Script&amp;display=swap" rel="stylesheet">
 
     <link rel="stylesheet"
           href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/registration.css') }}">
 </head>
 
-<body class="auth-page">
+<body class="auth-page registration-page">
 
     <!-- HEADER -->
 
@@ -47,15 +51,13 @@
                     YOUR JOURNEY STARTS HERE
                 </p>
 
-                <h1 id="register-title">
-                    Every great idea starts somewhere.
-                </h1>
+                <h1 id="register-title">A beautiful beginning.</h1>
 
                 <p class="auth-description">
-                    Create your Elunette account and take
-                    the first step towards clearer,
-                    more organised project briefs.
+                    Your ideas deserve a lovely place to grow.
                 </p>
+                <p class="registration-script" aria-hidden="true">a little room to bloom</p>
+                <img class="registration-bloom" src="{{ url_for('static', filename='images/welcome/signup-bloom.png') }}" width="1122" height="1402" loading="eager" decoding="async" alt="A pink tulip resting on an open notebook beside a fountain pen and a sunlit plant.">
 
             </div>
 
@@ -63,6 +65,15 @@
             <!-- REGISTRATION FORM -->
 
             <div class="auth-form-container">
+                <nav class="registration-roles" aria-label="Choose your account pathway">
+                    <a href="{{ url_for('register', role='client') }}"{% if registration_role == 'client' %} aria-current="page"{% endif %}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h5"/></svg><span><strong>I'm a Client</strong><small>Bring your ideas to life.</small></span>
+                    </a>
+                    <a href="{{ url_for('register', role='service_provider') }}"{% if registration_role == 'service_provider' %} aria-current="page"{% endif %}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m5 16 11-11 3 3L8 19l-4 1zM14 7l3 3M5 16l3 3"/></svg><span><strong>I'm a Service Provider</strong><small>Help shape beautiful projects.</small></span>
+                    </a>
+                </nav>
+                <h2 class="registration-form-title">{{ 'Create your Service Provider account.' if registration_role == 'service_provider' else 'Create your Client account.' }}</h2>
                 
 <!-- LOGIN FEEDBACK MESSAGES -->
 
@@ -82,7 +93,7 @@
 
 
                 <form
-                    action="/register"
+                    action="{{ url_for('register', role=registration_role) }}"
                     method="POST"
                     class="auth-form">
 
@@ -184,7 +195,7 @@
                         type="submit"
                         class="btn btn-primary auth-submit">
 
-                        Create Account
+                        Create {{ 'Provider' if registration_role == 'service_provider' else 'Client' }} Account
 
                     </button>
 
@@ -195,7 +206,7 @@
 
                 <p class="auth-switch">
                     Already have an account?
-                    <a href="/login">Log In</a>
+                    <a href="{{ url_for('login', role=registration_role) }}">{{ 'Provider' if registration_role == 'service_provider' else 'Client' }} Login</a>
                 </p>
 
             </div>

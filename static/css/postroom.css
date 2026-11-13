@@ -1,0 +1,22 @@
+/* Postroom content only; application shell and footer remain shared. */
+.postroom-page .postroom-intro { display: flex; justify-content: space-between; align-items: center; gap: 24px; padding: 22px 0 32px; }
+.postroom-page .postroom-intro h1 { margin: 14px 0 12px; font: 400 clamp(38px, 4vw, 51px)/1.15 var(--font-heading); letter-spacing: -1.5px; }
+.postroom-page .postroom-intro h1 span { color: var(--burgundy); }
+.postroom-page .postroom-intro > div > p:last-child { color: #756052; font-size: 14px; }
+.postroom-page .postroom-envelope { display: block; width: 100px; height: auto; flex-shrink: 0; }
+.postroom-page .postroom-header-art { width: 80px; margin-right: 12px; }
+.postroom-page .postroom-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 18px 0; border-top: 1px solid var(--line); }
+.postroom-page .postroom-section-heading h2 { font: 600 12px var(--font-navigation); }
+.postroom-page .postroom-section-heading > span { color: #756052; font-size: 11px; }
+.postroom-page .postroom-empty { display: flex; flex-direction: column; align-items: center; padding: 44px 24px; border: 1px solid #DDD3C5; border-radius: 22px; background: #FFFFFF; text-align: center; }
+.postroom-page .postroom-empty .postroom-envelope { margin-bottom: 24px; }
+.postroom-page .postroom-empty h2 { margin: 14px 0; font: 400 clamp(30px, 3vw, 38px)/1.2 var(--font-heading); letter-spacing: -.7px; }
+.postroom-page .postroom-empty > p:not(.studio-eyebrow) { max-width: 360px; color: #756052; font-size: 13px; line-height: 1.9; }
+.postroom-page .postroom-empty > a { margin-top: 26px; min-height: 32px; }
+@media (max-width: 600px) {
+ .postroom-page .postroom-intro { gap: 12px; padding-top: 12px; }
+ .postroom-page .postroom-header-art { width: 54px; margin-right: 0; }
+ .postroom-page .postroom-intro h1 { font-size: clamp(31px, 8vw, 40px); letter-spacing: -1px; }
+ .postroom-page .postroom-intro > div > p:last-child { max-width: 235px; font-size: 12px; }
+ .postroom-page .postroom-empty { padding: 36px 20px; }
+}

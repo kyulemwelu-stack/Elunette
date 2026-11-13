@@ -9,27 +9,27 @@
     align-items: center;
     gap: 20px;
     width: min(1150px, calc(100% - 36px));
-    min-height: 64px;
-    margin: 28px auto 24px;
-    padding: 14px 24px;
-    border-radius: 10px;
-    background: #5C3A26;
-    color: #F1E7D3;
+    margin: 24px auto 16px;
+    padding: 8px 0;
+    border-top: 1px solid rgba(92, 58, 38, .16);
+    border-radius: 0;
+    background: transparent;
+    color: #756052;
     font: 400 11px/1.6 "Manrope", Arial, sans-serif;
 }
 .signature-footer *, .signature-footer *::before, .signature-footer *::after { box-sizing: border-box; }
 .signature-footer .signature-footer-copyright { margin: 0; color: inherit; font: inherit; }
 .signature-footer a { color: inherit; text-decoration: none; }
-.signature-footer .signature-footer-wordmark { justify-self: center; font: 400 25px/1.2 "Bodoni Moda", Georgia, serif; letter-spacing: -.7px; white-space: nowrap; }
+.signature-footer .signature-footer-wordmark { justify-self: center; color: #5C3A26; font: 400 20px/1.2 "Bodoni Moda", Georgia, serif; letter-spacing: -.5px; white-space: nowrap; }
 .signature-footer nav { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px 22px; }
 .signature-footer nav a { display: inline-flex; align-items: center; min-height: 28px; font: inherit; }
-.signature-footer a:hover { color: #FFFFFF; text-decoration: underline; text-underline-offset: 4px; }
-.signature-footer a:focus-visible { outline: 2px solid #F1E7D3; outline-offset: 4px; border-radius: 2px; }
-.studio-page .signature-footer { width: 100%; margin: 28px 0 0; }
+.signature-footer a:hover { color: #6B1F2F; text-decoration: underline; text-underline-offset: 4px; }
+.signature-footer a:focus-visible { outline: 2px solid #6B1F2F; outline-offset: 3px; border-radius: 2px; }
+.studio-page .signature-footer { width: 100%; margin: 24px 0 0; }
 @media (max-width: 600px) {
-    .signature-footer { gap: 12px; padding: 14px 16px; font-size: 10px; }
+    .signature-footer { gap: 10px; font-size: 11px; }
     .signature-footer nav { gap: 12px; }
-    .signature-footer .signature-footer-wordmark { font-size: 22px; }
+    .signature-footer .signature-footer-wordmark { font-size: 19px; }
 }
 @media (max-width: 360px) {
     .signature-footer { grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; }

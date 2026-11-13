@@ -40,6 +40,19 @@ def signature_footer_context():
     return {"current_year": datetime.now(timezone(timedelta(hours=3))).year}
 
 
+@app.context_processor
+def studio_invitation_context():
+    if request.endpoint not in ('client_dashboard', 'provider_dashboard'):
+        return {}
+    user = current_user()
+    event = session.pop('studio_invitation', None)
+    if not user or not event or event.get('user_id') != user['id'] or user['role'] not in ('client', 'service_provider'):
+        return {}
+    if event.get('kind') not in ('registration', 'returning'):
+        return {}
+    return {'studio_invitation': event}
+
+
 # ==========================================
 # AUTHENTICATION HELPERS
 # ==========================================
@@ -153,7 +166,16 @@ def about():
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "GET":
-        return render_template("register.html")
+        registration_role = request.args.get("role", "client")
+        if registration_role not in ("client", "service_provider"):
+            registration_role = "client"
+        return render_template("register.html", registration_role=registration_role)
+
+    # The two public roles are explicitly allowlisted; account identity is never supplied.
+    roles = request.args.getlist("role") + request.form.getlist("role")
+    registration_role = roles[0] if roles else 'client'
+    if registration_role not in ('client', 'service_provider') or any(role != registration_role for role in roles):
+        abort(400)
 
     full_name = request.form.get("full_name", "").strip()
     email = request.form.get("email", "").strip().lower()
@@ -162,11 +184,11 @@ def register():
 
     if not all((full_name, email, password, confirm_password)):
         flash("Please complete all fields.", "error")
-        return redirect(url_for("register"))
+        return redirect(url_for("register", role=registration_role))
 
     if not 2 <= len(full_name) <= 100:
         flash("Enter a valid full name.", "error")
-        return redirect(url_for("register"))
+        return redirect(url_for("register", role=registration_role))
 
     valid_email = re.fullmatch(
         r"[^@\s]+@[^@\s]+\.[^@\s]+", email
@@ -174,31 +196,31 @@ def register():
 
     if len(email) > 254 or not valid_email:
         flash("Enter a valid email address.", "error")
-        return redirect(url_for("register"))
+        return redirect(url_for("register", role=registration_role))
 
     if len(password) < 12:
         flash(
             "Password must contain at least 12 characters.",
             "error"
         )
-        return redirect(url_for("register"))
+        return redirect(url_for("register", role=registration_role))
 
     if password != confirm_password:
         flash("Passwords do not match.", "error")
-        return redirect(url_for("register"))
+        return redirect(url_for("register", role=registration_role))
 
     password_hash = generate_password_hash(password)
     db = get_db()
 
     try:
-        db.execute(
+        cursor = db.execute(
             """
             INSERT INTO users (
                 full_name, email, password_hash, role, status
             )
-            VALUES (?, ?, ?, 'client', 'active')
+            VALUES (?, ?, ?, ?, 'active')
             """,
-            (full_name, email, password_hash)
+            (full_name, email, password_hash, registration_role)
         )
         db.commit()
     except IntegrityError:
@@ -207,13 +229,14 @@ def register():
             "This email address is already registered.",
             "error"
         )
-        return redirect(url_for("register"))
+        return redirect(url_for("register", role=registration_role))
 
+    session['pending_registration_user_id'] = cursor.lastrowid
     flash(
         "Account created successfully. Please log in.",
         "success"
     )
-    return redirect(url_for("login"))
+    return redirect(url_for("login", role=registration_role))
 
 
 # ==========================================
@@ -222,6 +245,11 @@ def register():
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    # Preserve only the validated visual pathway on failed sign-in; permissions
+    # and successful redirects continue to derive solely from the database role.
+    login_hint = request.args.get('role')
+    if login_hint not in ('client', 'service_provider', 'administrator'):
+        login_hint = None
     if request.method == "GET":
         return render_template("login.html")
 
@@ -238,15 +266,18 @@ def login():
         user["password_hash"], password
     ):
         flash("Invalid email or password.", "error")
-        return redirect(url_for("login"))
+        return redirect(url_for("login", role=login_hint))
 
     if user["status"] != "active":
         flash("This account is inactive.", "error")
-        return redirect(url_for("login"))
+        return redirect(url_for("login", role=login_hint))
 
+    newly_registered = session.get('pending_registration_user_id') == user['id']
     session.clear()
     session["user_id"] = user["id"]
     session["user_role"] = user["role"]
+    if user['role'] in ('client', 'service_provider'):
+        session['studio_invitation'] = {'user_id': user['id'], 'kind': 'registration' if newly_registered else 'returning'}
 
     if user["role"] == "client":
         return redirect(url_for("client_dashboard"))
@@ -320,7 +351,7 @@ def my_briefs():
     briefs = [b for b in client_briefs()
               if search.casefold() in b["title"].casefold()
               and (not status or b["status"] == status)]
-    return render_template("my_briefs.html", briefs=briefs,
+    return render_template("my_briefs.html", briefs=briefs, user=current_user(),
                            search_query=search, status_filter=status)
 
 
@@ -390,108 +421,47 @@ def delete_draft_brief(brief_id):
 @role_required("client")
 def new_brief():
     db = get_db()
-
-    if request.method == "POST":
-        user = current_user()
-        title = request.form.get(
-            "project_title", ""
-        ).strip()
-        questionnaire_id = request.form.get(
-            "questionnaire_id", "", type=int
-        )
-
-        if not title or len(title) > 150:
-            flash(
-                "Enter a project title of up to 150 characters.",
-                "error"
-            )
-            return redirect(url_for("new_brief"))
-
-        if questionnaire_id is None:
-            flash(
-                "Please select a questionnaire.",
-                "error"
-            )
-            return redirect(url_for("new_brief"))
-
-        questionnaire = db.execute(
-            """
-            SELECT q.id, q.title,
-                   v.id AS version_id,
-                   v.version_number
-            FROM questionnaires q
-            JOIN questionnaire_versions v
-                ON v.questionnaire_id = q.id
-            JOIN questionnaire_publications p
-                ON p.questionnaire_version_id = v.id
-            WHERE q.id = ?
-              AND q.status = 'active'
-            ORDER BY v.version_number DESC
-            LIMIT 1
-            """,
-            (questionnaire_id,)
-        ).fetchone()
-
-        if questionnaire is None:
-            flash(
-                "The selected questionnaire is not available.",
-                "error"
-            )
-            return redirect(url_for("new_brief"))
-
-        cursor = db.execute(
-            """
-            INSERT INTO project_briefs (
-                client_id,
-                questionnaire_version_id,
-                title,
-                status,
-                completeness_percentage
-            )
-            VALUES (?, ?, ?, 'draft', 0)
-            """,
-            (
-                user["id"],
-                questionnaire["version_id"],
-                title
-            )
-        )
-        db.commit()
-
-        brief_id = cursor.lastrowid
-
-        return redirect(
-            url_for(
-                "client_questionnaire",
-                questionnaire_id=questionnaire_id,
-                brief_id=brief_id
-            )
-        )
-
-    questionnaires = db.execute(
-        """
-        SELECT q.id, q.title, v.version_number
+    providers = db.execute("SELECT id,full_name FROM users WHERE role='service_provider' AND status='active' ORDER BY full_name COLLATE NOCASE,id").fetchall()
+    values = request.form if request.method == 'POST' else request.args
+    provider_id = values.get('provider_id', type=int)
+    provider = next((p for p in providers if p['id'] == provider_id), None)
+    title = values.get('project_title', '').strip()[:151]
+    questionnaires = db.execute("""
+        SELECT q.id,p.title_snapshot AS title,v.version_number
         FROM questionnaires q
-        JOIN questionnaire_versions v
-            ON v.questionnaire_id = q.id
-        JOIN questionnaire_publications p
-            ON p.questionnaire_version_id = v.id
-        WHERE q.status = 'active'
-          AND v.version_number = (
-              SELECT MAX(v2.version_number)
-              FROM questionnaire_versions v2
-              JOIN questionnaire_publications p2
-                  ON p2.questionnaire_version_id = v2.id
-              WHERE v2.questionnaire_id = q.id
-          )
-        ORDER BY q.title COLLATE NOCASE ASC
-        """
-    ).fetchall()
-
-    return render_template(
-        "new_brief.html",
-        questionnaires=questionnaires
-    )
+        JOIN questionnaire_versions v ON v.questionnaire_id=q.id
+        JOIN questionnaire_publications p ON p.questionnaire_version_id=v.id
+        WHERE q.created_by=? AND q.status='active'
+          AND v.version_number=(SELECT MAX(v2.version_number) FROM questionnaire_versions v2
+              JOIN questionnaire_publications p2 ON p2.questionnaire_version_id=v2.id
+              WHERE v2.questionnaire_id=q.id)
+        ORDER BY p.title_snapshot COLLATE NOCASE,q.id
+    """, (provider_id if provider else None,)).fetchall()
+    if request.method == 'POST':
+        # Serialize creation and eligibility checks with provider/questionnaire updates.
+        db.execute('BEGIN IMMEDIATE')
+        provider_id = request.form.get('provider_id', type=int)
+        questionnaire_id = request.form.get('questionnaire_id', type=int)
+        if not all(isinstance(value, int) and 0 < value < 2**63 for value in (provider_id, questionnaire_id)):
+            db.rollback()
+            abort(400, 'Choose a valid Service Provider and questionnaire.')
+        eligible = db.execute("""SELECT v.id AS version_id FROM questionnaires q
+            JOIN users u ON u.id=q.created_by
+            JOIN questionnaire_versions v ON v.questionnaire_id=q.id
+            JOIN questionnaire_publications p ON p.questionnaire_version_id=v.id
+            WHERE q.id=? AND q.created_by=? AND q.status='active'
+              AND u.role='service_provider' AND u.status='active'
+            ORDER BY v.version_number DESC LIMIT 1""", (questionnaire_id,provider_id)).fetchone()
+        if not title or len(title)>150 or eligible is None:
+            db.rollback()
+            flash('Enter a valid project title and choose an available questionnaire from your selected Service Provider.', 'error')
+            return render_template('new_brief.html',user=current_user(),providers=providers,selected_provider=provider_id,questionnaires=questionnaires,project_title=title),400
+        cursor = db.execute("""INSERT INTO project_briefs
+            (client_id,questionnaire_version_id,assigned_provider_id,title,status,completeness_percentage)
+            VALUES (?,?,?,?,'draft',0)""",(current_user()['id'],eligible['version_id'],provider_id,title))
+        db.commit()
+        return redirect(url_for('client_questionnaire',questionnaire_id=questionnaire_id,brief_id=cursor.lastrowid))
+    return render_template('new_brief.html',user=current_user(),providers=providers,selected_provider=provider_id,questionnaires=questionnaires,project_title=title)
 
 
 # ==========================================
@@ -556,7 +526,7 @@ def provider_dashboard():
         JOIN questionnaire_versions v ON v.id = pb.questionnaire_version_id
         JOIN questionnaires q ON q.id = v.questionnaire_id
         JOIN users u ON u.id = pb.client_id
-        WHERE q.created_by = ? AND br.reviewer_id = ? AND pb.status != 'draft'
+        WHERE pb.assigned_provider_id = ? AND br.reviewer_id = ? AND pb.status != 'draft'
         ORDER BY br.created_at DESC, br.id DESC LIMIT 5
         """, (provider["id"], provider["id"])
     ).fetchall()
@@ -625,7 +595,7 @@ def provider_brief_records():
             ON v.id = pb.questionnaire_version_id
         JOIN questionnaires AS q
             ON q.id = v.questionnaire_id
-        WHERE q.created_by = ?
+        WHERE pb.assigned_provider_id = ?
           AND pb.status IN (
               'submitted',
               'under_review',
@@ -679,7 +649,7 @@ def review_brief(brief_id):
         JOIN questionnaires q
             ON q.id = v.questionnaire_id
         WHERE pb.id = ?
-          AND q.created_by = ?
+          AND pb.assigned_provider_id = ?
           AND pb.status != 'draft'
         """,
         (brief_id, provider["id"])
@@ -2159,6 +2129,8 @@ def manage_adaptive_rules(questionnaire_id):
 )
 @role_required("service_provider")
 def questionnaire_detail(questionnaire_id):
+    if get_db().execute('SELECT 1 FROM questionnaires WHERE id=? AND created_by=?', (questionnaire_id,current_user()['id'])).fetchone() is None:
+        abort(404)
     return redirect(
         url_for(
             "edit_questionnaire",
@@ -2423,7 +2395,7 @@ def persist_brief_answers(brief_id, commit=True):
     # Verify that the client owns this draft.
     brief = db.execute(
         """
-        SELECT id, questionnaire_version_id, status
+        SELECT id, questionnaire_version_id, status, assigned_provider_id
         FROM project_briefs
         WHERE id = ?
           AND client_id = ?
@@ -2667,7 +2639,7 @@ def submit_brief(brief_id):
 
     brief = db.execute(
         """
-        SELECT id, questionnaire_version_id, status
+        SELECT id, questionnaire_version_id, status, assigned_provider_id
         FROM project_briefs
         WHERE id = ?
           AND client_id = ?
@@ -2680,6 +2652,11 @@ def submit_brief(brief_id):
 
     if brief["status"] not in ("draft", "revision_requested"):
         abort(409, "This brief cannot be submitted in its current status.")
+
+    if brief['assigned_provider_id'] is None:
+        abort(409, 'This legacy brief needs administrator Provider reconciliation before submission.')
+    if db.execute("SELECT 1 FROM users WHERE id=? AND role='service_provider' AND status='active'", (brief['assigned_provider_id'],)).fetchone() is None:
+        abort(409, 'The assigned Service Provider is not available.')
 
     is_revision = brief["status"] == "revision_requested"
     if is_revision != (request.endpoint == "resubmit_brief"):

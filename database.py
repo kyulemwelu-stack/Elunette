@@ -46,6 +46,12 @@ def init_app(app):
     with app.app_context():
         db = get_db()
 
+        # Existing databases require an explicit, backed-up migration first.
+        if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='project_briefs'").fetchone():
+            columns = {row[1] for row in db.execute('PRAGMA table_info(project_briefs)')}
+            if 'assigned_provider_id' not in columns:
+                raise RuntimeError('Provider assignment migration required. Stop Elunette and run: python migrate_provider_assignment.py --database <database path>. This creates a backup before migrating.')
+
         schema_path = (
             Path(app.root_path) / "schema.sql"
         )
