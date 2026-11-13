@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delete Draft | Elunette</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="dashboard-page client-workspace">
+    <header class="dashboard-header">
+        <a href="{{ url_for('client_dashboard') }}" class="logo" aria-label="Elunette Dashboard">
+            <img src="{{ url_for('static', filename='images/elunette-logo.png') }}" class="logo-img" alt="Elunette">
+        </a>
+        <a class="brief-action" href="{{ url_for('my_briefs') }}">Back to My Briefs</a>
+    </header>
+    <main class="dashboard-main">
+        <section class="brief-delete-confirmation" aria-labelledby="confirmation-title">
+            <p class="section-label">MANAGE YOUR PROJECTS</p>
+            <h1 id="confirmation-title">Delete this draft?</h1>
+            <p>&ldquo;{{ brief['title'] }}&rdquo; and its saved answers will be permanently deleted. This cannot be undone.</p>
+            <div class="brief-actions">
+                <a href="{{ url_for('my_briefs') }}" class="btn btn-secondary">Keep Draft</a>
+                <form method="POST" action="{{ url_for('delete_draft_brief', brief_id=brief['id']) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="confirm_delete" value="delete">
+                    <button class="btn btn-primary" type="submit">Delete Draft</button>
+                </form>
+            </div>
+        </section>
+    </main>
+</body>
+</html>

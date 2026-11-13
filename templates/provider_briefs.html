@@ -131,25 +131,25 @@
 
                 <article class="overview-card">
                     <h3>Total Submitted</h3>
-                    <p class="overview-number">0</p>
+                    <p class="overview-number">{{ overview["total"] }}</p>
                     <p>All submitted briefs</p>
                 </article>
 
                 <article class="overview-card">
                     <h3>Pending Review</h3>
-                    <p class="overview-number">0</p>
+                    <p class="overview-number">{{ overview["pending"] }}</p>
                     <p>Awaiting a review decision</p>
                 </article>
 
                 <article class="overview-card">
                     <h3>Revision Requested</h3>
-                    <p class="overview-number">0</p>
+                    <p class="overview-number">{{ overview["revision"] }}</p>
                     <p>Awaiting client corrections</p>
                 </article>
 
                 <article class="overview-card">
                     <h3>Approved</h3>
-                    <p class="overview-number">0</p>
+                    <p class="overview-number">{{ overview["approved"] }}</p>
                     <p>Successfully approved briefs</p>
                 </article>
 
@@ -179,6 +179,7 @@
                         type="search"
                         id="brief-search"
                         name="search"
+                        value="{{ search_query }}"
                         placeholder="Search by project or client">
 
                 </div>
@@ -194,14 +195,14 @@
                     <select id="status-filter" name="status">
 
                         <option value="">All Statuses</option>
-                        <option value="submitted">Submitted</option>
-                        <option value="under_review">Under Review</option>
+                        <option value="submitted" {% if status_filter == "submitted" %}selected{% endif %}>Submitted</option>
+                        <option value="under_review" {% if status_filter == "under_review" %}selected{% endif %}>Under Review</option>
 
-                        <option value="revision_requested">
+                        <option value="revision_requested" {% if status_filter == "revision_requested" %}selected{% endif %}>
                             Revision Requested
                         </option>
 
-                        <option value="approved">Approved</option>
+                        <option value="approved" {% if status_filter == "approved" %}selected{% endif %}>Approved</option>
 
                     </select>
 
@@ -305,8 +306,6 @@
     class="btn btn-secondary">
     Review Brief
 </a>
-
-                </span>
             </td>
         </tr>
 

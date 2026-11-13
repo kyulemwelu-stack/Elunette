@@ -288,14 +288,86 @@ def reset_password_preview():
 @app.route("/dashboard/client-preview")
 @role_required("client")
 def client_dashboard():
-    return render_template("client_dashboard.html")
+    briefs = client_briefs()
+    return render_template(
+        "client_dashboard.html", briefs=briefs[:6],
+        total=len(briefs),
+        pending=sum(b["status"] in ("submitted", "under_review") for b in briefs),
+        approved=sum(b["status"] == "approved" for b in briefs)
+    )
 
 
 @app.route("/briefs")
 @app.route("/briefs-preview")
 @role_required("client")
 def my_briefs():
-    return render_template("my_briefs.html")
+    search = request.args.get("search", "").strip()[:150]
+    status = request.args.get("status", "").strip()
+    if status not in ("draft", "submitted", "under_review", "revision_requested", "approved"):
+        status = ""
+    briefs = [b for b in client_briefs()
+              if search.casefold() in b["title"].casefold()
+              and (not status or b["status"] == status)]
+    return render_template("my_briefs.html", briefs=briefs,
+                           search_query=search, status_filter=status)
+
+
+def client_briefs():
+    return get_db().execute(
+        """
+        SELECT pb.*, v.questionnaire_id, v.version_number,
+               p.title_snapshot AS questionnaire_title
+        FROM project_briefs pb
+        JOIN questionnaire_versions v ON v.id = pb.questionnaire_version_id
+        JOIN questionnaire_publications p ON p.questionnaire_version_id = v.id
+        WHERE pb.client_id = ?
+        ORDER BY pb.updated_at DESC, pb.id DESC
+        """, (current_user()["id"],)
+    ).fetchall()
+
+
+@app.route("/briefs/<int:brief_id>/delete", methods=["GET", "POST"])
+@role_required("client")
+def delete_draft_brief(brief_id):
+    db = get_db()
+    client = current_user()
+    if request.method == "POST":
+        # Serialize against saving/submission before checking the current status.
+        db.execute("BEGIN IMMEDIATE")
+
+    brief = db.execute(
+        "SELECT id, title, status FROM project_briefs WHERE id = ? AND client_id = ?",
+        (brief_id, client["id"])
+    ).fetchone()
+    if brief is None:
+        abort(404)
+    if brief["status"] != "draft":
+        abort(409, "Only draft briefs can be deleted.")
+
+    if request.method == "GET":
+        return render_template("delete_draft.html", brief=brief)
+    if request.form.get("confirm_delete") != "delete":
+        abort(400, "Please confirm draft deletion.")
+
+    try:
+        deleted = db.execute(
+            "DELETE FROM project_briefs WHERE id = ? AND client_id = ? AND status = 'draft'",
+            (brief_id, client["id"])
+        )
+        if deleted.rowcount != 1:
+            abort(409, "This brief can no longer be deleted.")
+        # Saved responses are removed by the existing ON DELETE CASCADE constraint.
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        abort(409, "This draft has review history and cannot be deleted.")
+
+    flash("Your draft brief has been deleted.", "success")
+    if request.form.get("return_to") == "dashboard":
+        return redirect(url_for("client_dashboard"))
+    return redirect(url_for("my_briefs",
+                            search=request.form.get("search", "").strip()[:150],
+                            status=request.form.get("status", "").strip()[:30]))
 
 
 # ==========================================
@@ -445,7 +517,7 @@ def revision_history_preview():
 @app.route("/notifications")
 @login_required
 def notifications():
-    return render_template("notifications.html")
+    return render_template("notifications.html", user=current_user())
 
 
 # ==========================================
@@ -456,7 +528,9 @@ def notifications():
 @app.route("/dashboard/provider-preview")
 @role_required("service_provider")
 def provider_dashboard():
-    return render_template("provider_dashboard.html")
+    briefs = provider_brief_records()
+    return render_template("provider_dashboard.html", overview=brief_overview(briefs),
+                           briefs=[b for b in briefs if b["status"] in ("submitted", "under_review")])
 
 
 # ==========================================
@@ -466,10 +540,31 @@ def provider_dashboard():
 @app.route("/provider/briefs")
 @role_required("service_provider")
 def provider_briefs():
-    user = current_user()
-    db = get_db()
+    records = provider_brief_records()
+    search = request.args.get("search", "").strip()[:150]
+    status = request.args.get("status", "").strip()
+    if status not in ("submitted", "under_review", "revision_requested", "approved"):
+        status = ""
+    briefs = [b for b in records
+              if (search.casefold() in b["title"].casefold()
+                  or search.casefold() in b["client_name"].casefold())
+              and (not status or b["status"] == status)]
+    return render_template("provider_briefs.html", briefs=briefs,
+                           overview=brief_overview(records),
+                           search_query=search, status_filter=status)
 
-    briefs = db.execute(
+
+def brief_overview(briefs):
+    return {
+        "total": len(briefs),
+        "pending": sum(b["status"] in ("submitted", "under_review") for b in briefs),
+        "revision": sum(b["status"] == "revision_requested" for b in briefs),
+        "approved": sum(b["status"] == "approved" for b in briefs),
+    }
+
+
+def provider_brief_records():
+    return get_db().execute(
         """
         SELECT
             pb.id,
@@ -478,6 +573,7 @@ def provider_briefs():
             pb.completeness_percentage,
             pb.created_at,
             pb.updated_at,
+            pb.submitted_at,
             u.full_name AS client_name,
             q.title AS questionnaire_title,
             v.version_number
@@ -497,13 +593,9 @@ def provider_briefs():
           )
         ORDER BY pb.updated_at DESC, pb.id DESC
         """,
-        (user["id"],)
+        (current_user()["id"],)
     ).fetchall()
 
-    return render_template(
-        "provider_briefs.html",
-        briefs=briefs
-    )
 
 
 # ==========================================
@@ -2150,6 +2242,11 @@ def client_questionnaire(questionnaire_id):
     ).fetchall()
 
 
+    review_history = db.execute(
+        "SELECT decision, comment, created_at FROM brief_reviews "
+        "WHERE brief_id = ? ORDER BY created_at DESC, id DESC", (brief_id,)
+    ).fetchall() if brief_id is not None else []
+
     return render_template(
         "client_questionnaire.html",
         questionnaire=questionnaire,
@@ -2157,6 +2254,7 @@ def client_questionnaire(questionnaire_id):
         adaptive_rules=[dict(rule) for rule in rules],
         brief_id=brief_id,
         saved_answers=saved_answers,
+        review_history=review_history,
         brief_status=(
             questionnaire["brief_status"]
             if brief_id is not None
@@ -2175,15 +2273,20 @@ def client_questionnaire(questionnaire_id):
 )
 @role_required("client")
 def save_brief_answers(brief_id):
+    questionnaire_id = persist_brief_answers(brief_id)
+    flash("Your questionnaire draft has been saved.", "success")
+    return redirect(url_for("client_questionnaire",
+                            questionnaire_id=questionnaire_id,
+                            brief_id=brief_id))
+
+
+def persist_brief_answers(brief_id, commit=True):
     db = get_db()
     client = current_user()
 
-    print(
-        "SAVE DRAFT REQUEST:",
-        brief_id,
-        list(request.form.keys()),
-        flush=True
-    )
+    # Serialize writers before reading answers or status.
+    if not db.in_transaction:
+        db.execute("BEGIN IMMEDIATE")
 
     # Verify that the client owns this draft.
     brief = db.execute(
@@ -2192,7 +2295,7 @@ def save_brief_answers(brief_id):
         FROM project_briefs
         WHERE id = ?
           AND client_id = ?
-          AND status = 'draft'
+          AND status IN ('draft', 'revision_requested')
         """,
         (brief_id, client["id"])
     ).fetchone()
@@ -2332,7 +2435,7 @@ def save_brief_answers(brief_id):
     completeness = (
         round(required_completed * 100 / required_total)
         if required_total
-        else 0
+        else (100 if answers else 0)
     )
 
     # Save changes together in one transaction.
@@ -2344,7 +2447,7 @@ def save_brief_answers(brief_id):
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
               AND client_id = ?
-              AND status = 'draft'
+              AND status IN ('draft', 'revision_requested')
             """,
             (
                 completeness,
@@ -2381,26 +2484,14 @@ def save_brief_answers(brief_id):
                 (brief_id, question_id, answer)
             )
 
-        db.commit()
+        if commit:
+            db.commit()
 
     except Exception:
         db.rollback()
         raise
 
-    flash(
-        "Your questionnaire draft has been saved.",
-        "success"
-    )
-
-    
-    return redirect(
-    url_for(
-        "client_questionnaire",
-        questionnaire_id=version["questionnaire_id"],
-        brief_id=brief_id,
-        saved=1
-    )
-)
+    return version["questionnaire_id"]
 
 
 # ==========================================
@@ -2417,6 +2508,8 @@ def submit_brief(brief_id):
     db = get_db()
     client = current_user()
 
+    db.execute("BEGIN IMMEDIATE")
+
     # Verify ownership and current status.
 
     brief = db.execute(
@@ -2432,8 +2525,13 @@ def submit_brief(brief_id):
     if brief is None:
         abort(404)
 
-    if brief["status"] != "draft":
-        abort(409, "This brief has already left draft status.")
+    if brief["status"] not in ("draft", "revision_requested"):
+        abort(409, "This brief cannot be submitted in its current status.")
+
+    # The questionnaire submits its current fields, including explicit blanks.
+    # Save incomplete drafts too, then explain any missing required answers.
+    if request.form.get("save_answers") == "1":
+        persist_brief_answers(brief_id, commit=False)
 
     version_id = brief["questionnaire_version_id"]
 
@@ -2475,6 +2573,7 @@ def submit_brief(brief_id):
 
     if not questions:
         flash("This questionnaire has no active questions.", "error")
+        db.commit()
         return redirect(questionnaire_url)
 
     # Use responses already saved in SQLite.
@@ -2553,6 +2652,7 @@ def submit_brief(brief_id):
                     "before submitting.",
                     "error"
                 )
+                db.commit()
                 return redirect(questionnaire_url)
 
             required_completed += 1
@@ -2596,6 +2696,7 @@ def submit_brief(brief_id):
             "Save your questionnaire answers before submitting.",
             "error"
         )
+        db.commit()
         return redirect(questionnaire_url)
 
     if required_completed != required_total:
@@ -2610,10 +2711,11 @@ def submit_brief(brief_id):
             UPDATE project_briefs
             SET status = 'submitted',
                 completeness_percentage = 100,
+                submitted_at = CURRENT_TIMESTAMP,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
               AND client_id = ?
-              AND status = 'draft'
+              AND status IN ('draft', 'revision_requested')
             """,
             (brief_id, client["id"])
         )
@@ -2627,6 +2729,8 @@ def submit_brief(brief_id):
     except Exception:
         db.rollback()
         raise
+
+    flash("Your brief has been submitted for review.", "success")
 
     return redirect(
         url_for(

@@ -1,4 +1,4 @@
-
+{% import '_brief_components.html' as brief_ui %}
 <!DOCTYPE html>
 <html lang="en">
 
@@ -12,7 +12,7 @@
           href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 
-<body class="dashboard-page">
+<body class="dashboard-page client-workspace">
 
     <!-- DASHBOARD HEADER -->
 
@@ -72,6 +72,8 @@
 
     <main class="dashboard-main">
 
+        {{ brief_ui.feedback() }}
+
         <!-- WELCOME SECTION -->
 
         <section class="dashboard-welcome">
@@ -117,7 +119,7 @@
 
                     <h3>Total Briefs</h3>
 
-                    <p class="overview-number">0</p>
+                    <p class="overview-number">{{ total }}</p>
 
                     <p>All your project briefs</p>
 
@@ -130,7 +132,7 @@
 
                     <h3>Pending Review</h3>
 
-                    <p class="overview-number">0</p>
+                    <p class="overview-number">{{ pending }}</p>
 
                     <p>Briefs awaiting review</p>
 
@@ -143,7 +145,7 @@
 
                     <h3>Approved Briefs</h3>
 
-                    <p class="overview-number">0</p>
+                    <p class="overview-number">{{ approved }}</p>
 
                     <p>Successfully approved briefs</p>
 
@@ -170,22 +172,26 @@
             </div>
 
 
-            <!-- EMPTY STATE -->
-
-            <div class="empty-state">
-
-                <h3>No project briefs yet.</h3>
-
-                <p>
-                    Your project briefs will appear here
-                    once you create your first one.
-                </p>
-
-                <a href="/briefs/new" class="btn btn-secondary">
-                    Start Your First Brief
-                </a>
-
+            {% if briefs %}
+            <div class="brief-card-grid">
+                {% for brief in briefs %}
+                <article class="project-brief-card" aria-labelledby="brief-card-{{ brief['id'] }}">
+                    {{ brief_ui.status_badge(brief) }}
+                    <h3 id="brief-card-{{ brief['id'] }}">{{ brief['title'] }}</h3>
+                    <p class="brief-card-questionnaire">{{ brief['questionnaire_title'] }}</p>
+                    {{ brief_ui.progress(brief) }}
+                    {{ brief_ui.actions(brief) }}
+                </article>
+                {% endfor %}
             </div>
+            {% else %}
+            <div class="empty-state">
+                <p class="section-label">A PLACE FOR YOUR NEXT IDEA</p>
+                <h3>No project briefs yet.</h3>
+                <p>Start a brief and shape your project, one thoughtful detail at a time.</p>
+                <a href="{{ url_for('new_brief') }}" class="btn btn-secondary">Start Your First Brief</a>
+            </div>
+            {% endif %}
 
         </section>
 
@@ -231,6 +237,7 @@
 
     </footer>
 
+    {{ brief_ui.deletion_dialog('dashboard') }}
 </body>
 
 </html>

@@ -156,7 +156,7 @@
 
                     <h3>Submitted Briefs</h3>
 
-                    <p class="overview-number">0</p>
+                    <p class="overview-number">{{ overview["total"] }}</p>
 
                     <p>
                         All briefs submitted
@@ -172,7 +172,7 @@
 
                     <h3>Pending Reviews</h3>
 
-                    <p class="overview-number">0</p>
+                    <p class="overview-number">{{ overview["pending"] }}</p>
 
                     <p>
                         Briefs awaiting
@@ -188,7 +188,7 @@
 
                     <h3>Approved Briefs</h3>
 
-                    <p class="overview-number">0</p>
+                    <p class="overview-number">{{ overview["revision"] }}</p>
 
                     <p>
                         Briefs successfully
@@ -204,7 +204,7 @@
 
                     <h3>Active Questionnaires</h3>
 
-                    <p class="overview-number">0</p>
+                    <p class="overview-number">{{ overview["approved"] }}</p>
 
                     <p>
                         Questionnaires currently
@@ -292,42 +292,17 @@
 
 
                     <tbody>
-
-                        <!--
-                        Actual submitted brief records
-                        will be loaded from SQLite
-                        through Flask.
-
-                        Each row will display:
-                        - Project title
-                        - Client name
-                        - Submission date
-                        - Review status
-                        - Link to review the brief
-                        -->
-
+                        {% for brief in briefs %}
                         <tr>
-
-                            <td colspan="5">
-
-                                <div class="empty-state">
-
-                                    <h3>
-                                        No briefs awaiting review.
-                                    </h3>
-
-                                    <p>
-                                        Newly submitted client
-                                        briefs will appear here
-                                        when they are available.
-                                    </p>
-
-                                </div>
-
-                            </td>
-
+                            <td>{{ brief['title'] }}</td>
+                            <td>{{ brief['client_name'] }}</td>
+                            <td>{{ brief['submitted_at'] or brief['updated_at'] }}</td>
+                            <td>{{ brief['status'] | replace('_', ' ') | title }}</td>
+                            <td><a class="btn btn-secondary" href="{{ url_for('review_brief', brief_id=brief['id']) }}">Review Brief</a></td>
                         </tr>
-
+                        {% else %}
+                        <tr><td colspan="5"><div class="empty-state"><h3>No briefs awaiting review.</h3></div></td></tr>
+                        {% endfor %}
                     </tbody>
 
                 </table>

@@ -1,4 +1,5 @@
 
+import os
 import sqlite3
 from pathlib import Path
 
@@ -34,7 +35,8 @@ def init_app(app):
 
     # Configure the database location
     app.config["DATABASE"] = str(
-        Path(app.instance_path) / "elunette.db"
+        os.environ.get("ELUNETTE_DATABASE")
+        or Path(app.instance_path) / "elunette.db"
     )
 
     # Close database connections after requests

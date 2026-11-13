@@ -2224,6 +2224,221 @@ select {
 }
 
 /* ==================================
+   CLIENT WORKSPACE - PROJECT COMPONENTS
+   Shared by the dashboard and My Briefs.
+================================== */
+
+.client-workspace {
+    --font-heading: "Newsreader", Georgia, serif;
+    --font-body: "Lato", Arial, sans-serif;
+    --font-navigation: "Montserrat", Arial, sans-serif;
+}
+
+.client-workspace .btn {
+    padding: 11px 20px;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.client-workspace :is(a, button, input, select, [tabindex]):focus-visible {
+    outline: 2px solid var(--burgundy);
+    outline-offset: 4px;
+}
+
+.brief-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    gap: 20px;
+}
+
+.project-brief-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;
+    padding: 25px;
+    background: var(--white);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+}
+
+.project-brief-card h3 {
+    margin: 20px 0 8px;
+    font-size: 27px;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+
+.brief-card-questionnaire {
+    margin-bottom: 25px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    overflow-wrap: anywhere;
+}
+
+.project-brief-card .brief-progress {
+    width: 100%;
+    margin-top: auto;
+}
+
+.project-brief-card .brief-actions {
+    width: 100%;
+    justify-content: space-between;
+    margin-top: 22px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+}
+
+.brief-state {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: var(--radius-pill);
+    background: var(--cream);
+    color: var(--chocolate);
+    font: 500 10px/1.5 var(--font-navigation);
+    white-space: nowrap;
+}
+
+.brief-state--submitted,
+.brief-state--under-review {
+    background: rgba(163, 177, 138, 0.22);
+}
+
+.brief-state--revision-requested {
+    background: rgba(107, 31, 47, 0.08);
+    color: var(--burgundy);
+}
+
+.brief-state--approved {
+    background: var(--sage);
+}
+
+.brief-progress {
+    display: grid;
+    gap: 8px;
+    min-width: 105px;
+    font: 600 12px/1.5 var(--font-navigation);
+    color: var(--chocolate);
+}
+
+.brief-progress-unit {
+    font: 400 12px var(--font-body);
+    color: var(--text-secondary);
+}
+
+.brief-progress progress {
+    appearance: none;
+    display: block;
+    width: 100%;
+    height: 5px;
+    overflow: hidden;
+    border: none;
+    border-radius: var(--radius-pill);
+    background: var(--cream);
+    color: var(--burgundy);
+    accent-color: var(--burgundy);
+}
+
+.brief-progress progress::-webkit-progress-bar {
+    background: var(--cream);
+}
+
+.brief-progress progress::-webkit-progress-value {
+    background: var(--burgundy);
+    border-radius: var(--radius-pill);
+}
+
+.brief-progress progress::-moz-progress-bar {
+    background: var(--burgundy);
+    border-radius: var(--radius-pill);
+}
+
+.brief-actions,
+.brief-filter-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+}
+
+.brief-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 36px;
+    font: 600 11px/1.5 var(--font-navigation);
+    color: var(--burgundy);
+    white-space: nowrap;
+    text-underline-offset: 4px;
+}
+
+.brief-action:hover {
+    text-decoration: underline;
+}
+
+.brief-action--delete {
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.brief-feedback {
+    margin-bottom: 25px;
+    padding: 15px 20px;
+    background: var(--white);
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--sage);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+}
+
+.brief-delete-dialog .section-label {
+    margin-bottom: 15px;
+    font-size: 10px;
+    color: var(--burgundy);
+}
+
+.brief-delete-dialog h2 {
+    margin-bottom: 16px;
+    font-size: 34px;
+    color: var(--chocolate);
+}
+
+.brief-delete-dialog #delete-draft-name {
+    overflow-wrap: anywhere;
+}
+
+.brief-delete-dialog .simple-delete-actions {
+    flex-wrap: wrap;
+}
+
+.brief-delete-dialog .simple-delete-actions form {
+    flex-basis: 130px;
+}
+
+.brief-delete-dialog button {
+    font-family: var(--font-navigation);
+}
+
+.brief-delete-confirmation {
+    max-width: 540px;
+    margin: 35px auto;
+    padding: clamp(24px, 5vw, 45px);
+    background: var(--white);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    overflow-wrap: anywhere;
+}
+
+.brief-delete-confirmation h1 {
+    margin: 15px 0;
+    font-size: 40px;
+}
+
+.brief-delete-confirmation .brief-actions {
+    margin-top: 25px;
+}
+
+/* ==================================
    MY BRIEFS - PAGE INTRODUCTION
 ================================== */
 
@@ -2286,8 +2501,8 @@ select {
 ================================== */
 
 .briefs-filter-section {
-    margin-bottom: 55px;
-    padding: 30px;
+    margin-bottom: 40px;
+    padding: 24px;
     background: var(--white);
     border: 1px solid var(--border-color);
     border-radius: 12px;
@@ -2295,7 +2510,7 @@ select {
 
 .briefs-filter-form {
     display: grid;
-    grid-template-columns: 2fr 1fr auto;
+    grid-template-columns: minmax(0, 2fr) minmax(160px, 1fr) auto;
     align-items: end;
     gap: 20px;
 }
@@ -2421,6 +2636,91 @@ select {
 
 .briefs-table tbody tr:hover {
     background: rgba(163, 177, 138, 0.12);
+}
+
+/* Project management table: retain native table semantics on small screens. */
+.client-briefs-table {
+    min-width: 960px;
+    table-layout: fixed;
+}
+
+.client-briefs-table caption {
+    padding: 16px 22px;
+    text-align: left;
+    color: var(--text-secondary);
+    font-size: 13px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.client-briefs-table thead {
+    background: rgba(241, 231, 211, 0.5);
+    color: var(--chocolate);
+}
+
+.client-briefs-table thead th {
+    padding: 16px 20px;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+}
+
+.client-briefs-table thead th:nth-child(1) { width: 20%; }
+.client-briefs-table thead th:nth-child(2) { width: 18%; }
+.client-briefs-table thead th:nth-child(3) { width: 13%; }
+.client-briefs-table thead th:nth-child(4) { width: 16%; }
+.client-briefs-table thead th:nth-child(5) { width: 15%; }
+.client-briefs-table thead th:nth-child(6) { width: 18%; }
+
+.client-briefs-table tbody :is(th, td) {
+    padding: 24px 20px;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--border-color);
+    overflow-wrap: anywhere;
+}
+
+.client-briefs-table tbody tr:last-child th {
+    border-bottom: none;
+}
+
+.client-briefs-table .brief-project-title {
+    font: 500 21px/1.25 var(--font-heading);
+    letter-spacing: 0;
+}
+
+.brief-version {
+    display: block;
+    margin-top: 5px;
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.client-briefs-table time {
+    color: var(--text-secondary);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.brief-table-hint {
+    display: none;
+    margin-bottom: 12px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+@media (max-width: 1000px) {
+    .brief-table-hint { display: block; }
+}
+
+@media (max-width: 600px) {
+    .client-briefs-table:has(td[colspan]) {
+        min-width: 0;
+    }
+
+    .client-briefs-table:has(td[colspan]) thead {
+        display: none;
+    }
+
+    .brief-card-grid { gap: 16px; }
+    .project-brief-card { padding: 22px; }
 }
 
 /* EMPTY STATE */

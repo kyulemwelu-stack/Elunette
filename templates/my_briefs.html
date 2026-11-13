@@ -1,4 +1,4 @@
-
+{% import '_brief_components.html' as brief_ui %}
 <!DOCTYPE html>
 <html lang="en">
 
@@ -12,7 +12,7 @@
           href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 
-<body class="dashboard-page">
+<body class="dashboard-page client-workspace my-briefs-page">
 
     <!-- DASHBOARD HEADER -->
 
@@ -83,6 +83,8 @@
 
     <main class="dashboard-main">
 
+        {{ brief_ui.feedback() }}
+
         <!-- PAGE INTRODUCTION -->
 
         <section class="briefs-intro">
@@ -131,6 +133,7 @@
                         type="search"
                         id="brief-search"
                         name="search"
+                        value="{{ search_query }}"
                         placeholder="Search by project title">
 
                 </div>
@@ -148,23 +151,23 @@
 
                         <option value="">All Statuses</option>
 
-                        <option value="draft">
+                        <option value="draft" {% if status_filter == "draft" %}selected{% endif %}>
                             Draft
                         </option>
 
-                        <option value="submitted">
+                        <option value="submitted" {% if status_filter == "submitted" %}selected{% endif %}>
                             Submitted
                         </option>
 
-                        <option value="under_review">
+                        <option value="under_review" {% if status_filter == "under_review" %}selected{% endif %}>
                             Under Review
                         </option>
 
-                        <option value="revision_requested">
+                        <option value="revision_requested" {% if status_filter == "revision_requested" %}selected{% endif %}>
                             Revision Requested
                         </option>
 
-                        <option value="approved">
+                        <option value="approved" {% if status_filter == "approved" %}selected{% endif %}>
                             Approved
                         </option>
 
@@ -172,10 +175,12 @@
 
                 </div>
 
-                <button type="submit"
-                        class="btn btn-secondary">
-                    Apply Filters
-                </button>
+                <div class="brief-filter-actions">
+                    <button type="submit" class="btn btn-secondary">Apply Filters</button>
+                    {% if search_query or status_filter %}
+                    <a href="{{ url_for('my_briefs') }}" class="brief-action">Clear filters</a>
+                    {% endif %}
+                </div>
 
             </form>
 
@@ -194,8 +199,7 @@
                 </h2>
 
                 <p>
-                    Your saved and submitted briefs
-                    will appear below.
+                    {{ briefs | length }} {{ 'project' if briefs | length == 1 else 'projects' }}{{ ' matching your filters' if search_query or status_filter else ' in your workspace' }}.
                 </p>
 
             </div>
@@ -203,9 +207,12 @@
 
             <!-- BRIEFS TABLE -->
 
-            <div class="table-container">
+            <p class="brief-table-hint" id="brief-table-hint">On smaller screens, scroll across to see all project details and actions.</p>
+            <div class="table-container" role="region" aria-label="Your project briefs"
+                 aria-describedby="brief-table-hint" tabindex="0">
 
-                <table class="briefs-table">
+                <table class="briefs-table client-briefs-table">
+                    <caption>Project briefs, progress and available actions</caption>
 
                     <thead>
 
@@ -214,42 +221,35 @@
                             <th scope="col">Questionnaire</th>
                             <th scope="col">Last Updated</th>
                             <th scope="col">Status</th>
-                            <th scope="col">Action</th>
+                            <th scope="col">Progress</th>
+                            <th scope="col">Actions</th>
                         </tr>
 
                     </thead>
 
                     <tbody>
 
-                        <!--
-                        Brief records will be displayed
-                        dynamically using Flask and SQLite.
-                        -->
-
+                        {% for brief in briefs %}
                         <tr>
-
-                            <td colspan="5">
-
-                                <div class="empty-state">
-
-                                    <h3>No project briefs yet.</h3>
-
-                                    <p>
-                                        You haven't created any
-                                        project briefs. Start by
-                                        creating your first one.
-                                    </p>
-
-                                    <a href="/briefs/new"
-                                       class="btn btn-primary">
-                                        Create Your First Brief
-                                    </a>
-
-                                </div>
-
-                            </td>
-
+                            <th scope="row" class="brief-project-title">{{ brief['title'] }}</th>
+                            <td>{{ brief['questionnaire_title'] }}<span class="brief-version">Version {{ brief['version_number'] }}</span></td>
+                            <td><time datetime="{{ brief['updated_at'] | replace(' ', 'T') }}Z" title="{{ brief['updated_at'] }} UTC">{{ brief['updated_at'][:10] }}</time></td>
+                            <td>{{ brief_ui.status_badge(brief) }}</td>
+                            <td>{{ brief_ui.progress(brief) }}</td>
+                            <td>{{ brief_ui.actions(brief) }}</td>
                         </tr>
+                        {% else %}
+                        <tr><td colspan="6"><div class="empty-state">
+                            <p class="section-label">{{ 'A FRESH PERSPECTIVE' if search_query or status_filter else 'YOUR NEXT PROJECT STARTS HERE' }}</p>
+                            <h3>{{ 'No briefs match your filters.' if search_query or status_filter else 'No project briefs yet.' }}</h3>
+                            <p>{{ 'Try a different project title or clear your filters to see every brief.' if search_query or status_filter else 'Give your next idea a home. Create a brief and return whenever inspiration strikes.' }}</p>
+                            {% if search_query or status_filter %}
+                            <a href="{{ url_for('my_briefs') }}" class="btn btn-secondary">Clear Filters</a>
+                            {% else %}
+                            <a href="{{ url_for('new_brief') }}" class="btn btn-primary">Create Your First Brief</a>
+                            {% endif %}
+                        </div></td></tr>
+                        {% endfor %}
 
                     </tbody>
 
@@ -347,6 +347,7 @@
 
     </footer>
 
+    {{ brief_ui.deletion_dialog('briefs', search_query, status_filter) }}
 </body>
 
 </html>

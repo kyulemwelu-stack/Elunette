@@ -100,6 +100,14 @@
         </section>
 
 
+        {% for review in review_history %}
+        <section class="questionnaire-save-feedback">
+            <h2>{{ review['decision'] | replace('_', ' ') | title }}</h2>
+            {% if review['comment'] %}<p>{{ review['comment'] }}</p>{% endif %}
+            <p>{{ review['created_at'] }}</p>
+        </section>
+        {% endfor %}
+
         <!-- COMPLETENESS PROGRESS -->
 
         <section class="client-questionnaire-progress">
@@ -161,7 +169,9 @@
 <form
     id="client-questionnaire-form"
     class="questionnaire-form"
-    method="POST">
+    method="POST"
+    {% if brief_id %}action="{{ url_for('save_brief_answers', brief_id=brief_id) }}"{% endif %}>
+    <input type="hidden" name="save_answers" value="1">
 
     <!-- CSRF PROTECTION -->
     <input
@@ -170,11 +180,13 @@
         value="{{ csrf_token() }}">
 
                 {% for question in questions %}
+                {% set answer = saved_answers.get(question['id'] | string, '') %}
 
                 <fieldset
                     class="question-card adaptive-question"
                     data-question-id="{{ question['id'] }}"
-                    data-required="{{ 1 if question['is_required'] else 0 }}">
+                    data-required="{{ 1 if question['is_required'] else 0 }}"
+                    {% if brief_status not in ('draft', 'revision_requested') %}disabled{% endif %}>
 
                     <legend>
                         QUESTION {{ question["position"] }}
@@ -215,11 +227,11 @@
                                 Select your answer
                             </option>
 
-                            <option value="{{ question['option_one'] }}">
+                            <option value="{{ question['option_one'] }}" {% if answer == question['option_one'] %}selected{% endif %}>
                                 {{ question["option_one"] }}
                             </option>
 
-                            <option value="{{ question['option_two'] }}">
+                            <option value="{{ question['option_two'] }}" {% if answer == question['option_two'] %}selected{% endif %}>
                                 {{ question["option_two"] }}
                             </option>
 
@@ -232,10 +244,12 @@
 
                         <input
                             type="number"
+                            value="{{ answer }}"
                             id="answer-{{ question['id'] }}"
                             name="answer_{{ question['id'] }}"
                             class="answer-input"
                             placeholder="Enter a number"
+                            step="any"
                             {% if question["is_required"] %}
                                 required
                             {% endif %}>
@@ -247,6 +261,7 @@
 
                         <input
                             type="date"
+                            value="{{ answer }}"
                             id="answer-{{ question['id'] }}"
                             name="answer_{{ question['id'] }}"
                             class="answer-input"
@@ -267,7 +282,7 @@
                             placeholder="Write your answer here"
                             {% if question["is_required"] %}
                                 required
-                            {% endif %}></textarea>
+                            {% endif %}>{{ answer }}</textarea>
 
                         {% endif %}
 
@@ -300,7 +315,7 @@
 
 <!-- SAVE QUESTIONNAIRE DRAFT -->
 
-{% if brief_id is defined and brief_id and brief_status == 'draft' %}
+{% if brief_id is defined and brief_id and brief_status in ('draft', 'revision_requested') %}
 
 
 <button
@@ -327,20 +342,11 @@
 
 <!-- SAVE DRAFT SUCCESS MESSAGE -->
 
-{% if request.args.get('saved') == '1' %}
-
-<div class="questionnaire-save-feedback"
-     role="status"
-     aria-live="polite">
-
-    <p class="save-message">
-        Your questionnaire draft has been saved successfully.
-    </p>
-
-</div>
-
-{% endif %}
-
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% for category, message in messages %}
+<div class="questionnaire-save-feedback" role="status"><p class="save-message">{{ message }}</p></div>
+{% endfor %}
+{% endwith %}
 
 <p class="questionnaire-save-hint">
     Save your progress anytime and return later
@@ -353,26 +359,14 @@
      SUBMIT BRIEF FOR PROVIDER REVIEW
 ========================================== -->
 
-{% if brief_id and brief_status == 'draft' %}
+{% if brief_id and brief_status in ('draft', 'revision_requested') %}
 
-<form
-    action="{{ url_for('submit_brief', brief_id=brief_id) }}"
-    method="POST"
-    class="client-questionnaire-actions"
-    id="submit-brief-form">
-
-    <input
-        type="hidden"
-        name="csrf_token"
-        value="{{ csrf_token() }}">
-
-    <button
-        type="submit"
-        class="btn btn-primary">
-        Submit for Review
-    </button>
-
-</form>
+<div class="client-questionnaire-actions">
+    <button type="submit" class="btn btn-primary" id="submit-brief-button"
+            form="client-questionnaire-form"
+            formaction="{{ url_for('submit_brief', brief_id=brief_id) }}"
+            formnovalidate>Submit for Review</button>
+</div>
 
 
 <!-- CUSTOM SUBMISSION CONFIRMATION -->
@@ -396,7 +390,7 @@
         <p
             id="submit-dialog-description"
             class="submit-dialog-description">
-            Your saved answers will be sent to the
+            Your latest answers will be saved and sent to the
             service provider for review.
 
             You won't be able to edit this draft
@@ -427,7 +421,8 @@
 
 <script>
 (function () {
-    const form = document.getElementById("submit-brief-form");
+    const form = document.getElementById("client-questionnaire-form");
+    const submitButton = document.getElementById("submit-brief-button");
     const dialog = document.getElementById("submit-brief-dialog");
     const cancelButton = document.getElementById(
         "cancel-brief-submission"
@@ -441,7 +436,7 @@
     let confirmed = false;
 
     form.addEventListener("submit", function (event) {
-        if (confirmed) return;
+        if (event.submitter !== submitButton || confirmed) return;
 
         event.preventDefault();
         dialog.showModal();
@@ -454,17 +449,17 @@
     confirmButton.addEventListener("click", function () {
         confirmed = true;
         dialog.close();
-        form.requestSubmit();
+        form.requestSubmit(submitButton);
     });
 })();
 </script>
 
 
 <p class="questionnaire-save-hint">
-    Please save your latest answers before submitting.
+    Your latest answers will be saved when you submit for review.
 </p>
 
-{% elif brief_id and brief_status != 'draft' %}
+{% elif brief_id and brief_status not in ('draft', 'revision_requested') %}
 
 <div class="questionnaire-save-feedback" role="status">
     <p class="save-message">
@@ -566,13 +561,7 @@ const adaptiveRules = JSON.parse(
                     "client-questionnaire-form"
                 );
 
-form.addEventListener("submit", function (event) {
-    event.preventDefault();
 
-    document.getElementById(
-        "check-questionnaire"
-    ).click();
-});
 
                 const cards = Array.from(
                     form.querySelectorAll(
@@ -702,7 +691,7 @@ form.addEventListener("submit", function (event) {
 
                         if (field) {
 
-                            field.disabled = !shouldShow;
+                            field.disabled = !shouldShow || {{ (brief_status not in ('draft', 'revision_requested')) | tojson }};
 
                             field.required =
                                 shouldShow &&

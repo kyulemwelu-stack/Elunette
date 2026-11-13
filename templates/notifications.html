@@ -19,7 +19,7 @@
 
     <header class="dashboard-header">
 
-        <a href="/dashboard/client"
+        <a href="{{ url_for('client_dashboard' if user['role'] == 'client' else 'provider_dashboard' if user['role'] == 'service_provider' else 'admin_dashboard') }}"
            class="logo"
            aria-label="Elunette Dashboard">
 
@@ -39,14 +39,14 @@
             <ul>
 
                 <li>
-                    <a href="/dashboard/client">
+                    <a href="{{ url_for('client_dashboard' if user['role'] == 'client' else 'provider_dashboard' if user['role'] == 'service_provider' else 'admin_dashboard') }}">
                         Dashboard
                     </a>
                 </li>
 
                 <li>
-                    <a href="/briefs">
-                        My Briefs
+                    <a href="{{ url_for('my_briefs' if user['role'] == 'client' else 'provider_briefs' if user['role'] == 'service_provider' else 'user_management') }}">
+                        {{ "My Briefs" if user["role"] == "client" else "Client Briefs" if user["role"] == "service_provider" else "Users" }}
                     </a>
                 </li>
 
@@ -251,7 +251,7 @@
                         appear here.
                     </p>
 
-                    <a href="/dashboard/client"
+                    <a href="{{ url_for('client_dashboard' if user['role'] == 'client' else 'provider_dashboard' if user['role'] == 'service_provider' else 'admin_dashboard') }}"
                        class="btn btn-secondary">
                         Back to Dashboard
                     </a>

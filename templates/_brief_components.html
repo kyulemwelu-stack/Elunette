@@ -1,0 +1,52 @@
+{% macro status_badge(brief) -%}
+<span class="brief-state brief-state--{{ brief['status'] | replace('_', '-') }}">{{ brief['status'] | replace('_', ' ') | title }}</span>
+{%- endmacro %}
+
+{% macro progress(brief) -%}
+<div class="brief-progress">
+    <span>{{ brief['completeness_percentage'] }}<span class="brief-progress-unit">% complete</span></span>
+    <progress max="100" value="{{ brief['completeness_percentage'] }}"
+              aria-label="{{ brief['title'] }} completion">{{ brief['completeness_percentage'] }}%</progress>
+</div>
+{%- endmacro %}
+
+{% macro actions(brief) -%}
+<div class="brief-actions">
+    <a class="brief-action" href="{{ url_for('client_questionnaire', questionnaire_id=brief['questionnaire_id'], brief_id=brief['id']) }}"
+       aria-label="{{ 'Continue' if brief['status'] in ('draft', 'revision_requested') else 'View' }} {{ brief['title'] }}">{{ 'Continue' if brief['status'] in ('draft', 'revision_requested') else 'View Brief' }} <span aria-hidden="true">&rarr;</span></a>
+    {% if brief['status'] == 'draft' %}
+    <a class="brief-action brief-action--delete" href="{{ url_for('delete_draft_brief', brief_id=brief['id']) }}"
+       data-delete-draft data-brief-title="{{ brief['title'] }}"
+       aria-label="Delete draft {{ brief['title'] }}">Delete</a>
+    {% endif %}
+</div>
+{%- endmacro %}
+
+{% macro feedback() -%}
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% for category, message in messages %}
+<p class="brief-feedback" role="status">{{ message }}</p>
+{% endfor %}
+{% endwith %}
+{%- endmacro %}
+
+{% macro deletion_dialog(return_to='briefs', search='', status='') -%}
+<dialog class="simple-delete-dialog brief-delete-dialog" id="delete-draft-dialog"
+        aria-labelledby="delete-draft-title" aria-describedby="delete-draft-description">
+    <p class="section-label">MANAGE YOUR PROJECTS</p>
+    <h2 id="delete-draft-title">Delete this draft?</h2>
+    <p id="delete-draft-description">&ldquo;<span id="delete-draft-name"></span>&rdquo; and its saved answers will be permanently deleted. This cannot be undone.</p>
+    <div class="simple-delete-actions">
+        <form method="dialog"><button class="cancel-btn" autofocus>Keep Draft</button></form>
+        <form method="POST" id="delete-draft-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="confirm_delete" value="delete">
+            <input type="hidden" name="return_to" value="{{ return_to }}">
+            <input type="hidden" name="search" value="{{ search }}">
+            <input type="hidden" name="status" value="{{ status }}">
+            <button type="submit" class="confirm-delete-btn">Delete Draft</button>
+        </form>
+    </div>
+</dialog>
+<script src="{{ url_for('static', filename='js/briefs.js') }}" defer></script>
+{%- endmacro %}
