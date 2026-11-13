@@ -198,6 +198,12 @@ INVITATION_CHECK = """(() => {
     try {
         const dialog=document.querySelector('#studio-invitation');
         if (!dialog?.open || !dialog.matches(':modal')) throw Error('Invitation is not modal');
+        const backdrop=getComputedStyle(dialog,'::backdrop');
+        if (backdrop.backgroundColor !== 'rgba(241, 231, 211, 0.84)' || backdrop.backdropFilter !== 'blur(5px)') throw Error('Cream blurred backdrop missing');
+        document.querySelector('.studio-account summary').focus();
+        if (!dialog.contains(document.activeElement)) throw Error('Background controls accept focus while modal');
+        window.invitationWorkspace=document.querySelector('#studio-main');
+        window.invitationLocation=location.href;
         if (document.querySelectorAll('#studio-invitation').length !== 1) throw Error('Duplicate invitations');
         if (!dialog.getAttribute('aria-labelledby') || !dialog.getAttribute('aria-describedby')) throw Error('Missing accessible name/description');
         const close=dialog.querySelector('.invitation-close');
@@ -811,23 +817,32 @@ def main():
                         if not focus.get('result',{}).get('value'):
                             raise RuntimeError('Keyboard focus escaped invitation')
                     if '-registration-' in name:
-                        devtools.call('Runtime.evaluate', {'expression': "document.querySelector('.invitation-close').click()"})
+                        dismiss_expression="document.querySelector('.invitation-close').click()"
+                    elif '-reduced' in name or '-mobile' in name:
+                        dismiss_expression="document.querySelector('.invitation-action').click()"
                     else:
+                        dismiss_expression=None
                         devtools.call('Input.dispatchKeyEvent', {'type':'keyDown','key':'Escape','code':'Escape','windowsVirtualKeyCode':27})
                         devtools.call('Input.dispatchKeyEvent', {'type':'keyUp','key':'Escape','code':'Escape','windowsVirtualKeyCode':27})
-                    time.sleep(.1)
-                    closed=devtools.call('Runtime.evaluate', {'expression': "!document.querySelector('#studio-invitation').open && document.activeElement.matches('#studio-main h1')"})
+                    if dismiss_expression:
+                        state=devtools.call('Runtime.evaluate', {'expression': "(() => { "+dismiss_expression+"; const d=document.querySelector('#studio-invitation'); if (matchMedia('(prefers-reduced-motion: reduce)').matches) return !d.open; return d.open && d.matches(':modal') && d.getAnimations().length>0; })()"})
+                        if not state.get('result',{}).get('value'):
+                            raise RuntimeError('Dismissal lost modality during reveal or reduced motion was delayed')
+                    devtools.call('Runtime.evaluate', {'expression': "new Promise(resolve => { const d=document.querySelector('#studio-invitation'); if (!d.open && document.activeElement.matches('#studio-main h1')) resolve(); else d.addEventListener('close', () => resolve(), {once:true}); })",'awaitPromise':True})
+                    closed=devtools.call('Runtime.evaluate', {'expression': "!document.querySelector('#studio-invitation').open && document.activeElement.matches('#studio-main h1') && window.invitationWorkspace===document.querySelector('#studio-main') && location.href===window.invitationLocation"})
                     if not closed.get('result',{}).get('value'):
                         raise RuntimeError('Invitation dismissal/focus restoration failed')
-                    devtools.call('Runtime.evaluate', {'expression': "document.querySelector('.invitation-action').click()"})
-                    for _ in range(100):
-                        result=devtools.call('Runtime.evaluate', {'expression': "document.readyState === 'complete' && !document.querySelector('#studio-invitation') && Boolean(document.querySelector('.studio-bento'))"})
-                        if result.get('result',{}).get('value'):
-                            break
-                        time.sleep(.1)
-                    else:
-                        raise RuntimeError('Studio action did not navigate without repeating invitation')
+                    image=devtools.call('Page.captureScreenshot', {'format':'png'})
+                    (root/(name+'-revealed.png')).write_bytes(base64.b64decode(image['data']))
                     if name == 'invitation-returning-client':
+                        devtools.call('Page.navigate', {'url':f'http://127.0.0.1:{server.server_port}/dashboard/client-preview'})
+                        for _ in range(100):
+                            result=devtools.call('Runtime.evaluate', {'expression': "document.readyState === 'complete' && location.pathname === '/dashboard/client-preview' && !document.querySelector('#studio-invitation')"})
+                            if result.get('result',{}).get('value'):
+                                break
+                            time.sleep(.1)
+                        else:
+                            raise RuntimeError('Dashboard navigation unexpectedly repeated invitation')
                         devtools.call('Runtime.evaluate', {'expression':'history.back()'})
                         for _ in range(100):
                             result=devtools.call('Runtime.evaluate', {'expression': "document.readyState === 'complete' && location.pathname === '/dashboard/client' && !document.querySelector('#studio-invitation')?.open"})
