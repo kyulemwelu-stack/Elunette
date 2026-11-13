@@ -1,0 +1,51 @@
+{% import '_brief_components.html' as brief_ui %}
+{% from '_studio_icons.html' import icon, paper_motif %}
+{% set initials = user['full_name'].split()[0][0] ~ (user['full_name'].split()[-1][0] if user['full_name'].split() | length > 1 else '') %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#F1E7D3">
+    <title>{% block title %}Elunette Provider Studio{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,wght@0,400;0,500;1,400&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/studio.css') }}">
+    {% block page_styles %}{% endblock %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/signature-footer.css') }}">
+</head>
+<body class="studio-page {% block page_class %}{% endblock %}">
+    <a href="#studio-main" class="studio-skip">Skip to workspace</a>
+    <aside class="studio-rail" aria-label="Studio sidebar">
+        <a class="studio-brand" href="{{ url_for('home') }}" aria-label="Elunette Home"><img src="{{ url_for('static', filename='images/elunette-icon.png') }}" alt="" width="34" height="34"></a>
+        <nav class="studio-navigation" aria-label="Service provider navigation">
+            {% for endpoint, symbol, label in [('provider_dashboard', 'overview', 'Overview'), ('provider_briefs', 'brief', 'Client Briefs'), ('questionnaire_management', 'brief', 'Questionnaires'), ('notifications', 'bell', 'Updates')] %}
+            <a href="{{ url_for(endpoint) }}"{% if active_navigation | default('provider_briefs') == endpoint %} aria-current="page"{% endif %}>{{ icon(symbol) }}<span>{{ label }}</span></a>
+            {% endfor %}
+        </nav>
+        <div class="studio-rail-bottom">
+            <a href="{{ url_for('home') }}">{{ icon('home') }}<span>Home</span></a>
+            <form action="{{ url_for('logout') }}" method="POST"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit">{{ icon('logout') }}<span>Log out</span></button></form>
+        </div>
+    </aside>
+    <div class="studio-shell">
+        <header class="studio-toolbar">
+            <p class="studio-breadcrumb">Your workspace <span aria-hidden="true">/</span> <strong>{% block breadcrumb %}Review Library{% endblock %}</strong></p>
+            <div class="studio-toolbar-actions">
+                <a class="studio-notifications" href="{{ url_for('notifications') }}" aria-label="View notifications">{{ icon('bell') }}</a>
+                <details class="studio-account">
+                    <summary aria-label="Account controls for {{ user['full_name'] }}"><span class="studio-avatar">{{ initials | upper }}</span><span class="studio-account-name">{{ user['full_name'] }}</span>{{ icon('chevron') }}</summary>
+                    <div class="studio-account-menu"><strong>{{ user['full_name'] }}</strong><p>Provider workspace</p><a href="{{ url_for('provider_briefs') }}">Your review workspace {{ icon('arrow') }}</a><form action="{{ url_for('logout') }}" method="POST"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit">Log out {{ icon('logout') }}</button></form></div>
+                </details>
+            </div>
+        </header>
+        <main id="studio-main">
+            {{ brief_ui.feedback() }}
+            {% block content %}{% endblock %}
+            {% include '_signature_footer.html' %}
+        </main>
+    </div>
+    {% block page_scripts %}{% endblock %}
+</body>
+</html>

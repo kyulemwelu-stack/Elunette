@@ -1,0 +1,49 @@
+/* Provider-only details; the approved Studio shell and components are shared unchanged. */
+.provider-studio .provider-review-workspace { display: flex; flex-direction: column; scroll-margin-top: 24px; }
+.provider-studio .provider-list-label { margin-top: 20px; font-size: 9px; font-weight: 700; letter-spacing: 1px; color: var(--muted); }
+.provider-studio .provider-list-label > span { margin-left: 8px; color: var(--burgundy); }
+.provider-studio .provider-client-name { font-weight: 600; color: var(--chocolate); }
+.provider-studio .provider-client-name > span { white-space: normal; color: var(--muted); font-weight: 400; }
+.provider-studio .provider-submission-date { margin-bottom: 0; font-size: 9px; }
+.provider-studio .provider-workspace-note { display: flex; align-items: flex-start; gap: 10px; padding-top: 24px; margin-top: auto; color: var(--muted); font-size: 11px; }
+.provider-studio .provider-workspace-note .studio-icon { width: 17px; height: 17px; }
+.provider-studio .studio-empty-projects { flex: 1; height: auto; min-height: 280px; }
+.provider-studio .provider-follow-up { margin-top: 24px; }
+.provider-studio .provider-follow-up-item { display: flex; align-items: center; gap: 12px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+.provider-studio .provider-follow-up-item > span:first-child { flex: 1; min-width: 0; }
+.provider-studio .provider-follow-up-item strong { display: block; font-size: 12px; overflow-wrap: anywhere; }
+.provider-studio .provider-follow-up-item small { display: block; margin-top: 4px; color: var(--muted); font-size: 10px; }
+.provider-studio .provider-follow-up-item .studio-icon { width: 16px; height: 16px; color: var(--burgundy); }
+.provider-studio .provider-questionnaire-counts { display: flex; flex-wrap: wrap; gap: 10px 18px; margin: 20px 0; padding-bottom: 16px; border-bottom: 1px solid rgba(92, 58, 38, .2); font-size: 10px; }
+.provider-studio .provider-questionnaire-counts strong { margin-right: 4px; font-size: 22px; font-weight: 600; }
+.provider-studio .provider-activity h2 { font-size: 17px; }
+.provider-studio .provider-activity-list { display: grid; list-style: none; padding: 0; margin: 18px 0 0; }
+.provider-studio .provider-activity-list a { display: grid; grid-template-columns: 28px minmax(0, 1fr) 14px; align-items: start; gap: 10px; padding: 15px 0; border-top: 1px solid #E3D6CF; }
+.provider-studio .provider-activity-list strong { display: block; font-size: 11px; font-weight: 700; overflow-wrap: anywhere; }
+.provider-studio .provider-activity-decision { display: block; margin: 4px 0; font-size: 10px; color: var(--burgundy); }
+.provider-studio .provider-activity-list small { display: block; font-size: 9px; color: var(--muted); overflow-wrap: anywhere; }
+.provider-studio .provider-activity-list a > .studio-icon { width: 14px; height: 14px; margin-top: 4px; }
+.provider-studio .provider-activity-icon { display: grid; place-items: center; width: 28px; height: 28px; background: var(--white); color: var(--burgundy); border-radius: 10px; }
+.provider-studio .provider-activity-icon .studio-icon { width: 15px; height: 15px; }
+.provider-studio .provider-activity-icon--approved { background: #E7ECDD; color: #45593C; }
+.provider-studio .provider-activity-empty { padding-top: 20px; color: var(--muted); font-size: 11px; }
+.provider-studio .provider-activity-empty > p:first-child { margin-bottom: 10px; color: var(--chocolate); font-weight: 600; }
+.provider-studio .provider-follow-up-item:hover strong, .provider-studio .provider-activity-list a:hover strong { text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 600px) {
+    .provider-studio .provider-follow-up-item { flex-wrap: wrap; gap: 8px; }
+    .provider-studio .provider-follow-up-item > span:first-child { flex-basis: calc(100% - 30px); }
+    .provider-studio .provider-follow-up-item .brief-state { order: 3; }
+    .provider-studio .provider-activity-list strong { font-size: 12px; }
+    .provider-studio .provider-activity-list small { font-size: 10px; }
+}
+
+/* A small queue gets a tighter composition instead of an oversized empty workspace. */
+@media (min-width: 851px) {
+    .provider-studio--light-queue .provider-review-workspace { grid-row: auto; }
+    .provider-studio--light-queue .provider-activity { grid-column: span 8; }
+    .provider-studio--light-queue .studio-workflow { grid-column: span 4; }
+}
+@media (min-width: 851px) and (max-width: 1150px) {
+    .provider-studio--light-queue .provider-activity { grid-column: span 7; }
+    .provider-studio--light-queue .studio-workflow { grid-column: span 5; }
+}

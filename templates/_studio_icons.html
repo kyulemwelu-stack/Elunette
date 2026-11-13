@@ -1,0 +1,28 @@
+{% macro icon(name, class_name='') -%}
+<svg class="studio-icon {{ class_name }}" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+    {% if name == 'overview' %}<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>
+    {% elif name == 'brief' %}<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>
+    {% elif name == 'bell' %}<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>
+    {% elif name == 'plus' %}<path d="M12 5v14M5 12h14"/>
+    {% elif name == 'arrow' %}<path d="M5 12h14m-5-5 5 5-5 5"/>
+    {% elif name == 'logout' %}<path d="M9 4H5v16h4M9 12h12m-4-4 4 4-4 4"/>
+    {% elif name == 'check' %}<path d="m6 12 4 4 8-9"/><circle cx="12" cy="12" r="10"/>
+    {% elif name == 'clock' %}<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+    {% elif name == 'revision' %}<path d="M3 10a9 9 0 1 1 2 8M3 4v6h6M12 7v5l3 2"/>
+    {% elif name == 'home' %}<path d="m3 10 9-7 9 7M5 9v12h14V9M9 21v-7h6v7"/>
+    {% elif name == 'chevron' %}<path d="m7 10 5 5 5-5"/>
+    {% endif %}
+</svg>
+{%- endmacro %}
+
+{% macro paper_motif() -%}
+<svg class="studio-paper-art" viewBox="0 0 190 200" fill="none" aria-hidden="true" focusable="false">
+    <rect x="34" y="23" width="112" height="146" rx="7" transform="rotate(-13 34 23)" fill="#A3B18A"/>
+    <path d="m58 22 106 18-22 136-106-18z" fill="#F1E7D3"/>
+    <path d="m145 36 19 4-4 22z" fill="#FFFFFF"/>
+    <path d="m57 131 63 10m-66 1 48 8" stroke="#5C3A26" stroke-opacity=".35" stroke-width="1.3"/>
+    <path d="m96 117 6-42m-6 36c-12-2-16-10-16-19 11 4 17 9 16 19Zm3-13c10 1 17-6 20-14-12 1-17 6-20 14Z" stroke="#5C3A26" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M102 79c-14-3-17-17-11-27l8 7 8-10 3 12 11-4c1 13-6 24-19 22Z" fill="#6B1F2F"/>
+    <path d="m101 77 6-27" stroke="#F1E7D3" stroke-opacity=".45"/>
+</svg>
+{%- endmacro %}

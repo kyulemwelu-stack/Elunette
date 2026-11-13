@@ -10,6 +10,7 @@
 
     <link rel="stylesheet"
           href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/signature-footer.css') }}">
 </head>
 
 <body class="dashboard-page provider-page">
@@ -554,13 +555,7 @@
 
     <!-- FOOTER -->
 
-    <footer class="dashboard-footer">
-
-        <p>
-            &copy; 2026 Elunette. All rights reserved.
-        </p>
-
-    </footer>
+    {% include '_signature_footer.html' %}
 
 
     <!-- ADAPTIVE QUESTION SELECTION -->

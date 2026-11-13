@@ -1,0 +1,139 @@
+/* Step 87.1: isolated welcome styles. Other pages retain their existing design. */
+.welcome-page {
+    --chocolate: #5C3A26;
+    --cream: #F1E7D3;
+    --sage: #A3B18A;
+    --burgundy: #6B1F2F;
+    --white: #FFFFFF;
+    margin: 0;
+    background: var(--cream);
+    color: var(--chocolate);
+    font-family: "Manrope", Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.8;
+    -webkit-font-smoothing: antialiased;
+}
+
+.welcome-page *,
+.welcome-page *::before,
+.welcome-page *::after { box-sizing: border-box; }
+.welcome-page :is(h1, h2, h3, p, figure) { margin: 0; }
+.welcome-page a { color: inherit; text-decoration: none; }
+.welcome-page a:focus-visible { outline: 2px solid var(--burgundy); outline-offset: 5px; }
+.welcome-page a:hover { color: var(--burgundy); }
+.welcome-page img { display: block; max-width: 100%; height: auto; }
+.welcome-page :is(h1, h2, h3) { font-family: "Bodoni Moda", Georgia, serif; font-weight: 400; }
+
+.welcome-skip {
+    position: absolute;
+    left: 20px;
+    top: 12px;
+    padding: 10px 16px;
+    background: var(--white);
+    transform: translateY(-160%);
+    z-index: 5;
+}
+.welcome-skip:focus { transform: translateY(0); }
+
+.welcome-header,
+.welcome-footer {
+    max-width: 1320px;
+    margin: auto;
+    padding: 27px 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+}
+.welcome-header { min-height: 110px; }
+.welcome-logo { flex-shrink: 0; }
+.welcome-logo img { width: 174px; }
+.welcome-nav { display: flex; gap: 32px; }
+.welcome-nav a { padding: 7px 0; font-size: 12px; }
+.welcome-nav [aria-current="page"] { border-bottom: 1px solid var(--burgundy); }
+.welcome-signin { font-size: 11px; }
+.welcome-signin span { margin-left: 6px; color: var(--burgundy); border-bottom: 1px solid var(--burgundy); }
+
+.welcome-hero {
+    max-width: 1320px;
+    min-height: 650px;
+    margin: auto;
+    padding: 65px 48px 90px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr);
+    align-items: center;
+    gap: 14px;
+}
+.welcome-copy { position: relative; z-index: 1; }
+.welcome-eyebrow { font-size: 9px; font-weight: 600; letter-spacing: 2.3px; color: var(--burgundy); }
+.welcome-copy h1 { max-width: 620px; margin: 24px 0; font-size: clamp(44px, 5.1vw, 72px); line-height: 1.13; letter-spacing: -2.5px; }
+.welcome-copy h1 em { font-weight: 400; color: var(--burgundy); }
+.welcome-description { max-width: 385px; font-size: 14px; line-height: 1.95; }
+.welcome-role-selection { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
+.welcome-role { display: inline-flex; align-items: center; justify-content: center; gap: 16px; min-height: 48px; padding: 11px 20px; border: 1px solid var(--burgundy); border-radius: 30px; font-size: 11px; font-weight: 600; transition: background-color 160ms ease, color 160ms ease; }
+.welcome-role span { font-size: 16px; font-weight: 400; }
+.welcome-role--client { background: var(--burgundy); color: var(--white) !important; }
+.welcome-role--client:hover { background: var(--chocolate); border-color: var(--chocolate); }
+.welcome-role--provider:hover { background: rgba(255, 255, 255, 0.55); }
+.welcome-register { margin-top: 19px !important; font-size: 11px; }
+.welcome-register a { margin-left: 4px; color: var(--burgundy); text-decoration: underline; text-underline-offset: 4px; }
+
+.welcome-art { min-width: 0; position: relative; }
+.welcome-art::before { content: ""; position: absolute; inset: 4% 0 15% 9%; border-radius: 50% 46% 44% 47%; background: rgba(255, 255, 255, 0.3); }
+.welcome-page .welcome-hero-image { position: relative; width: 112%; max-width: 112%; margin-left: -12%; aspect-ratio: 1672 / 941; object-fit: contain; mix-blend-mode: multiply; mask-image: linear-gradient(90deg, transparent, #000 14%, #000 90%, transparent), linear-gradient(0deg, transparent, #000 12%, #000 92%, transparent); mask-composite: intersect; }
+.welcome-art figcaption { position: relative; display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 5px; }
+.welcome-script { font-family: "Pinyon Script", cursive; font-size: 32px; color: var(--burgundy); }
+.welcome-art figcaption > span:last-child { font-size: 8px; font-weight: 500; letter-spacing: 2px; }
+
+.welcome-process { max-width: 1224px; margin: 0 auto; padding: 42px 0 60px; border-top: 1px solid rgba(92, 58, 38, 0.2); display: grid; grid-template-columns: 0.9fr 1.5fr; gap: 60px; }
+.welcome-process h2 { max-width: 315px; margin-top: 14px; font-size: 32px; line-height: 1.3; letter-spacing: -0.7px; }
+.welcome-process h2 em { display: block; }
+.welcome-steps { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 30px; }
+.welcome-steps li > span { display: block; margin-bottom: 16px; font-size: 10px; color: var(--burgundy); }
+.welcome-steps h3 { font-size: 22px; line-height: 1.3; margin-bottom: 10px; }
+.welcome-steps p { font-size: 11px; line-height: 1.9; }
+.welcome-footer { border-top: 1px solid rgba(92, 58, 38, 0.15); font-size: 10px; }
+.welcome-footer nav { display: flex; gap: 24px; flex-wrap: wrap; }
+
+@media (max-width: 1320px) {
+    .welcome-process { margin-inline: 48px; }
+}
+@media (max-width: 1000px) {
+    .welcome-header, .welcome-footer { padding-inline: 28px; }
+    .welcome-nav { gap: 22px; }
+    .welcome-hero { padding: 55px 28px 70px; min-height: 600px; }
+    .welcome-copy h1 { font-size: 55px; }
+    .welcome-process { margin-inline: 28px; grid-template-columns: 1fr; gap: 30px; }
+    .welcome-process h2 { max-width: none; }
+    .welcome-process h2 em { display: inline; }
+}
+@media (max-width: 750px) {
+    .welcome-header { flex-wrap: wrap; padding: 20px 24px; gap: 16px; }
+    .welcome-logo img { width: 145px; }
+    .welcome-nav { order: 3; width: 100%; justify-content: center; gap: 30px; }
+    .welcome-signin { font-size: 10px; }
+    .welcome-hero { grid-template-columns: 1fr; padding: 38px 24px 45px; gap: 22px; }
+    .welcome-copy { max-width: 540px; margin: auto; }
+    .welcome-copy h1 { max-width: 520px; font-size: clamp(44px, 8vw, 58px); letter-spacing: -1.8px; }
+    .welcome-description { max-width: 400px; }
+    .welcome-art { width: min(100%, 540px); margin: auto !important; }
+    .welcome-page .welcome-hero-image { width: 100%; max-width: 100%; margin-left: 0; }
+    .welcome-script { font-size: 29px; }
+    .welcome-process { margin-inline: 24px; padding: 32px 0 40px; }
+    .welcome-steps { gap: 22px; }
+    .welcome-footer { flex-direction: column; align-items: flex-start; padding: 24px; gap: 12px; }
+}
+@media (max-width: 480px) {
+    .welcome-eyebrow { font-size: 8px; letter-spacing: 1.7px; }
+    .welcome-role-selection { gap: 10px; }
+    .welcome-role { padding: 11px 16px; gap: 12px; font-size: 10px; }
+    .welcome-steps { grid-template-columns: 1fr; gap: 24px; }
+    .welcome-steps li { display: flex; gap: 20px; }
+    .welcome-steps li > span { margin: 5px 0 0; }
+    .welcome-steps h3 { font-size: 23px; margin-bottom: 6px; }
+    .welcome-steps p { font-size: 12px; max-width: 290px; }
+    .welcome-footer nav { gap: 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .welcome-role { transition: none; }
+}

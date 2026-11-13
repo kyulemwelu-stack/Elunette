@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Delete Draft | Elunette</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/signature-footer.css') }}">
 </head>
 <body class="dashboard-page client-workspace">
     <header class="dashboard-header">
@@ -28,5 +29,6 @@
             </div>
         </section>
     </main>
+    {% include '_signature_footer.html' %}
 </body>
 </html>

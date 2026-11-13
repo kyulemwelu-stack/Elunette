@@ -1,383 +1,62 @@
+{% extends 'studio_provider_base.html' %}
+{% block title %}Review Library | The Elunette Edit{% endblock %}
+{% block page_class %}edit-page{% endblock %}
+{% block page_styles %}
+<link href="https://fonts.googleapis.com/css2?family=Pinyon+Script&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/edit.css') }}">
+{% endblock %}
+{% block content %}
+    <section class="edit-introduction" aria-labelledby="library-title">
+        <div><p class="studio-eyebrow">THE ELUNETTE EDIT &nbsp; / &nbsp; YOUR CLIENT COLLECTION</p><h1 id="library-title">Review <em>Library.</em></h1><p>A considered home for every client brief.<br>Read closely, leave a clear next step, and let good ideas grow.</p></div>
+        <div class="edit-intro-motif" aria-hidden="true">{{ paper_motif() }}<span>a little clarity, collected</span></div>
+    </section>
 
-<!DOCTYPE html>
-<html lang="en">
+    <div class="edit-library-summary" aria-label="Library overview">
+        <p><strong>{{ overview['total'] }}</strong> {{ 'project file' if overview['total'] == 1 else 'project files' }}</p>
+        <span aria-hidden="true">/</span><p><strong>{{ overview['pending'] }}</strong> awaiting review</p>
+        <span aria-hidden="true">/</span><p><strong>{{ overview['revision'] }}</strong> awaiting client changes</p>
+        <a class="studio-text-link" href="{{ url_for('provider_dashboard') }}">Back to your Studio {{ icon('arrow') }}</a>
+    </div>
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+    <section class="edit-library" aria-labelledby="library-collection-title">
+        <div class="edit-library-heading"><div><span class="edit-section-number" aria-hidden="true">01</span><h2 id="library-collection-title">The collection</h2></div><p>{{ briefs | length }} {{ 'file' if briefs | length == 1 else 'files' }}{{ ' matching your selection' if search_query or status_filter else ' in your library' }}</p></div>
 
-    <title>Client Briefs | Elunette</title>
-
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='css/style.css') }}">
-</head>
-
-<body class="dashboard-page provider-page">
-
-    <!-- HEADER -->
-
-    <header class="dashboard-header">
-
-        <a href="/dashboard/provider"
-           class="logo"
-           aria-label="Elunette Provider Dashboard">
-
-            <img
-                src="{{ url_for('static', filename='images/elunette-logo.png') }}"
-                alt="Elunette"
-                class="logo-img">
-        </a>
-
-        <!-- PROVIDER NAVIGATION -->
-
-        <nav class="dashboard-nav"
-             aria-label="Service provider navigation">
-
-            <ul>
-                <li>
-                    <a href="/dashboard/provider">Dashboard</a>
-                </li>
-
-                <li>
-                    <a href="/provider/questionnaires">
-                        Questionnaires
-                    </a>
-                </li>
-
-                <li>
-                    <a href="/provider/briefs"
-                       class="active"
-                       aria-current="page">
-                        Client Briefs
-                    </a>
-                </li>
-
-                <li>
-                    <a href="/notifications">Notifications</a>
-                </li>
-            </ul>
-
+        <nav class="edit-folder-tabs" aria-label="Filter client briefs by status">
+            {% for value, label in [('', 'All files'), ('submitted', 'Submitted'), ('under_review', 'Under review'), ('revision_requested', 'Client revisions'), ('approved', 'Approved')] %}
+            <a href="{{ url_for('provider_briefs', status=value, search=search_query) }}"{% if status_filter == value %} aria-current="page"{% endif %}>{{ label }}<span>{{ all_matching_count if value == '' else tab_counts[value] }}</span></a>
+            {% endfor %}
         </nav>
 
-
-<!-- ==========================================
-     SERVICE PROVIDER LOGOUT
-========================================== -->
-
-<form
-    action="{{ url_for('logout') }}"
-    method="POST"
-    class="logout-form">
-
-    <input
-        type="hidden"
-        name="csrf_token"
-        value="{{ csrf_token() }}">
-
-    <button
-        type="submit"
-        class="logout-btn">
-        Log Out
-    </button>
-
-</form>
-
-    </header>
-
-
-    <!-- MAIN CONTENT -->
-
-    <main class="dashboard-main">
-
-        <!-- PAGE INTRODUCTION -->
-
-        <section class="provider-briefs-intro">
-
-            <p class="section-label">
-                CLIENT REQUIREMENTS
-            </p>
-
-            <h1>Client Project Briefs</h1>
-
-            <p>
-                Review submitted project requirements,
-                provide feedback, and manage brief
-                approval decisions in one place.
-            </p>
-
-        </section>
-
-
-        <!-- BRIEF OVERVIEW -->
-
-        <section class="dashboard-overview"
-                 aria-labelledby="overview-title">
-
-            <div class="section-header">
-
-                <h2 id="overview-title">
-                    Brief Overview
-                </h2>
-
-                <p>
-                    A summary of submitted project
-                    briefs and their review statuses.
-                </p>
-
-            </div>
-
-            <div class="overview-grid">
-
-                <article class="overview-card">
-                    <h3>Total Submitted</h3>
-                    <p class="overview-number">{{ overview["total"] }}</p>
-                    <p>All submitted briefs</p>
-                </article>
-
-                <article class="overview-card">
-                    <h3>Pending Review</h3>
-                    <p class="overview-number">{{ overview["pending"] }}</p>
-                    <p>Awaiting a review decision</p>
-                </article>
-
-                <article class="overview-card">
-                    <h3>Revision Requested</h3>
-                    <p class="overview-number">{{ overview["revision"] }}</p>
-                    <p>Awaiting client corrections</p>
-                </article>
-
-                <article class="overview-card">
-                    <h3>Approved</h3>
-                    <p class="overview-number">{{ overview["approved"] }}</p>
-                    <p>Successfully approved briefs</p>
-                </article>
-
-            </div>
-
-        </section>
-
-
-        <!-- SEARCH AND FILTERS -->
-
-        <section class="provider-brief-filters"
-                 aria-label="Search and filter client briefs">
-
-            <form action="/provider/briefs"
-                  method="GET"
-                  class="filter-form">
-
-                <!-- SEARCH -->
-
-                <div class="form-group">
-
-                    <label for="brief-search">
-                        Search Briefs
-                    </label>
-
-                    <input
-                        type="search"
-                        id="brief-search"
-                        name="search"
-                        value="{{ search_query }}"
-                        placeholder="Search by project or client">
-
-                </div>
-
-                <!-- STATUS -->
-
-                <div class="form-group">
-
-                    <label for="status-filter">
-                        Brief Status
-                    </label>
-
-                    <select id="status-filter" name="status">
-
-                        <option value="">All Statuses</option>
-                        <option value="submitted" {% if status_filter == "submitted" %}selected{% endif %}>Submitted</option>
-                        <option value="under_review" {% if status_filter == "under_review" %}selected{% endif %}>Under Review</option>
-
-                        <option value="revision_requested" {% if status_filter == "revision_requested" %}selected{% endif %}>
-                            Revision Requested
-                        </option>
-
-                        <option value="approved" {% if status_filter == "approved" %}selected{% endif %}>Approved</option>
-
-                    </select>
-
-                </div>
-
-                <button type="submit"
-                        class="btn btn-secondary">
-                    Apply Filters
-                </button>
-
-            </form>
-
-        </section>
-
-
-        <!-- CLIENT BRIEFS LIST -->
-
-        <section class="provider-briefs-list"
-                 aria-labelledby="brief-list-title">
-
-            <div class="section-header">
-
-                <p class="section-label">
-                    PROJECT SUBMISSIONS
-                </p>
-
-                <h2 id="brief-list-title">
-                    Submitted Client Briefs
-                </h2>
-
-                <p>
-                    Select a project brief to view
-                    its requirements and review status.
-                </p>
-
-            </div>
-
-            <div class="table-container">
-
-
-<!-- ==========================================
-     STEP 83.2 - REAL CLIENT BRIEFS
-========================================== -->
-
-<table class="briefs-table provider-briefs-table">
-
-    <caption>
-        Submitted project briefs available for provider review.
-    </caption>
-
-    <thead>
-        <tr>
-            <th scope="col">Project Title</th>
-            <th scope="col">Client</th>
-            <th scope="col">Questionnaire</th>
-            <th scope="col">Status</th>
-            <th scope="col">Completeness</th>
-            <th scope="col">Last Updated</th>
-            <th scope="col">Actions</th>
-        </tr>
-    </thead>
-
-    <tbody>
-
-        {% for brief in briefs %}
-
-        <tr>
-            <td>
-                <strong>{{ brief['title'] }}</strong>
-            </td>
-
-            <td>
-                {{ brief['client_name'] }}
-            </td>
-
-            <td>
-                {{ brief['questionnaire_title'] }}
-                <small>
-                    Version {{ brief['version_number'] }}
-                </small>
-            </td>
-
-            <td>
-                <span class="brief-status status-{{ brief['status'] | replace('_', '-') }}">
-                    {{ brief['status'] | replace('_', ' ') | title }}
-                </span>
-            </td>
-
-            <td>
-                {{ brief['completeness_percentage'] }}%
-            </td>
-
-            <td>
-                {{ brief['updated_at'] }}
-            </td>
-
-            <td>
-                
-<a
-    href="{{ url_for('review_brief', brief_id=brief['id']) }}"
-    class="btn btn-secondary">
-    Review Brief
-</a>
-            </td>
-        </tr>
-
+        <form class="edit-search" action="{{ url_for('provider_briefs') }}" method="GET" role="search" aria-label="Search client briefs">
+            <input type="hidden" name="status" value="{{ status_filter }}">
+            <div><label for="library-search">Find a project or client</label><input type="search" id="library-search" name="search" value="{{ search_query }}" placeholder="Search your collection" maxlength="150"></div>
+            <button type="submit" class="studio-button studio-button--burgundy">Search {{ icon('arrow') }}</button>
+            {% if search_query or status_filter %}<a class="edit-reset" href="{{ url_for('provider_briefs') }}">Clear filters</a>{% endif %}
+        </form>
+
+        {% if briefs %}
+        <div class="edit-dossier-grid">
+            {% for brief in briefs %}
+            <article class="edit-dossier edit-dossier--{{ brief['status'] }}" aria-labelledby="dossier-title-{{ brief['id'] }}" data-brief-id="{{ brief['id'] }}">
+                <header class="edit-dossier-top"><p class="edit-file-number">PROJECT FILE {{ '%03d' | format(file_numbers[brief['id']]) }}</p><div class="edit-status-stamp">{{ brief_ui.status_badge(brief) }}</div></header>
+                <h2 id="dossier-title-{{ brief['id'] }}">{{ brief['title'] }}</h2>
+                <dl class="edit-dossier-details"><div><dt>PREPARED BY</dt><dd>{{ brief['client_name'] }}</dd></div><div><dt>QUESTIONNAIRE</dt><dd>{{ brief['questionnaire_title'] }} <span>v{{ brief['version_number'] }}</span></dd></div></dl>
+                <div class="edit-dossier-date"><span>Last updated <time datetime="{{ brief['updated_at'] | replace(' ', 'T') }}Z" title="{{ brief['updated_at'] }} UTC">{{ brief['updated_at'][:10] }}</time></span><span>Brief #{{ brief['id'] }}</span></div>
+                <footer class="edit-dossier-footer">{{ brief_ui.progress(brief) }}<a class="edit-review-action" href="{{ url_for('review_brief', brief_id=brief['id']) }}" aria-label="{{ 'Review' if brief['status'] in ('submitted', 'under_review') else 'View' }} {{ brief['title'] }}">{{ 'Review Brief' if brief['status'] in ('submitted', 'under_review') else 'View Brief' }} {{ icon('arrow') }}</a></footer>
+            </article>
+            {% endfor %}
+        </div>
+        <p class="edit-file-note">Project file numbers organise this collection. Brief references and review records remain unchanged.</p>
         {% else %}
+        <div class="edit-library-empty">
+            <span class="edit-empty-paper" aria-hidden="true">{{ icon('brief') }}</span>
+            <p class="studio-eyebrow">{{ 'A LITTLE ROOM TO REFOCUS' if overview['total'] else 'THE FIRST PAGE IS STILL TO COME' }}</p>
+            <h2>{{ 'Nothing in this folder—yet.' if overview['total'] else 'Your next collaboration starts here.' }}</h2>
+            <p>{{ 'Try another project title, search by client, or clear your filters to reopen the whole collection.' if overview['total'] else 'When a client submits a brief to one of your questionnaires, it will find a home in this library.' }}</p>
+            {% if overview['total'] or search_query or status_filter %}<a class="studio-button studio-button--burgundy" href="{{ url_for('provider_briefs') }}">View all project files {{ icon('arrow') }}</a>{% else %}<a class="studio-button studio-button--burgundy" href="{{ url_for('questionnaire_management') }}">Visit your questionnaires {{ icon('arrow') }}</a>{% endif %}
+        </div>
+        {% endif %}
+    </section>
 
-        <tr>
-            <td colspan="7" class="empty-state">
-
-                <h3>No submitted briefs yet</h3>
-
-                <p>
-                    Client project briefs will appear here
-                    once submitted for review.
-                </p>
-
-            </td>
-        </tr>
-
-        {% endfor %}
-
-    </tbody>
-
-</table>
-
-
-            </div>
-
-        </section>
-
-
-        <!-- REVIEW GUIDANCE -->
-
-        <aside class="provider-review-help"
-               aria-labelledby="review-help-title">
-
-            <h2 id="review-help-title">
-                Reviewing Client Briefs
-            </h2>
-
-            <p>
-                Carefully review the client's
-                submitted requirements before
-                making an approval decision.
-            </p>
-
-            <p>
-                If clarification or corrections
-                are needed, request revisions
-                and provide clear feedback.
-            </p>
-
-            <p>
-                Approved briefs and their
-                revision records will remain
-                available for reference.
-            </p>
-
-        </aside>
-
-    </main>
-
-
-    <!-- FOOTER -->
-
-    <footer class="dashboard-footer">
-
-        <p>
-            &copy; 2026 Elunette. All rights reserved.
-        </p>
-
-    </footer>
-
-</body>
-
-</html>
+    <aside class="edit-review-note" aria-labelledby="review-note-title"><span class="edit-section-number" aria-hidden="true">02</span><div><p class="studio-eyebrow">A NOTE ON THOUGHTFUL REVIEW</p><h2 id="review-note-title">Leave a clear next step.</h2><p>Open a project file to review its requirements, approve the brief or request revisions. Your feedback and the project's history stay together.</p></div><a class="studio-text-link" href="{{ url_for('provider_briefs', status='submitted') }}">Browse submitted briefs {{ icon('arrow') }}</a></aside>
+{% endblock %}

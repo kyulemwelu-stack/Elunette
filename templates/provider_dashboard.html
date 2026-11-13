@@ -1,491 +1,118 @@
-
+{% import '_brief_components.html' as brief_ui %}
+{% from '_studio_icons.html' import icon, paper_motif %}
+{% set first_name = user['full_name'].split()[0] %}
+{% set initials = user['full_name'].split()[0][0] ~ (user['full_name'].split()[-1][0] if user['full_name'].split() | length > 1 else '') %}
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
-
-    <title>Service Provider Dashboard | Elunette</title>
-
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='css/style.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#F1E7D3">
+    <title>The Elunette Provider Studio | Service Provider Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,wght@0,400;0,500;1,400&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/studio.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/provider-studio.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/signature-footer.css') }}">
 </head>
-
-<body class="dashboard-page provider-dashboard-page">
-
-    <!-- DASHBOARD HEADER -->
-
-    <header class="dashboard-header">
-
-        <!-- ELUNETTE LOGO -->
-
-        <a href="/dashboard/provider"
-           class="logo"
-           aria-label="Elunette Provider Dashboard">
-
-            <img
-                src="{{ url_for('static', filename='images/elunette-logo.png') }}"
-                alt="Elunette"
-                class="logo-img">
-
-        </a>
-
-
-        <!-- PROVIDER NAVIGATION -->
-
-        <nav class="dashboard-nav"
-             aria-label="Service provider navigation">
-
-            <ul>
-
-                <li>
-                    <a href="/dashboard/provider"
-                       class="active"
-                       aria-current="page">
-                        Dashboard
-                    </a>
-                </li>
-
-                <li>
-                    <a href="/provider/questionnaires">
-                        Questionnaires
-                    </a>
-                </li>
-
-                <li>
-                    <a href="/provider/briefs">
-                        Client Briefs
-                    </a>
-                </li>
-
-                <li>
-                    <a href="/notifications">
-                        Notifications
-                    </a>
-                </li>
-
-            </ul>
-
+<body class="studio-page provider-studio{{ ' provider-studio--light-queue' if ((briefs | length) + (following_up | length)) < 3 else '' }}">
+    <a href="#studio-main" class="studio-skip">Skip to workspace</a>
+    <aside class="studio-rail" aria-label="Studio sidebar">
+        <a class="studio-brand" href="{{ url_for('home') }}" aria-label="Elunette Home"><img src="{{ url_for('static', filename='images/elunette-icon.png') }}" alt="" width="34" height="34"></a>
+        <nav class="studio-navigation" aria-label="Service provider navigation">
+            <a href="{{ url_for('provider_dashboard') }}" aria-current="page">{{ icon('overview') }}<span>Overview</span></a>
+            <a href="{{ url_for('provider_briefs') }}">{{ icon('brief') }}<span>Client Briefs</span></a>
+            <a href="{{ url_for('questionnaire_management') }}">{{ icon('brief') }}<span>Questionnaires</span></a>
+            <a href="{{ url_for('notifications') }}">{{ icon('bell') }}<span>Updates</span></a>
         </nav>
+        <div class="studio-rail-bottom">
+            <a href="{{ url_for('home') }}">{{ icon('home') }}<span>Home</span></a>
+            <form action="{{ url_for('logout') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit">{{ icon('logout') }}<span>Log out</span></button>
+            </form>
+        </div>
+    </aside>
 
-
-
-<!-- ==========================================
-     SERVICE PROVIDER LOGOUT
-========================================== -->
-
-<form
-    action="{{ url_for('logout') }}"
-    method="POST"
-    class="logout-form">
-
-    <input
-        type="hidden"
-        name="csrf_token"
-        value="{{ csrf_token() }}">
-
-    <button
-        type="submit"
-        class="logout-btn">
-        Log Out
-    </button>
-
-</form>
-
-    </header>
-
-
-    <!-- MAIN DASHBOARD -->
-
-    <main class="dashboard-main">
-
-        <!-- WELCOME SECTION -->
-
-        <section class="dashboard-welcome">
-
-            <div class="welcome-content">
-
-                <p class="section-label">
-                    SERVICE PROVIDER WORKSPACE
-                </p>
-
-                <h1>Welcome to your workspace.</h1>
-
-                <p>
-                    Manage client requirements,
-                    organise questionnaires, and
-                    review project briefs in one place.
-                </p>
-
-                <a href="/provider/briefs"
-                   class="btn btn-primary">
-                    View Client Briefs
-                </a>
-
+    <div class="studio-shell">
+        <header class="studio-toolbar">
+            <p class="studio-breadcrumb">Your workspace <span aria-hidden="true">/</span> <strong>Overview</strong></p>
+            <div class="studio-toolbar-actions">
+                <a class="studio-notifications" href="{{ url_for('notifications') }}" aria-label="View notifications">{{ icon('bell') }}</a>
+                <details class="studio-account">
+                    <summary aria-label="Account controls for {{ user['full_name'] }}"><span class="studio-avatar">{{ initials | upper }}</span><span class="studio-account-name">{{ user['full_name'] }}</span>{{ icon('chevron') }}</summary>
+                    <div class="studio-account-menu">
+                        <strong>{{ user['full_name'] }}</strong><p>Provider workspace</p>
+                        <a href="{{ url_for('provider_briefs') }}">Your review workspace {{ icon('arrow') }}</a>
+                        <form action="{{ url_for('logout') }}" method="POST"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit">Log out {{ icon('logout') }}</button></form>
+                    </div>
+                </details>
             </div>
-
-        </section>
-
-
-        <!-- DASHBOARD OVERVIEW -->
-
-        <section class="dashboard-overview"
-                 aria-labelledby="overview-title">
-
-            <div class="section-header">
-
-                <h2 id="overview-title">
-                    Workspace Overview
-                </h2>
-
-                <p>
-                    A quick summary of your
-                    questionnaire and review activities.
-                </p>
-
-            </div>
-
-
-            <div class="overview-grid">
-
-                <!-- TOTAL SUBMITTED BRIEFS -->
-
-                <article class="overview-card">
-
-                    <h3>Submitted Briefs</h3>
-
-                    <p class="overview-number">{{ overview["total"] }}</p>
-
-                    <p>
-                        All briefs submitted
-                        for provider review.
-                    </p>
-
-                </article>
-
-
-                <!-- PENDING REVIEWS -->
-
-                <article class="overview-card">
-
-                    <h3>Pending Reviews</h3>
-
-                    <p class="overview-number">{{ overview["pending"] }}</p>
-
-                    <p>
-                        Briefs awaiting
-                        your review decision.
-                    </p>
-
-                </article>
-
-
-                <!-- APPROVED BRIEFS -->
-
-                <article class="overview-card">
-
-                    <h3>Approved Briefs</h3>
-
-                    <p class="overview-number">{{ overview["revision"] }}</p>
-
-                    <p>
-                        Briefs successfully
-                        reviewed and approved.
-                    </p>
-
-                </article>
-
-
-                <!-- ACTIVE QUESTIONNAIRES -->
-
-                <article class="overview-card">
-
-                    <h3>Active Questionnaires</h3>
-
-                    <p class="overview-number">{{ overview["approved"] }}</p>
-
-                    <p>
-                        Questionnaires currently
-                        available to clients.
-                    </p>
-
-                </article>
-
-            </div>
-
-        </section>
-
-
-        <!-- BRIEFS AWAITING REVIEW -->
-
-        <section class="provider-pending-briefs"
-                 aria-labelledby="pending-title">
-
-            <div class="section-header">
-
-                <div class="section-heading">
-
-                    <p class="section-label">
-                        REQUIRES YOUR ATTENTION
-                    </p>
-
-                    <h2 id="pending-title">
-                        Briefs Awaiting Review
-                    </h2>
-
-                    <p>
-                        Review submitted project briefs
-                        and provide the appropriate
-                        decision or feedback.
-                    </p>
-
-                </div>
-
-                <a href="/provider/briefs"
-                   class="text-link">
-                    View All Briefs
-                </a>
-
-            </div>
-
-
-            <!-- PENDING BRIEFS TABLE -->
-
-            <div class="table-container">
-
-                <table class="briefs-table">
-
-                    <caption>
-                        Client briefs awaiting
-                        service provider review.
-                    </caption>
-
-                    <thead>
-
-                        <tr>
-
-                            <th scope="col">
-                                Project Title
-                            </th>
-
-                            <th scope="col">
-                                Client
-                            </th>
-
-                            <th scope="col">
-                                Date Submitted
-                            </th>
-
-                            <th scope="col">
-                                Status
-                            </th>
-
-                            <th scope="col">
-                                Action
-                            </th>
-
-                        </tr>
-
-                    </thead>
-
-
-                    <tbody>
+        </header>
+
+        <main id="studio-main">
+            {{ brief_ui.feedback() }}
+            <div class="studio-page-heading"><div><p class="studio-eyebrow">THOUGHTFUL WORK BEGINS HERE</p><h1>The Elunette Provider Studio<span aria-hidden="true">.</span></h1></div><a class="studio-text-link" href="{{ url_for('provider_briefs') }}">Explore your workspace {{ icon('arrow') }}</a></div>
+
+            <div class="studio-bento">
+                <section class="studio-hero" aria-labelledby="provider-welcome-title">
+                    <div class="studio-hero-copy"><p class="studio-hero-greeting">Good to see you, {{ first_name }}.</p><h2 id="provider-welcome-title">Beautiful ideas deserve <em>thoughtful attention.</em></h2><p>Every great project begins with a brief worth understanding.</p><a class="studio-button studio-button--cream" href="#provider-review-queue">{{ icon('brief') }} Review Client Briefs</a></div>
+                    {{ paper_motif() }}
+                    <span class="studio-hero-footnote">A CLEARER PICTURE. A THOUGHTFUL NEXT STEP.</span>
+                </section>
+
+                <section class="studio-summary" aria-labelledby="provider-summary-title">
+                    <div class="studio-panel-top"><h2 id="provider-summary-title">Your review overview</h2><span class="studio-icon-tile">{{ icon('brief') }}</span></div>
+                    <div class="studio-total"><strong id="provider-stat-total" class="overview-number">{{ overview['total'] }}</strong><span>Client briefs<br><small>Submitted to your questionnaires.</small></span></div>
+                    <div class="studio-mini-stats">
+                        <a href="#provider-review-queue" class="studio-mini-stat studio-mini-stat--pending">{{ icon('clock') }}<strong id="provider-stat-pending">{{ overview['pending'] }}</strong><span>Awaiting review</span></a>
+                        <a href="{{ url_for('provider_briefs', status='approved') }}" class="studio-mini-stat studio-mini-stat--approved">{{ icon('check') }}<strong id="provider-stat-approved">{{ overview['approved'] }}</strong><span>Approved</span></a>
+                        <a href="{{ url_for('provider_briefs', status='revision_requested') }}" class="studio-mini-stat studio-mini-stat--revision">{{ icon('revision') }}<strong id="provider-stat-revision">{{ overview['revision'] }}</strong><span>Awaiting client changes</span></a>
+                    </div>
+                </section>
+
+                <section class="studio-projects provider-review-workspace" id="provider-review-queue" aria-labelledby="provider-queue-title">
+                    <div class="studio-panel-top"><div><p class="studio-eyebrow">YOUR ATTENTION MAKES A DIFFERENCE</p><h2 id="provider-queue-title">Your review workspace</h2></div><a class="studio-text-link" href="{{ url_for('provider_briefs') }}">View all {{ icon('arrow') }}</a></div>
+                    <nav class="studio-project-shortcuts" aria-label="Filter client briefs"><a href="{{ url_for('provider_briefs', status='submitted') }}">Submitted <span>{{ status_counts['submitted'] }}</span></a><a href="{{ url_for('provider_briefs', status='under_review') }}">Under review <span>{{ status_counts['under_review'] }}</span></a><a href="{{ url_for('provider_briefs', status='revision_requested') }}">Client revisions <span>{{ overview['revision'] }}</span></a></nav>
+                    {% if briefs %}
+                    <p class="provider-list-label">AWAITING YOUR REVIEW <span>{{ overview['pending'] }}</span></p>
+                    <div class="studio-project-list">
                         {% for brief in briefs %}
-                        <tr>
-                            <td>{{ brief['title'] }}</td>
-                            <td>{{ brief['client_name'] }}</td>
-                            <td>{{ brief['submitted_at'] or brief['updated_at'] }}</td>
-                            <td>{{ brief['status'] | replace('_', ' ') | title }}</td>
-                            <td><a class="btn btn-secondary" href="{{ url_for('review_brief', brief_id=brief['id']) }}">Review Brief</a></td>
-                        </tr>
-                        {% else %}
-                        <tr><td colspan="5"><div class="empty-state"><h3>No briefs awaiting review.</h3></div></td></tr>
+                        <article class="project-brief-card" aria-labelledby="provider-brief-{{ brief['id'] }}">
+                            <span class="studio-project-symbol">{{ icon('brief') }}</span>
+                            <div class="studio-project-copy"><h3 id="provider-brief-{{ brief['id'] }}">{{ brief['title'] }}</h3><p class="provider-client-name">{{ brief['client_name'] }} <span>&middot; {{ brief['questionnaire_title'] }} v{{ brief['version_number'] }}</span></p>{{ brief_ui.status_badge(brief) }}<p class="provider-submission-date">{{ 'Submitted' if brief['submitted_at'] else 'Updated' }} <time datetime="{{ (brief['submitted_at'] or brief['updated_at']) | replace(' ', 'T') }}Z">{{ (brief['submitted_at'] or brief['updated_at'])[:10] }}</time></p></div>
+                            <div class="studio-project-controls">{{ brief_ui.progress(brief) }}<div class="brief-actions"><a class="brief-action" href="{{ url_for('review_brief', brief_id=brief['id']) }}" aria-label="Review {{ brief['title'] }}">Review Brief <span aria-hidden="true">&rarr;</span></a></div></div>
+                        </article>
                         {% endfor %}
-                    </tbody>
+                    </div>
+                    {% if overview['pending'] > briefs | length %}<p class="studio-project-caption">Showing the {{ briefs | length }} most recently updated briefs. <a class="studio-text-link" href="{{ url_for('provider_briefs') }}">Explore all client briefs {{ icon('arrow') }}</a></p>{% endif %}
+                    {% else %}
+                    <div class="studio-empty-projects"><span class="studio-empty-symbol">{{ icon('check') }}</span><h3>A little breathing room.</h3><p>No briefs awaiting review. When a client submits a brief, its next chapter begins here.</p><a class="studio-button studio-button--burgundy" href="{{ url_for('provider_briefs') }}">View Client Briefs {{ icon('arrow') }}</a></div>
+                    {% endif %}
 
-                </table>
+                    {% if following_up %}
+                    <div class="provider-follow-up"><p class="provider-list-label">FOLLOWING THE PROGRESS</p>
+                    {% for brief in following_up %}<a class="provider-follow-up-item" href="{{ url_for('review_brief', brief_id=brief['id']) }}"><span><strong>{{ brief['title'] }}</strong><small>{{ brief['client_name'] }}</small></span>{{ brief_ui.status_badge(brief) }}{{ icon('arrow') }}</a>{% endfor %}
+                    </div>
+                    {% endif %}
+                    <p class="provider-workspace-note">{{ icon('brief') }} Open a brief to read its requirements, leave feedback and record your decision.</p>
+                </section>
 
+                <section class="studio-quick" aria-labelledby="provider-questionnaires-title"><div class="studio-panel-top"><p class="studio-eyebrow">MAKE SPACE FOR BETTER BRIEFS</p><span class="studio-quick-plus">{{ icon('plus') }}</span></div><h2 id="provider-questionnaires-title">Clarity starts with<br>the right questions.</h2><div class="provider-questionnaire-counts"><span><strong id="provider-questionnaire-active">{{ questionnaires['active'] }}</strong> active</span><span><strong id="provider-questionnaire-total">{{ questionnaires['total'] }}</strong> total questionnaires</span></div><div class="studio-quick-links"><a href="{{ url_for('questionnaire_management') }}">Manage questionnaires {{ icon('arrow') }}</a><a href="{{ url_for('create_questionnaire') }}">Create a questionnaire {{ icon('plus') }}</a></div></section>
+
+                <section class="studio-attention provider-activity" aria-labelledby="provider-activity-title"><div class="studio-panel-top"><p class="studio-eyebrow">THOUGHTFUL DECISIONS, RECORDED</p>{{ icon('revision') }}</div><h2 id="provider-activity-title">Your recent review activity</h2>
+                    {% if recent_activity %}<ol class="provider-activity-list">{% for activity in recent_activity %}<li><a href="{{ url_for('review_brief', brief_id=activity['brief_id']) }}"><span class="provider-activity-icon provider-activity-icon--{{ activity['decision'] }}">{{ icon('check' if activity['decision'] == 'approved' else 'revision') }}</span><span><strong>{{ activity['title'] }}</strong><span class="provider-activity-decision">{{ activity['decision'] | replace('_', ' ') | title }}</span><small>{{ activity['client_name'] }} &middot; <time datetime="{{ activity['created_at'] | replace(' ', 'T') }}Z">{{ activity['created_at'][:10] }}</time></small></span>{{ icon('arrow') }}</a></li>{% endfor %}</ol>
+                    {% else %}<div class="provider-activity-empty"><p>Your next thoughtful decision starts here.</p><p>Approvals and revision requests will appear once you've reviewed a client brief.</p></div>{% endif %}
+                </section>
+
+                <section class="studio-workflow" aria-labelledby="provider-workflow-title"><div class="studio-panel-top"><h2 id="provider-workflow-title">Your review landscape</h2>{{ icon('overview') }}</div><p class="studio-workflow-description">The current status of briefs submitted to you.</p>
+                    {% if overview['total'] %}<dl class="studio-flow-list">{% for status, label in [('submitted', 'Submitted'), ('under_review', 'Under review'), ('revision_requested', 'Client revisions'), ('approved', 'Approved')] %}<div><dt>{{ label }}</dt><dd><progress value="{{ status_counts[status] }}" max="{{ overview['total'] }}" aria-label="{{ label }}: {{ status_counts[status] }} of {{ overview['total'] }} briefs">{{ status_counts[status] }} of {{ overview['total'] }}</progress><span>{{ status_counts[status] }}</span></dd></div>{% endfor %}</dl>
+                    {% else %}<div class="studio-workflow-empty"><p>A clear view of your reviews will grow with your first submission.</p><a class="studio-text-link" href="{{ url_for('questionnaire_management') }}">Prepare your questionnaires {{ icon('arrow') }}</a></div>{% endif %}
+                </section>
             </div>
-
-        </section>
-
-
-        <!-- QUESTIONNAIRE MANAGEMENT -->
-
-        <section class="provider-questionnaires"
-                 aria-labelledby="questionnaires-title">
-
-            <div class="section-header">
-
-                <p class="section-label">
-                    COLLECTING REQUIREMENTS
-                </p>
-
-                <h2 id="questionnaires-title">
-                    Questionnaire Management
-                </h2>
-
-                <p>
-                    Create and maintain the
-                    questionnaires clients use
-                    to describe their projects.
-                </p>
-
-            </div>
-
-
-            <div class="questionnaire-management-grid">
-
-                <!-- CREATE QUESTIONNAIRE -->
-
-                <article class="management-card">
-
-                    <h3>Create a Questionnaire</h3>
-
-                    <p>
-                        Build a new questionnaire
-                        with questions designed
-                        to collect relevant
-                        client requirements.
-                    </p>
-
-                    <a href="/provider/questionnaires/new"
-                       class="btn btn-primary">
-                        Create Questionnaire
-                    </a>
-
-                </article>
-
-
-                <!-- MANAGE QUESTIONNAIRES -->
-
-                <article class="management-card">
-
-                    <h3>Manage Questionnaires</h3>
-
-                    <p>
-                        Edit questions, configure
-                        adaptive rules, and manage
-                        questionnaire availability.
-                    </p>
-
-                    <a href="/provider/questionnaires"
-                       class="btn btn-secondary">
-                        View Questionnaires
-                    </a>
-
-                </article>
-
-            </div>
-
-        </section>
-
-
-        <!-- RECENT ACTIVITY -->
-
-        <section class="provider-activity"
-                 aria-labelledby="activity-title">
-
-            <div class="section-header">
-
-                <p class="section-label">
-                    STAY UP TO DATE
-                </p>
-
-                <h2 id="activity-title">
-                    Recent Activity
-                </h2>
-
-                <p>
-                    Keep track of important
-                    developments in your workspace.
-                </p>
-
-            </div>
-
-
-            <div class="activity-container">
-
-                <!--
-                Recent activities will be loaded
-                from application records.
-
-                Activities may include:
-                - New brief submissions
-                - Brief resubmissions
-                - Approval decisions
-                - Revision requests
-                -->
-
-                <div class="empty-state">
-
-                    <h3>No recent activity.</h3>
-
-                    <p>
-                        Activity involving client
-                        briefs and reviews will
-                        appear here.
-                    </p>
-
-                </div>
-
-            </div>
-
-        </section>
-
-
-        <!-- NOTIFICATIONS -->
-
-        <section class="provider-notifications"
-                 aria-labelledby="notifications-title">
-
-            <div class="section-header">
-
-                <h2 id="notifications-title">
-                    Notifications
-                </h2>
-
-                <p>
-                    Important updates about
-                    client submissions and
-                    project brief reviews.
-                </p>
-
-            </div>
-
-
-            <div class="notifications-content">
-
-                <p>
-                    You're all caught up!
-                    New notifications will
-                    appear here.
-                </p>
-
-                <a href="/notifications"
-                   class="text-link">
-                    View All Notifications
-                </a>
-
-            </div>
-
-        </section>
-
-    </main>
-
-
-    <!-- FOOTER -->
-
-    <footer class="dashboard-footer">
-
-        <p>
-            &copy; 2026 Elunette. All rights reserved.
-        </p>
-
-    </footer>
-
+            {% include '_signature_footer.html' %}
+        </main>
+    </div>
 </body>
-
 </html>

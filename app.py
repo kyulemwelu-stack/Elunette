@@ -1,8 +1,9 @@
 
 import os
+import json
 import re
 import secrets
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from functools import wraps
 from sqlite3 import IntegrityError
@@ -31,6 +32,12 @@ app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
 csrf = CSRFProtect(app)
 init_app(app)
+
+
+@app.context_processor
+def signature_footer_context():
+    # Elunette's local calendar year (East Africa Time, UTC+3).
+    return {"current_year": datetime.now(timezone(timedelta(hours=3))).year}
 
 
 # ==========================================
@@ -289,11 +296,16 @@ def reset_password_preview():
 @role_required("client")
 def client_dashboard():
     briefs = client_briefs()
+    status_counts = {status: sum(b["status"] == status for b in briefs)
+                     for status in ("draft", "submitted", "under_review", "revision_requested", "approved")}
     return render_template(
         "client_dashboard.html", briefs=briefs[:6],
         total=len(briefs),
-        pending=sum(b["status"] in ("submitted", "under_review") for b in briefs),
-        approved=sum(b["status"] == "approved" for b in briefs)
+        pending=status_counts["submitted"] + status_counts["under_review"],
+        approved=status_counts["approved"], revision=status_counts["revision_requested"],
+        status_counts=status_counts, user=current_user(),
+        revision_briefs=[b for b in briefs if b["status"] == "revision_requested"][:3],
+        latest_draft=next((b for b in briefs if b["status"] == "draft"), None)
     )
 
 
@@ -529,8 +541,33 @@ def notifications():
 @role_required("service_provider")
 def provider_dashboard():
     briefs = provider_brief_records()
-    return render_template("provider_dashboard.html", overview=brief_overview(briefs),
-                           briefs=[b for b in briefs if b["status"] in ("submitted", "under_review")])
+    provider = current_user()
+    db = get_db()
+    questionnaires = db.execute(
+        "SELECT COUNT(*) AS total, COALESCE(SUM(status = 'active'), 0) AS active "
+        "FROM questionnaires WHERE created_by = ?", (provider["id"],)
+    ).fetchone()
+    activity = db.execute(
+        """
+        SELECT br.id, br.decision, br.comment, br.created_at, pb.id AS brief_id,
+               pb.title, u.full_name AS client_name
+        FROM brief_reviews br
+        JOIN project_briefs pb ON pb.id = br.brief_id
+        JOIN questionnaire_versions v ON v.id = pb.questionnaire_version_id
+        JOIN questionnaires q ON q.id = v.questionnaire_id
+        JOIN users u ON u.id = pb.client_id
+        WHERE q.created_by = ? AND br.reviewer_id = ? AND pb.status != 'draft'
+        ORDER BY br.created_at DESC, br.id DESC LIMIT 5
+        """, (provider["id"], provider["id"])
+    ).fetchall()
+    return render_template(
+        "provider_dashboard.html", overview=brief_overview(briefs), user=provider,
+        briefs=[b for b in briefs if b["status"] in ("submitted", "under_review")][:6],
+        following_up=[b for b in briefs if b["status"] in ("revision_requested", "approved")][:3],
+        status_counts={status: sum(b["status"] == status for b in briefs)
+                       for status in ("submitted", "under_review", "revision_requested", "approved")},
+        questionnaires=questionnaires, recent_activity=activity
+    )
 
 
 # ==========================================
@@ -545,13 +582,17 @@ def provider_briefs():
     status = request.args.get("status", "").strip()
     if status not in ("submitted", "under_review", "revision_requested", "approved"):
         status = ""
-    briefs = [b for b in records
-              if (search.casefold() in b["title"].casefold()
-                  or search.casefold() in b["client_name"].casefold())
-              and (not status or b["status"] == status)]
+    matching = [b for b in records
+                if search.casefold() in b["title"].casefold()
+                or search.casefold() in b["client_name"].casefold()]
+    briefs = [b for b in matching if not status or b["status"] == status]
     return render_template("provider_briefs.html", briefs=briefs,
                            overview=brief_overview(records),
-                           search_query=search, status_filter=status)
+                           search_query=search, status_filter=status, user=current_user(),
+                           all_matching_count=len(matching),
+                           tab_counts={s: sum(b["status"] == s for b in matching)
+                                       for s in ("submitted", "under_review", "revision_requested", "approved")},
+                           file_numbers={b["id"]: number for number, b in enumerate(records, 1)})
 
 
 def brief_overview(briefs):
@@ -620,6 +661,8 @@ def review_brief_preview():
 def review_brief(brief_id):
     db = get_db()
     provider = current_user()
+    if request.method == "POST":
+        db.execute("BEGIN IMMEDIATE")
 
     brief = db.execute(
         """
@@ -784,7 +827,7 @@ def review_brief(brief_id):
             db.rollback()
             abort(409)
 
-        db.execute(
+        review_cursor = db.execute(
             """
             INSERT INTO brief_reviews (
                 brief_id,
@@ -802,6 +845,8 @@ def review_brief(brief_id):
             )
         )
 
+        if new_status == "revision_requested":
+            ensure_revision_cycle(db, brief_id, review_cursor.lastrowid)
         db.commit()
 
         flash(
@@ -829,6 +874,14 @@ def review_brief(brief_id):
         )
     ).fetchall()
 
+    if brief["status"] == "revision_requested":
+        pending = revision_request(db, brief_id)
+        if pending and pending["cycle_id"]:
+            cycle = db.execute("SELECT requested_answers_json FROM brief_revision_cycles WHERE id = ?",
+                               (pending["cycle_id"],)).fetchone()
+            responses = json.loads(cycle["requested_answers_json"])
+
+    revision_cycles = revision_history_records(db, brief_id)
     review_history = db.execute(
         """
         SELECT
@@ -854,7 +907,8 @@ def review_brief(brief_id):
         brief=brief,
         responses=responses,
         review_history=review_history,
-        can_review=can_review
+        can_review=can_review,
+        revision_cycles=revision_cycles
     )
 
 
@@ -892,9 +946,9 @@ def questionnaire_management():
                 THEN 1 ELSE 0 END
             ), 0) AS inactive
         FROM questionnaires
-        WHERE created_by = ?
+        WHERE created_by = ? AND title LIKE ?
         """,
-        (user["id"],)
+        (user["id"], f"%{search_query}%")
     ).fetchone()
 
     questionnaires = db.execute(
@@ -940,7 +994,8 @@ def questionnaire_management():
         questionnaires=questionnaires,
         overview=overview,
         search_query=search_query,
-        status_filter=status_filter
+        status_filter=status_filter,
+        user=user
     )
 
 
@@ -2112,6 +2167,75 @@ def questionnaire_detail(questionnaire_id):
     )
 
 
+def answer_snapshot(db, brief_id):
+    """Keep question labels alongside answers so history remains readable."""
+    return [dict(row) for row in db.execute(
+        """
+        SELECT q.id AS question_id, q.position, q.question_text, r.answer_text
+        FROM brief_responses r
+        JOIN project_briefs pb ON pb.id = r.brief_id
+        JOIN questions q ON q.id = r.question_id
+        WHERE r.brief_id = ? AND q.questionnaire_version_id = pb.questionnaire_version_id
+        ORDER BY q.position, q.id
+        """, (brief_id,)
+    ).fetchall()]
+
+
+def revision_request(db, brief_id):
+    return db.execute(
+        """
+        SELECT br.id AS review_id, br.comment, br.created_at,
+               c.id AS cycle_id, COALESCE(c.response_text, '') AS response_text,
+               c.resubmitted_at
+        FROM brief_reviews br
+        LEFT JOIN brief_revision_cycles c ON c.review_id = br.id AND c.brief_id = br.brief_id
+        WHERE br.brief_id = ? AND br.id = (
+            SELECT MAX(id) FROM brief_reviews WHERE brief_id = ?
+        ) AND br.decision = 'revision_requested'
+        """, (brief_id, brief_id)
+    ).fetchone()
+
+
+def ensure_revision_cycle(db, brief_id, review_id):
+    # Caller holds the write transaction. Also supports existing revision requests
+    # created before Step 85.3, before any new edits replace their saved answers.
+    db.execute(
+        """
+        INSERT INTO brief_revision_cycles (brief_id, review_id, requested_answers_json)
+        VALUES (?, ?, ?) ON CONFLICT(review_id) DO NOTHING
+        """, (brief_id, review_id, json.dumps(answer_snapshot(db, brief_id)))
+    )
+    return db.execute(
+        "SELECT * FROM brief_revision_cycles WHERE brief_id = ? AND review_id = ?",
+        (brief_id, review_id)
+    ).fetchone()
+
+
+def editable_revision_cycle(db, brief_id):
+    current = revision_request(db, brief_id)
+    if (current is None or current['resubmitted_at'] is not None
+            or request.form.get('revision_review_id', type=int) != current['review_id']):
+        abort(409, "This revision request has changed. Reload the questionnaire before saving.")
+    return ensure_revision_cycle(db, brief_id, current['review_id'])
+
+
+def revision_history_records(db, brief_id, include_pending=False):
+    rows = db.execute(
+        """
+        SELECT c.*, br.comment AS provider_feedback, br.created_at AS requested_at,
+               u.full_name AS reviewer_name
+        FROM brief_revision_cycles c
+        JOIN brief_reviews br ON br.id = c.review_id AND br.brief_id = c.brief_id
+        JOIN users u ON u.id = br.reviewer_id
+        WHERE c.brief_id = ? AND (? OR c.resubmitted_at IS NOT NULL)
+        ORDER BY c.review_id DESC
+        """, (brief_id, include_pending)
+    ).fetchall()
+    return [dict(row, previous_answers=json.loads(row['requested_answers_json']),
+                 revised_answers=json.loads(row['resubmitted_answers_json'] or '[]'))
+            for row in rows]
+
+
 # ==========================================
 # CLIENT QUESTIONNAIRE
 # LOAD PUBLISHED VERSION AND SAVED ANSWERS
@@ -2135,6 +2259,7 @@ def client_questionnaire(questionnaire_id):
     SELECT
         q.id,
         pb.status AS brief_status,
+        pb.completeness_percentage,
         p.title_snapshot AS title,
         p.description_snapshot AS description,
         v.id AS version_id,
@@ -2255,6 +2380,11 @@ def client_questionnaire(questionnaire_id):
         brief_id=brief_id,
         saved_answers=saved_answers,
         review_history=review_history,
+        revision_request=(revision_request(db, brief_id)
+                          if brief_id is not None and questionnaire["brief_status"] == "revision_requested"
+                          else None),
+        revision_cycles=revision_history_records(db, brief_id)
+                        if brief_id is not None else [],
         brief_status=(
             questionnaire["brief_status"]
             if brief_id is not None
@@ -2274,7 +2404,9 @@ def client_questionnaire(questionnaire_id):
 @role_required("client")
 def save_brief_answers(brief_id):
     questionnaire_id = persist_brief_answers(brief_id)
-    flash("Your questionnaire draft has been saved.", "success")
+    is_revision = get_db().execute("SELECT status FROM project_briefs WHERE id = ?", (brief_id,)).fetchone()["status"] == "revision_requested"
+    flash("Your changes and revision response have been saved." if is_revision
+          else "Your questionnaire draft has been saved.", "success")
     return redirect(url_for("client_questionnaire",
                             questionnaire_id=questionnaire_id,
                             brief_id=brief_id))
@@ -2291,7 +2423,7 @@ def persist_brief_answers(brief_id, commit=True):
     # Verify that the client owns this draft.
     brief = db.execute(
         """
-        SELECT id, questionnaire_version_id
+        SELECT id, questionnaire_version_id, status
         FROM project_briefs
         WHERE id = ?
           AND client_id = ?
@@ -2302,6 +2434,18 @@ def persist_brief_answers(brief_id, commit=True):
 
     if brief is None:
         abort(404)
+
+    cycle = None
+    previous_answers = {}
+    if brief["status"] == "revision_requested":
+        cycle = editable_revision_cycle(db, brief_id)
+        response_text = request.form.get("revision_response", cycle["response_text"]).strip()
+        if len(response_text) > 5000:
+            abort(400, "Your revision response must be at most 5000 characters.")
+        previous_answers = {str(row["question_id"]): row["answer_text"]
+                            for row in answer_snapshot(db, brief_id)}
+    elif "revision_response" in request.form or "revision_review_id" in request.form:
+        abort(409, "Revision responses can only be edited when revisions are requested.")
 
     version_id = brief["questionnaire_version_id"]
 
@@ -2379,7 +2523,7 @@ def persist_brief_answers(brief_id, commit=True):
             continue
 
         answer = request.form.get(
-            f"answer_{question_id}", ""
+            f"answer_{question_id}", previous_answers.get(str(question_id), "")
         ).strip()
 
         if len(answer) > 5000:
@@ -2484,6 +2628,14 @@ def persist_brief_answers(brief_id, commit=True):
                 (brief_id, question_id, answer)
             )
 
+        if cycle is not None:
+            changed = db.execute(
+                "UPDATE brief_revision_cycles SET response_text = ?, response_updated_at = CURRENT_TIMESTAMP "
+                "WHERE id = ? AND brief_id = ? AND resubmitted_at IS NULL",
+                (response_text, cycle["id"], brief_id)
+            )
+            if changed.rowcount != 1:
+                abort(409, "This revision cycle is already closed.")
         if commit:
             db.commit()
 
@@ -2502,6 +2654,7 @@ def persist_brief_answers(brief_id, commit=True):
     "/briefs/<int:brief_id>/submit",
     methods=["POST"]
 )
+@app.route("/briefs/<int:brief_id>/resubmit", methods=["POST"], endpoint="resubmit_brief")
 @role_required("client")
 def submit_brief(brief_id):
 
@@ -2528,9 +2681,20 @@ def submit_brief(brief_id):
     if brief["status"] not in ("draft", "revision_requested"):
         abort(409, "This brief cannot be submitted in its current status.")
 
+    is_revision = brief["status"] == "revision_requested"
+    if is_revision != (request.endpoint == "resubmit_brief"):
+        abort(409, "Use the action matching this brief's current status.")
+    cycle = None
+    if is_revision:
+        if request.form.get("confirm_resubmission") != "yes":
+            abort(400, "Please confirm resubmission before sending your revised brief.")
+        cycle = editable_revision_cycle(db, brief_id)
+    elif "revision_response" in request.form or "revision_review_id" in request.form:
+        abort(409, "An ordinary draft cannot contain a revision response.")
+
     # The questionnaire submits its current fields, including explicit blanks.
     # Save incomplete drafts too, then explain any missing required answers.
-    if request.form.get("save_answers") == "1":
+    if request.form.get("save_answers") == "1" or (is_revision and "revision_response" in request.form):
         persist_brief_answers(brief_id, commit=False)
 
     version_id = brief["questionnaire_version_id"]
@@ -2552,6 +2716,13 @@ def submit_brief(brief_id):
         questionnaire_id=version["questionnaire_id"],
         brief_id=brief_id
     )
+
+    if is_revision:
+        cycle = db.execute("SELECT * FROM brief_revision_cycles WHERE id = ?", (cycle["id"],)).fetchone()
+        if not cycle["response_text"].strip():
+            flash("Explain how you addressed the provider's feedback before resubmitting.", "error")
+            db.commit()
+            return redirect(questionnaire_url)
 
     # Load the questions for this exact version.
 
@@ -2724,13 +2895,22 @@ def submit_brief(brief_id):
             db.rollback()
             abort(409, "This brief cannot be submitted.")
 
+        if is_revision:
+            closed = db.execute(
+                "UPDATE brief_revision_cycles SET resubmitted_answers_json = ?, "
+                "resubmitted_at = CURRENT_TIMESTAMP WHERE id = ? AND brief_id = ? AND resubmitted_at IS NULL",
+                (json.dumps(answer_snapshot(db, brief_id)), cycle["id"], brief_id)
+            )
+            if closed.rowcount != 1:
+                abort(409, "This revision cycle has already been submitted.")
         db.commit()
 
     except Exception:
         db.rollback()
         raise
 
-    flash("Your brief has been submitted for review.", "success")
+    flash("Your revised brief has been resubmitted for review." if is_revision
+          else "Your brief has been submitted for review.", "success")
 
     return redirect(
         url_for(

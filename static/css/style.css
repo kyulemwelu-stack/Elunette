@@ -2228,7 +2228,9 @@ select {
    Shared by the dashboard and My Briefs.
 ================================== */
 
-.client-workspace {
+.client-workspace,
+.review-page,
+.client-questionnaire-page {
     --font-heading: "Newsreader", Georgia, serif;
     --font-body: "Lato", Arial, sans-serif;
     --font-navigation: "Montserrat", Arial, sans-serif;
@@ -10215,6 +10217,9 @@ select {
 .client-questionnaire-page .submit-confirm-dialog {
     width: min(480px, calc(100% - 32px));
     max-width: 480px;
+    max-height: calc(100dvh - 32px);
+    overflow-y: auto;
+    margin: auto;
     padding: 0;
     border: none;
     border-radius: 20px;
@@ -10280,6 +10285,11 @@ select {
     color: #5C3A26;
 }
 
+.client-questionnaire-page .submit-dialog-actions button:focus-visible {
+    outline: 2px solid var(--burgundy);
+    outline-offset: 4px;
+}
+
 .client-questionnaire-page .submit-dialog-cancel:hover {
     background: #E8DBCA;
 }
@@ -10306,4 +10316,395 @@ select {
     .client-questionnaire-page .submit-dialog-actions button {
         width: 100%;
     }
+}
+
+/* ==========================================
+   PROVIDER - REVIEW PROJECT BRIEF
+   Scoped to the review page; shared palette and font tokens.
+========================================== */
+
+.review-page .dashboard-main {
+    max-width: 1120px;
+}
+
+.review-page .dashboard-main > :is(section, aside) {
+    margin-bottom: 40px;
+    min-width: 0;
+}
+
+.review-page .review-intro {
+    padding: clamp(25px, 4vw, 42px);
+    background: var(--white);
+    border: 1px solid var(--border-color);
+    border-radius: 12px 40px 12px 12px;
+}
+
+.review-page .back-link {
+    display: inline-block;
+    margin-bottom: 24px;
+    font: 500 12px var(--font-navigation);
+    color: var(--burgundy);
+    text-underline-offset: 4px;
+}
+
+.review-page .back-link:hover { text-decoration: underline; }
+
+.review-page .section-label { margin-bottom: 10px; }
+
+.review-page h1 {
+    margin-bottom: 14px;
+    font-size: clamp(34px, 4vw, 48px);
+    font-weight: 400;
+}
+
+.review-page h2 {
+    margin-bottom: 10px;
+    font-size: clamp(28px, 3vw, 36px);
+    font-weight: 400;
+}
+
+.review-page .section-header { margin-bottom: 22px; }
+
+.review-page :is(.review-intro, .section-header, .decision-card) > p:not(.section-label),
+.review-page .form-hint {
+    max-width: 680px;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.review-page .review-information {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 24px 30px;
+    padding: 28px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--white);
+}
+
+.review-page .review-info-item dt,
+.review-page .review-feedback-label {
+    margin-bottom: 8px;
+    font: 600 11px/1.5 var(--font-navigation);
+    color: var(--text-secondary);
+}
+
+.review-page .review-info-item dd {
+    font-size: 15px;
+    overflow-wrap: anywhere;
+}
+
+.review-page .requirements-container { display: grid; gap: 18px; }
+
+.review-page :is(.requirement-card, .review-summary, .decision-card) {
+    min-width: 0;
+    padding: clamp(22px, 3vw, 32px);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--white);
+}
+
+.review-page .requirement-card { border-left: 3px solid var(--sage); }
+
+.review-page .requirement-number {
+    margin-bottom: 12px;
+    font: 600 10px/1.5 var(--font-navigation);
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    color: var(--burgundy);
+}
+
+.review-page .requirement-question {
+    margin-bottom: 18px;
+    font-size: clamp(23px, 2.4vw, 28px);
+    font-weight: 400;
+    overflow-wrap: anywhere;
+}
+
+.review-page .requirement-answer {
+    padding: 18px 20px;
+    border-radius: 8px;
+    background: rgba(241, 231, 211, 0.6);
+    color: var(--chocolate);
+    font-size: 15px;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.review-page .review-summary-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 18px;
+}
+
+.review-page .review-summary-heading h3 { font-size: 25px; font-weight: 400; }
+
+.review-page .review-percentage {
+    font: 400 44px/1 var(--font-heading);
+    color: var(--burgundy);
+    white-space: nowrap;
+}
+
+.review-page .review-percentage span { font-size: 26px; }
+
+.review-page .review-progress {
+    appearance: none;
+    display: block;
+    width: 100%;
+    height: 9px;
+    margin-bottom: 16px;
+    overflow: hidden;
+    border: none;
+    border-radius: var(--radius-pill);
+    background: var(--cream);
+    color: var(--sage);
+    accent-color: var(--sage);
+}
+
+.review-page .review-progress::-webkit-progress-bar { background: var(--cream); }
+.review-page .review-progress::-webkit-progress-value { background: var(--sage); border-radius: var(--radius-pill); }
+.review-page .review-progress::-moz-progress-bar { background: var(--sage); border-radius: var(--radius-pill); }
+
+.review-page .review-history-container {
+    padding: clamp(20px, 3vw, 30px);
+    border: 1px solid rgba(163, 177, 138, 0.65);
+    border-radius: 12px;
+    background: rgba(163, 177, 138, 0.18);
+}
+
+.review-page .review-timeline {
+    display: grid;
+    gap: 18px;
+    list-style: none;
+}
+
+.review-page .review-record {
+    padding: 24px;
+    border-left: 3px solid var(--sage);
+    border-radius: 8px;
+    background: var(--white);
+}
+
+.review-page .review-record-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+}
+
+.review-page .review-record h3 { font-size: 25px; font-weight: 400; }
+
+.review-page :is(.review-author, .review-no-comment),
+.review-page .review-record time {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.review-page .review-author { margin: 8px 0 18px; }
+.review-page .review-record-feedback { font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.review-page :is(.review-history-empty, .requirements-container .empty-state) {
+    padding: 20px;
+    text-align: center;
+}
+
+.review-page :is(.review-history-empty, .requirements-container .empty-state) h3 {
+    margin-bottom: 12px;
+    font-size: 27px;
+    font-weight: 400;
+}
+
+.review-page :is(.review-history-empty, .requirements-container .empty-state) > p:last-child {
+    max-width: 430px;
+    margin: auto;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.review-page .decision-container {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 22px;
+    margin-bottom: 18px;
+}
+
+.review-page .decision-card {
+    display: flex;
+    flex-direction: column;
+}
+
+.review-page .decision-card h3 { margin-bottom: 12px; font-size: 27px; font-weight: 400; }
+.review-page .decision-card > p { margin-bottom: 24px; }
+.review-page .decision-card form { display: flex; flex-direction: column; flex: 1; align-items: flex-start; }
+.review-page .decision-card .form-group { width: 100%; margin-bottom: 20px; }
+
+.review-page .decision-card label {
+    display: block;
+    margin-bottom: 10px;
+    font: 600 11px/1.6 var(--font-navigation);
+}
+
+.review-page .review-field-hint { color: var(--text-secondary); font-weight: 400; }
+
+.review-page .decision-card textarea {
+    display: block;
+    width: 100%;
+    min-height: 130px;
+    padding: 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--white);
+    color: var(--chocolate);
+    font: 14px/1.7 var(--font-body);
+    resize: vertical;
+}
+
+.review-page .btn {
+    margin-top: auto;
+    padding: 11px 20px;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.review-page :is(button, textarea):disabled { opacity: 0.6; cursor: not-allowed; }
+.review-page :is(a, button, textarea):focus-visible { outline: 2px solid var(--burgundy); outline-offset: 4px; }
+
+.review-page .review-guidance {
+    padding: 25px 28px;
+    border-top: 1px solid var(--sage);
+}
+
+.review-page .review-guidance h2 { font-size: 26px; }
+.review-page .review-guidance p { margin-top: 10px; color: var(--text-secondary); font-size: 14px; }
+
+@media (max-width: 750px) {
+    .review-page .review-information { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .review-page .decision-container { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+    .review-page .review-information { grid-template-columns: 1fr; padding: 22px; }
+    .review-page .review-record { padding: 20px; }
+    .review-page .review-summary-heading { flex-wrap: wrap; }
+    .review-page .review-guidance { padding: 22px 0; }
+}
+
+/* Step 85.3 - revision responses and preserved submission history */
+.revision-response-card {
+    padding: clamp(22px, 4vw, 34px);
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--sage);
+    border-radius: 12px;
+    background: var(--white);
+}
+
+.revision-response-card h2,
+.revision-cycle-history h2 {
+    margin: 12px 0;
+    font-size: clamp(27px, 3vw, 34px);
+    font-weight: 400;
+}
+
+.revision-response-card > p:not(.section-label),
+.revision-cycle-hint {
+    margin-bottom: 18px;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.revision-response-card label {
+    display: block;
+    margin: 18px 0 10px;
+    font: 600 12px/1.6 var(--font-navigation);
+    color: var(--chocolate);
+}
+
+.revision-response-card textarea {
+    display: block;
+    width: 100%;
+    padding: 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: rgba(241, 231, 211, 0.35);
+    color: var(--chocolate);
+    font: 15px/1.7 var(--font-body);
+    resize: vertical;
+}
+
+.revision-response-card textarea:focus-visible,
+.revision-cycle-history summary:focus-visible {
+    outline: 2px solid var(--burgundy);
+    outline-offset: 4px;
+}
+
+.revision-cycle-history { margin-top: 40px; }
+
+.revision-cycle-entry {
+    margin-top: 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--white);
+    overflow-wrap: anywhere;
+}
+
+.revision-cycle-entry > summary {
+    padding: 20px 24px;
+    cursor: pointer;
+    color: var(--chocolate);
+    font: 500 13px/1.8 var(--font-navigation);
+}
+
+.revision-cycle-entry > summary span {
+    display: inline-block;
+    margin-left: 12px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: rgba(163, 177, 138, 0.25);
+    color: var(--chocolate);
+    font-size: 10px;
+}
+
+.revision-cycle-content { padding: 0 24px 24px; }
+.revision-cycle-content h3 { margin: 20px 0 10px; font-size: 24px; font-weight: 400; }
+.revision-cycle-text { margin-bottom: 12px; font-size: 15px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.revision-answer-snapshot { margin-top: 16px; padding: 16px; border-radius: 8px; background: rgba(241, 231, 211, 0.45); }
+.revision-answer-snapshot summary { cursor: pointer; font: 600 12px/1.6 var(--font-navigation); color: var(--burgundy); }
+.revision-answer-snapshot dl > div { margin-top: 18px; }
+.revision-answer-snapshot dt { margin-bottom: 8px; font-size: 16px; font-weight: 700; }
+.revision-answer-snapshot dd { font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* Finalised client briefs: readable answers without editing controls. */
+.client-questionnaire-page .approved-brief-notice {
+    margin-bottom: 28px;
+    padding: clamp(22px, 4vw, 32px);
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--sage);
+    border-radius: 12px;
+    background: var(--white);
+}
+
+.client-questionnaire-page .approved-brief-notice h2 {
+    margin: 10px 0 14px;
+    font-size: clamp(27px, 3vw, 34px);
+    font-weight: 400;
+}
+
+.client-questionnaire-page .approved-brief-notice > p:last-child {
+    max-width: 650px;
+    color: var(--text-secondary);
+    font-size: 15px;
+}
+
+.client-questionnaire-page .approved-answer {
+    padding: 18px;
+    border-radius: 8px;
+    background: rgba(241, 231, 211, 0.5);
+    color: var(--chocolate);
+    font-size: 15px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
 }

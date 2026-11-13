@@ -1,0 +1,34 @@
+{% macro revision_history(cycles) -%}
+{% if cycles %}
+<section class="revision-cycle-history" aria-labelledby="revision-cycle-history-title">
+    <p class="section-label">PROJECT EVOLUTION</p>
+    <h2 id="revision-cycle-history-title">Revision &amp; Resubmission History</h2>
+    <p class="revision-cycle-hint">Original feedback, client responses and submitted answers are preserved for each revision.</p>
+    {% for cycle in cycles %}
+    <details class="revision-cycle-entry">
+        <summary>Revision requested {{ cycle['requested_at'] }} <span>{{ 'Resubmitted' if cycle['resubmitted_at'] else 'In progress' }}</span></summary>
+        <div class="revision-cycle-content">
+            <h3>Provider feedback</h3>
+            <p class="revision-cycle-text">{{ cycle['provider_feedback'] }}</p>
+            <p class="revision-cycle-hint">Reviewed by {{ cycle['reviewer_name'] }}</p>
+            <h3>Client revision response</h3>
+            <p class="revision-cycle-text">{{ cycle['response_text'] or 'No response saved yet.' }}</p>
+            {% if cycle['resubmitted_at'] %}<p class="revision-cycle-hint">Resubmitted {{ cycle['resubmitted_at'] }} UTC</p>{% endif %}
+            {% for heading, answers in [('Previously submitted answers', cycle['previous_answers']), ('Resubmitted answers', cycle['revised_answers'])] %}
+            <details class="revision-answer-snapshot">
+                <summary>{{ heading }}</summary>
+                <dl>
+                    {% for answer in answers %}
+                    <div><dt>{{ answer['question_text'] }}</dt><dd>{{ answer['answer_text'] }}</dd></div>
+                    {% else %}
+                    <div><dt>Saved answers</dt><dd>No answers recorded for this submission.</dd></div>
+                    {% endfor %}
+                </dl>
+            </details>
+            {% endfor %}
+        </div>
+    </details>
+    {% endfor %}
+</section>
+{% endif %}
+{%- endmacro %}

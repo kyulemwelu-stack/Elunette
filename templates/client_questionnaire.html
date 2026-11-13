@@ -1,4 +1,4 @@
-
+{% from '_revision_history.html' import revision_history %}
 <!DOCTYPE html>
 <html lang="en">
 
@@ -15,6 +15,7 @@
         rel="stylesheet"
         href="{{ url_for('static', filename='css/style.css') }}">
 
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/signature-footer.css') }}">
 </head>
 
 <body class="dashboard-page client-questionnaire-page">
@@ -100,6 +101,14 @@
         </section>
 
 
+        {% if brief_status == 'approved' %}
+        <section class="approved-brief-notice" role="status" aria-labelledby="approved-brief-title">
+            <p class="section-label">PROJECT APPROVED</p>
+            <h2 id="approved-brief-title">Approved and finalised</h2>
+            <p>This project brief has been approved and finalised. Your responses are now available for viewing only.</p>
+        </section>
+        {% endif %}
+
         {% for review in review_history %}
         <section class="questionnaire-save-feedback">
             <h2>{{ review['decision'] | replace('_', ' ') | title }}</h2>
@@ -114,10 +123,10 @@
 
             <div class="progress-heading">
 
-                <h2>Your Progress</h2>
+                <h2>{{ 'Recorded Completion' if brief_status == 'approved' else 'Your Progress' }}</h2>
 
                 <strong id="progress-percentage">
-                    0%
+                    {{ questionnaire['completeness_percentage'] if brief_status == 'approved' else 0 }}%
                 </strong>
 
             </div>
@@ -127,18 +136,19 @@
                  aria-label="Required answers completed"
                  aria-valuemin="0"
                  aria-valuemax="100"
-                 aria-valuenow="0"
+                 aria-valuenow="{{ questionnaire['completeness_percentage'] if brief_status == 'approved' else 0 }}"
                  id="questionnaire-progress-track">
 
                 <div
                     class="progress-fill"
-                    id="questionnaire-progress-fill">
+                    id="questionnaire-progress-fill"{% if brief_status == 'approved' %}
+                    style="width: {{ questionnaire['completeness_percentage'] }}%"{% endif %}>
                 </div>
 
             </div>
 
             <p id="progress-description">
-                Complete the applicable required questions.
+                {{ 'Completion recorded with the approved project brief.' if brief_status == 'approved' else 'Complete the applicable required questions.' }}
             </p>
 
         </section>
@@ -154,12 +164,14 @@
                     PROJECT REQUIREMENTS
                 </p>
 
-                <h2>Tell Us About Your Project</h2>
+                <h2>{{ 'Your Finalised Responses' if brief_status == 'approved' else 'Tell Us About Your Project' }}</h2>
 
                 <p>
-                    Answer the questions below.
-                    Additional questions may appear
-                    depending on your selections.
+                    {% if brief_status == 'approved' %}
+                    View the questionnaire answers saved with your approved brief.
+                    {% else %}
+                    Answer the questions below. Additional questions may appear depending on your selections.
+                    {% endif %}
                 </p>
 
             </div>
@@ -186,7 +198,7 @@
                     class="question-card adaptive-question"
                     data-question-id="{{ question['id'] }}"
                     data-required="{{ 1 if question['is_required'] else 0 }}"
-                    {% if brief_status not in ('draft', 'revision_requested') %}disabled{% endif %}>
+                    {% if brief_status not in ('draft', 'revision_requested', 'approved') %}disabled{% endif %}>
 
                     <legend>
                         QUESTION {{ question["position"] }}
@@ -194,12 +206,15 @@
 
                     <div class="question-content">
 
-                        <label for="answer-{{ question['id'] }}"
-                               class="question-text">
+                        {% if brief_status == 'approved' %}
+                        <h3 class="question-text" id="question-label-{{ question['id'] }}">
+                        {% else %}
+                        <label for="answer-{{ question['id'] }}" class="question-text">
+                        {% endif %}
 
                             {{ question["question_text"] }}
 
-                            {% if question["is_required"] %}
+                            {% if question["is_required"] and brief_status != 'approved' %}
 
                             <span class="required-mark"
                                   aria-label="Required">
@@ -208,12 +223,13 @@
 
                             {% endif %}
 
-                        </label>
-
+                        {% if brief_status == 'approved' %}</h3>{% else %}</label>{% endif %}
 
                         <!-- MULTIPLE CHOICE -->
 
-                        {% if question["question_type"] == "multiple_choice" %}
+                        {% if brief_status == 'approved' %}
+                        <p class="approved-answer" aria-labelledby="question-label-{{ question['id'] }}">{{ answer or 'No response provided.' }}</p>
+                        {% elif question["question_type"] == "multiple_choice" %}
 
                         <select
                             id="answer-{{ question['id'] }}"
@@ -293,6 +309,21 @@
                 {% endfor %}
 
 
+                {% if brief_status == 'revision_requested' and revision_request %}
+                <section class="revision-response-card" aria-labelledby="revision-response-title">
+                    <p class="section-label">RESPOND TO YOUR REVIEW</p>
+                    <h2 id="revision-response-title">Your Revision Response</h2>
+                    <p id="revision-response-hint">Explain how you addressed the provider's feedback. You can save your changes as you work; a response is required when resubmitting. Maximum 5,000 characters.</p>
+                    <input type="hidden" name="revision_review_id" value="{{ revision_request['review_id'] }}">
+                    <label for="revision-response">Your response</label>
+                    <textarea id="revision-response" name="revision_response" rows="5" maxlength="5000"
+                              aria-describedby="revision-response-hint" required
+                              placeholder="Describe the changes you made and any details the provider should review.">{{ revision_request['response_text'] }}</textarea>
+                    <input type="hidden" id="resubmission-confirmed" value="">
+                    <noscript><label class="revision-confirmation"><input type="checkbox" name="confirm_resubmission" value="yes"> I confirm that my revised answers and response are ready to resubmit.</label></noscript>
+                </section>
+                {% endif %}
+
                 <!-- FORM ACTIONS -->
 
                 <div class="client-questionnaire-actions">
@@ -305,12 +336,14 @@
 
 <!-- CHECK QUESTIONNAIRE ANSWERS -->
 
+{% if brief_status != 'approved' %}
 <button
     type="button"
     id="check-questionnaire"
     class="btn btn-primary">
     Check Answers
 </button>
+{% endif %}
 
 
 <!-- SAVE QUESTIONNAIRE DRAFT -->
@@ -324,7 +357,7 @@
     formaction="{{ url_for('save_brief_answers', brief_id=brief_id) }}"
     formmethod="POST"
     formnovalidate>
-    Save Draft
+    {{ 'Save Changes' if brief_status == 'revision_requested' else 'Save Draft' }}
 </button>
 
 {% endif %}
@@ -348,10 +381,11 @@
 {% endfor %}
 {% endwith %}
 
+{% if brief_status in ('draft', 'revision_requested') %}
 <p class="questionnaire-save-hint">
-    Save your progress anytime and return later
-    to complete your project brief.
+    Save your progress anytime and return later to complete your project brief.
 </p>
+{% endif %}
 
             </form>
 
@@ -364,8 +398,8 @@
 <div class="client-questionnaire-actions">
     <button type="submit" class="btn btn-primary" id="submit-brief-button"
             form="client-questionnaire-form"
-            formaction="{{ url_for('submit_brief', brief_id=brief_id) }}"
-            formnovalidate>Submit for Review</button>
+            formaction="{{ url_for('resubmit_brief' if brief_status == 'revision_requested' else 'submit_brief', brief_id=brief_id) }}"
+            formnovalidate>{{ 'Resubmit for Review' if brief_status == 'revision_requested' else 'Submit for Review' }}</button>
 </div>
 
 
@@ -384,7 +418,7 @@
         </p>
 
         <h2 id="submit-dialog-title">
-            Ready to submit your brief?
+            {{ 'Ready to resubmit your brief?' if brief_status == 'revision_requested' else 'Ready to submit your brief?' }}
         </h2>
 
         <p
@@ -393,8 +427,10 @@
             Your latest answers will be saved and sent to the
             service provider for review.
 
-            You won't be able to edit this draft
-            after submission.
+            {% if brief_status == 'revision_requested' %}
+            Your revision response will be included and this revision cycle will be preserved.
+            {% endif %}
+            You won't be able to edit the brief while it is awaiting review.
         </p>
 
         <div class="submit-dialog-actions">
@@ -402,7 +438,7 @@
             <button
                 type="button"
                 id="cancel-brief-submission"
-                class="submit-dialog-cancel">
+                class="submit-dialog-cancel" autofocus>
                 Keep Editing
             </button>
 
@@ -410,7 +446,7 @@
                 type="button"
                 id="confirm-brief-submission"
                 class="submit-dialog-confirm">
-                Yes, Submit Brief
+                {{ 'Yes, Resubmit Brief' if brief_status == 'revision_requested' else 'Yes, Submit Brief' }}
             </button>
 
         </div>
@@ -448,6 +484,11 @@
 
     confirmButton.addEventListener("click", function () {
         confirmed = true;
+        const resubmissionConfirmation = document.getElementById("resubmission-confirmed");
+        if (resubmissionConfirmation) {
+            resubmissionConfirmation.name = "confirm_resubmission";
+            resubmissionConfirmation.value = "yes";
+        }
         dialog.close();
         form.requestSubmit(submitButton);
     });
@@ -459,7 +500,7 @@
     Your latest answers will be saved when you submit for review.
 </p>
 
-{% elif brief_id and brief_status not in ('draft', 'revision_requested') %}
+{% elif brief_id and brief_status in ('submitted', 'under_review') %}
 
 <div class="questionnaire-save-feedback" role="status">
     <p class="save-message">
@@ -471,18 +512,13 @@
 
         </section>
 
+        {{ revision_history(revision_cycles | default([])) }}
     </main>
 
 
     <!-- FOOTER -->
 
-    <footer class="dashboard-footer">
-
-        <p>
-            &copy; 2026 Elunette. All rights reserved.
-        </p>
-
-    </footer>
+    {% include '_signature_footer.html' %}
 
 
 <!-- ==========================================
@@ -551,6 +587,8 @@ document.addEventListener("DOMContentLoaded", function () {
             "DOMContentLoaded",
             function () {
 
+
+if ({{ (brief_status == 'approved') | tojson }}) return;
 
 const adaptiveRules = JSON.parse(
     document.getElementById("adaptive-rules-data").textContent

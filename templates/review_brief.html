@@ -1,4 +1,5 @@
-
+{% from '_revision_history.html' import revision_history %}
+{% import '_brief_components.html' as brief_ui %}
 <!DOCTYPE html>
 <html lang="en">
 
@@ -11,6 +12,7 @@
 
     <link rel="stylesheet"
           href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/signature-footer.css') }}">
 </head>
 
 <body class="dashboard-page provider-page review-page">
@@ -89,6 +91,8 @@
 
     <main class="dashboard-main">
 
+        {{ brief_ui.feedback() }}
+
         <!-- PAGE INTRODUCTION -->
 
         <section class="review-intro">
@@ -128,39 +132,37 @@
 
 {% if brief is defined and brief %}
 
-<dl class="brief-information">
+<dl class="review-information">
 
-    <div class="brief-info-item">
+    <div class="review-info-item">
         <dt>Project Title</dt>
         <dd>{{ brief['title'] }}</dd>
     </div>
 
-    <div class="brief-info-item">
+    <div class="review-info-item">
         <dt>Client Name</dt>
         <dd>{{ brief['client_name'] }}</dd>
     </div>
 
-    <div class="brief-info-item">
+    <div class="review-info-item">
         <dt>Questionnaire</dt>
         <dd>{{ brief['questionnaire_title'] }}</dd>
     </div>
 
-    <div class="brief-info-item">
+    <div class="review-info-item">
         <dt>Questionnaire Version</dt>
         <dd>Version {{ brief['version_number'] }}</dd>
     </div>
 
-    <div class="brief-info-item">
+    <div class="review-info-item">
         <dt>Submission Date</dt>
         <dd>{{ brief['submitted_at'] or 'Not recorded' }}</dd>
     </div>
 
-    <div class="brief-info-item">
+    <div class="review-info-item">
         <dt>Brief Status</dt>
         <dd>
-            <span class="status-badge">
-                {{ brief['status'] | replace('_', ' ') | title }}
-            </span>
+            {{ brief_ui.status_badge(brief) }}
         </dd>
     </div>
 
@@ -208,20 +210,10 @@
 
         {% for response in responses %}
 
-        <article class="requirement-card">
-
-            <h3>
-                Question {{ loop.index }}
-            </h3>
-
-            <p class="requirement-question">
-                {{ response['question_text'] }}
-            </p>
-
-            <p class="requirement-answer">
-                {{ response['answer_text'] }}
-            </p>
-
+        <article class="requirement-card" aria-labelledby="requirement-{{ loop.index }}">
+            <p class="requirement-number">Question {{ loop.index }}</p>
+            <h3 id="requirement-{{ loop.index }}" class="requirement-question">{{ response['question_text'] }}</h3>
+            <p class="requirement-answer">{{ response['answer_text'] }}</p>
         </article>
 
         {% endfor %}
@@ -242,9 +234,6 @@
     {% endif %}
 
 </div>
-
-
-            </div>
 
         </section>
 
@@ -267,33 +256,18 @@
             </div>
 
 
-<div class="completeness-container">
-
-    <h3>Completeness Status</h3>
-
+<div class="review-summary">
     {% if brief is defined and brief %}
-
-        <p>
-            Recorded Completeness:
-            <strong>
-                {{ brief['completeness_percentage'] }}%
-            </strong>
-        </p>
-
-        <p class="form-hint">
-            Completeness is based on the value
-            currently saved with this project brief.
-        </p>
-
+    <div class="review-summary-heading">
+        <h3>Recorded completion</h3>
+        <strong class="review-percentage">{{ brief['completeness_percentage'] }}<span>%</span></strong>
+    </div>
+    <progress class="review-progress" max="100" value="{{ brief['completeness_percentage'] }}"
+              aria-label="Recorded brief completion">{{ brief['completeness_percentage'] }}%</progress>
+    <p class="form-hint">Based on the applicable questionnaire answers saved with this brief.</p>
     {% else %}
-
-        <p>
-            Completeness information will appear
-            when a submitted brief is selected.
-        </p>
-
+    <p>Completeness information will appear when a submitted brief is selected.</p>
     {% endif %}
-
 </div>
 
 
@@ -320,54 +294,39 @@
 
 
 <div class="review-history-container">
-
     {% if review_history is defined and review_history %}
-
+    <ol class="review-timeline" aria-label="Previous review decisions, newest first">
         {% for review in review_history %}
-
-        <article class="review-record">
-
-            <h3>
-                {{ review['decision']
-                   | replace('_', ' ')
-                   | title }}
-            </h3>
-
-            <p>
-                <strong>Reviewed by:</strong>
-                {{ review['reviewer_name'] }}
-            </p>
-
-            <p>
-                <strong>Date:</strong>
-                {{ review['created_at'] }}
-            </p>
-
-            {% if review['comment'] %}
-
-                <p>
-                    <strong>Feedback:</strong>
-                    {{ review['comment'] }}
-                </p>
-
-            {% endif %}
-
-        </article>
-
+        <li>
+            <article class="review-record">
+                <div class="review-record-heading">
+                    <h3>{{ review['decision'] | replace('_', ' ') | title }}</h3>
+                    <time datetime="{{ review['created_at'] | replace(' ', 'T') }}Z">{{ review['created_at'] }} UTC</time>
+                </div>
+                <p class="review-author">Reviewed by {{ review['reviewer_name'] }}</p>
+                {% if review['comment'] %}
+                <p class="review-feedback-label">Provider feedback</p>
+                <p class="review-record-feedback">{{ review['comment'] }}</p>
+                {% else %}
+                <p class="review-no-comment">No additional feedback was provided.</p>
+                {% endif %}
+            </article>
+        </li>
         {% endfor %}
-
+    </ol>
     {% else %}
-
-        <p>
-            No previous review decisions recorded.
-        </p>
-
+    <div class="review-history-empty">
+        <p class="section-label">A FRESH REVIEW</p>
+        <h3>No previous review decisions</h3>
+        <p>Your decision and feedback will appear here once this brief has been reviewed.</p>
+    </div>
     {% endif %}
-
 </div>
 
         </section>
 
+
+        {{ revision_history(revision_cycles | default([])) }}
 
         <!-- APPROVAL SECTION -->
 
@@ -424,14 +383,15 @@
                         <div class="form-group">
 
                             <label for="approval-comment">
-                                Approval Comment (Optional)
+                                Approval note <span class="review-field-hint">(optional)</span>
                             </label>
 
                             <textarea
                                 id="approval-comment"
                                 name="approval_comment"
                                 rows="4"
-                                placeholder="Add an optional approval note"></textarea>
+                                placeholder="Add an optional approval note"
+                                {% if not (can_review | default(false)) %}disabled{% endif %}></textarea>
 
                         </div>
 
@@ -477,15 +437,16 @@
                         <div class="form-group">
 
                             <label for="revision-comments">
-                                Revision Feedback
+                                Revision feedback <span class="review-field-hint">(required)</span>
                             </label>
 
                             <textarea
                                 id="revision-comments"
                                 name="revision_comments"
-                                rows="5"
+                                rows="4"
                                 placeholder="Explain the changes required"
-                                required></textarea>
+                                required
+                                {% if not (can_review | default(false)) %}disabled{% endif %}></textarea>
 
                         </div>
 
@@ -504,10 +465,12 @@
 
             </div>
 
-            <p class="form-hint">
-                Review decisions will become available
-                when the backend and permissions
-                are implemented.
+            <p class="form-hint" role="status">
+                {% if can_review | default(false) %}
+                Your decision and feedback will be recorded in this brief's review history.
+                {% else %}
+                Review actions are unavailable for this brief's current status.
+                {% endif %}
             </p>
 
         </section>
@@ -546,11 +509,7 @@
 
     <!-- FOOTER -->
 
-    <footer class="dashboard-footer">
-        <p>
-            &copy; 2026 Elunette. All rights reserved.
-        </p>
-    </footer>
+    {% include '_signature_footer.html' %}
 
 </body>
 

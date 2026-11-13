@@ -1,243 +1,110 @@
 {% import '_brief_components.html' as brief_ui %}
+{% from '_studio_icons.html' import icon, paper_motif %}
+{% set first_name = user['full_name'].split()[0] %}
+{% set initials = user['full_name'].split()[0][0] ~ (user['full_name'].split()[-1][0] if user['full_name'].split() | length > 1 else '') %}
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>Client Dashboard | Elunette</title>
-
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='css/style.css') }}">
+    <meta name="theme-color" content="#F1E7D3">
+    <title>The Elunette Studio | Client Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,wght@0,400;0,500;1,400&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/studio.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/signature-footer.css') }}">
 </head>
-
-<body class="dashboard-page client-workspace">
-
-    <!-- DASHBOARD HEADER -->
-
-    <header class="dashboard-header">
-
-        <a href="/dashboard/client" class="logo"
-           aria-label="Elunette Dashboard">
-
-            <img
-                src="{{ url_for('static', filename='images/elunette-logo.png') }}"
-                alt="Elunette"
-                class="logo-img">
-        </a>
-
-        <nav class="dashboard-nav"
-             aria-label="Client navigation">
-
-            <ul>
-                <li>
-                    <a href="/dashboard/client"
-                       class="active"
-                       aria-current="page">Dashboard</a>
-                </li>
-
-                <li>
-                    <a href="/briefs">My Briefs</a>
-                </li>
-
-                <li>
-                    <a href="/notifications">Notifications</a>
-                </li>
-            </ul>
-
+<body class="studio-page">
+    <a href="#studio-main" class="studio-skip">Skip to workspace</a>
+    <aside class="studio-rail" aria-label="Studio sidebar">
+        <a class="studio-brand" href="{{ url_for('home') }}" aria-label="Elunette Home"><img src="{{ url_for('static', filename='images/elunette-icon.png') }}" alt="" width="34" height="34"></a>
+        <nav class="studio-navigation" aria-label="Client navigation">
+            <a href="{{ url_for('client_dashboard') }}" aria-current="page">{{ icon('overview') }}<span>Overview</span></a>
+            <a href="{{ url_for('my_briefs') }}">{{ icon('brief') }}<span>My Briefs</span></a>
+            <a href="{{ url_for('new_brief') }}">{{ icon('plus') }}<span>New Brief</span></a>
+            <a href="{{ url_for('notifications') }}">{{ icon('bell') }}<span>Updates</span></a>
         </nav>
+        <div class="studio-rail-bottom">
+            <a href="{{ url_for('home') }}">{{ icon('home') }}<span>Home</span></a>
+            <form action="{{ url_for('logout') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit">{{ icon('logout') }}<span>Log out</span></button>
+            </form>
+        </div>
+    </aside>
 
-        
-<!-- LOG OUT -->
-
-
-<form action="/logout" method="POST">
-    <input
-        type="hidden"
-        name="csrf_token"
-        value="{{ csrf_token() }}">
-
-    <button type="submit" class="logout-btn">
-        Log Out
-    </button>
-</form>
-
-
-
-    </header>
-
-
-    <!-- MAIN DASHBOARD -->
-
-    <main class="dashboard-main">
-
-        {{ brief_ui.feedback() }}
-
-        <!-- WELCOME SECTION -->
-
-        <section class="dashboard-welcome">
-
-            <p class="section-label">
-                YOUR WORKSPACE
-            </p>
-
-            <h1>Welcome to Elunette.</h1>
-
-            <p>
-                Your ideas, projects, and progress
-                all in one organised space.
-            </p>
-
-            <a href="/briefs/new" class="btn btn-primary">
-                Create New Brief
-            </a>
-
-        </section>
-
-
-        <!-- PROJECT OVERVIEW -->
-
-        <section class="dashboard-overview"
-                 aria-labelledby="overview-title">
-
-            <div class="section-header">
-
-                <h2 id="overview-title">Project Overview</h2>
-
-                <p>
-                    A quick look at your project briefs.
-                </p>
-
+    <div class="studio-shell">
+        <header class="studio-toolbar">
+            <p class="studio-breadcrumb">Your workspace <span aria-hidden="true">/</span> <strong>Overview</strong></p>
+            <div class="studio-toolbar-actions">
+                <a class="studio-notifications" href="{{ url_for('notifications') }}" aria-label="View notifications">{{ icon('bell') }}</a>
+                <details class="studio-account">
+                    <summary aria-label="Account controls for {{ user['full_name'] }}"><span class="studio-avatar">{{ initials | upper }}</span><span class="studio-account-name">{{ user['full_name'] }}</span>{{ icon('chevron') }}</summary>
+                    <div class="studio-account-menu">
+                        <strong>{{ user['full_name'] }}</strong><p>Client workspace</p>
+                        <a href="{{ url_for('my_briefs') }}">Manage your briefs {{ icon('arrow') }}</a>
+                        <form action="{{ url_for('logout') }}" method="POST"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit">Log out {{ icon('logout') }}</button></form>
+                    </div>
+                </details>
             </div>
+        </header>
 
-            <div class="overview-grid">
+        <main id="studio-main">
+            {{ brief_ui.feedback() }}
+            <div class="studio-page-heading"><div><p class="studio-eyebrow">A SPACE FOR WHAT COMES NEXT</p><h1>The Elunette Studio<span aria-hidden="true">.</span></h1></div><a class="studio-text-link" href="{{ url_for('my_briefs') }}">Explore your workspace {{ icon('arrow') }}</a></div>
 
-                <!-- TOTAL BRIEFS -->
+            <div class="studio-bento">
+                <section class="studio-hero" aria-labelledby="studio-welcome-title">
+                    <div class="studio-hero-copy"><p class="studio-hero-greeting">Good to see you, {{ first_name }}.</p><h2 id="studio-welcome-title">A little progress looks <em>beautiful on you.</em></h2><p>Your ideas, a little clearer. Your next chapter, a little closer.</p><a class="studio-button studio-button--cream" href="{{ url_for('new_brief') }}">{{ icon('plus') }} Create New Brief</a></div>
+                    {{ paper_motif() }}
+                    <span class="studio-hero-footnote">SMALL STEPS. THOUGHTFUL BEGINNINGS.</span>
+                </section>
 
-                <article class="overview-card">
+                <section class="studio-summary" aria-labelledby="studio-summary-title">
+                    <div class="studio-panel-top"><h2 id="studio-summary-title">Your brief collection</h2><span class="studio-icon-tile">{{ icon('brief') }}</span></div>
+                    <div class="studio-total"><strong id="studio-stat-total" class="overview-number">{{ total }}</strong><span>Total briefs<br><small>Every idea, in one place.</small></span></div>
+                    <div class="studio-mini-stats">
+                        <div class="studio-mini-stat studio-mini-stat--pending">{{ icon('clock') }}<strong id="studio-stat-pending">{{ pending }}</strong><span>Awaiting review</span></div>
+                        <a href="{{ url_for('my_briefs', status='approved') }}" class="studio-mini-stat studio-mini-stat--approved">{{ icon('check') }}<strong id="studio-stat-approved">{{ approved }}</strong><span>Approved</span></a>
+                        <a href="{{ url_for('my_briefs', status='revision_requested') }}" class="studio-mini-stat studio-mini-stat--revision">{{ icon('revision') }}<strong id="studio-stat-revision">{{ revision }}</strong><span>Revisions</span></a>
+                    </div>
+                </section>
 
-                    <h3>Total Briefs</h3>
+                <section class="studio-projects" aria-labelledby="studio-projects-title">
+                    <div class="studio-panel-top"><div><p class="studio-eyebrow">IDEAS IN MOTION</p><h2 id="studio-projects-title">Your recent projects</h2></div><a class="studio-text-link" href="{{ url_for('my_briefs') }}">View all {{ icon('arrow') }}</a></div>
+                    <nav class="studio-project-shortcuts" aria-label="Browse briefs by status"><a href="{{ url_for('my_briefs', status='draft') }}">Drafts <span>{{ status_counts['draft'] }}</span></a><a href="{{ url_for('my_briefs', status='revision_requested') }}">Needs your touch <span>{{ revision }}</span></a><a href="{{ url_for('my_briefs', status='approved') }}">Approved <span>{{ approved }}</span></a></nav>
+                    {% if briefs %}
+                    <div class="studio-project-list">
+                        {% for brief in briefs %}
+                        <article class="project-brief-card" aria-labelledby="brief-card-{{ brief['id'] }}">
+                            <span class="studio-project-symbol studio-project-symbol--{{ brief['status'] }}">{{ icon('brief') }}</span>
+                            <div class="studio-project-copy"><h3 id="brief-card-{{ brief['id'] }}">{{ brief['title'] }}</h3><p>{{ brief['questionnaire_title'] }} <span> &middot; v{{ brief['version_number'] }}</span></p>{{ brief_ui.status_badge(brief) }}</div>
+                            <div class="studio-project-controls">{{ brief_ui.progress(brief) }}{{ brief_ui.actions(brief) }}</div>
+                        </article>
+                        {% endfor %}
+                    </div>
+                    <p class="studio-project-caption">Your {{ briefs | length }} most recently updated {{ 'brief' if briefs | length == 1 else 'briefs' }}. Every detail stays connected.</p>
+                    {% else %}
+                    <div class="studio-empty-projects"><span class="studio-empty-symbol">{{ icon('brief') }}</span><h3>A little space for a big idea.</h3><p>No project briefs yet. Start with a few thoughtful questions; the clarity will follow.</p><a class="studio-button studio-button--burgundy" href="{{ url_for('new_brief') }}">Create Your First Brief {{ icon('arrow') }}</a></div>
+                    {% endif %}
+                </section>
 
-                    <p class="overview-number">{{ total }}</p>
+                <section class="studio-quick" aria-labelledby="studio-quick-title"><div class="studio-panel-top"><p class="studio-eyebrow">A LITTLE MOMENTUM</p><span class="studio-quick-plus">{{ icon('plus') }}</span></div><h2 id="studio-quick-title">Make room for<br>your next idea.</h2><div class="studio-quick-links"><a href="{{ url_for('new_brief') }}">Start a new brief {{ icon('arrow') }}</a>{% if latest_draft %}<a href="{{ url_for('client_questionnaire', questionnaire_id=latest_draft['questionnaire_id'], brief_id=latest_draft['id']) }}" aria-label="Continue draft {{ latest_draft['title'] }}">Pick up your latest draft {{ icon('arrow') }}</a>{% else %}<a href="{{ url_for('my_briefs') }}">Revisit your collection {{ icon('arrow') }}</a>{% endif %}</div></section>
 
-                    <p>All your project briefs</p>
+                <section class="studio-attention {{ 'studio-attention--active' if revision else '' }}" aria-labelledby="studio-attention-title"><div class="studio-panel-top"><p class="studio-eyebrow">NEEDS YOUR ATTENTION</p>{{ icon('revision') }}</div><h2 id="studio-attention-title">{{ 'A fresh perspective.' if revision else 'A little breathing room.' }}</h2>
+                    {% if revision %}<p>{{ revision }} {{ 'brief is' if revision == 1 else 'briefs are' }} ready for your revisions.</p><ul class="studio-revision-list">{% for brief in revision_briefs %}<li><a href="{{ url_for('client_questionnaire', questionnaire_id=brief['questionnaire_id'], brief_id=brief['id']) }}"><span>{{ brief['title'] }}</span>{{ icon('arrow') }}</a></li>{% endfor %}</ul><a class="studio-text-link" href="{{ url_for('my_briefs', status='revision_requested') }}">View revision requests {{ icon('arrow') }}</a>
+                    {% else %}<p>No revision requests waiting. You'll find your next steps here whenever feedback arrives.</p><span class="studio-clear-state">{{ icon('check') }} All clear for now</span>{% endif %}
+                </section>
 
-                </article>
-
-
-                <!-- PENDING BRIEFS -->
-
-                <article class="overview-card">
-
-                    <h3>Pending Review</h3>
-
-                    <p class="overview-number">{{ pending }}</p>
-
-                    <p>Briefs awaiting review</p>
-
-                </article>
-
-
-                <!-- APPROVED BRIEFS -->
-
-                <article class="overview-card">
-
-                    <h3>Approved Briefs</h3>
-
-                    <p class="overview-number">{{ approved }}</p>
-
-                    <p>Successfully approved briefs</p>
-
-                </article>
-
+                <section class="studio-workflow" aria-labelledby="studio-workflow-title"><div class="studio-panel-top"><h2 id="studio-workflow-title">The shape of your work</h2>{{ icon('overview') }}</div><p class="studio-workflow-description">Where your briefs stand, right now.</p>
+                    {% if total %}<dl class="studio-flow-list">{% for status, label in [('draft', 'Draft'), ('submitted', 'Submitted'), ('under_review', 'Under review'), ('revision_requested', 'Revision requested'), ('approved', 'Approved')] %}<div><dt>{{ label }}</dt><dd><progress value="{{ status_counts[status] }}" max="{{ total }}" aria-label="{{ label }}: {{ status_counts[status] }} of {{ total }} briefs">{{ status_counts[status] }} of {{ total }}</progress><span>{{ status_counts[status] }}</span></dd></div>{% endfor %}</dl>
+                    {% else %}<div class="studio-workflow-empty"><p>Your workflow starts with your first brief.</p><a class="studio-text-link" href="{{ url_for('new_brief') }}">Give an idea its beginning {{ icon('arrow') }}</a></div>{% endif %}
+                </section>
             </div>
-
-        </section>
-
-
-        <!-- MY PROJECT BRIEFS -->
-
-        <section class="dashboard-briefs"
-                 aria-labelledby="briefs-title">
-
-            <div class="section-header">
-
-                <h2 id="briefs-title">My Project Briefs</h2>
-
-                <a href="/briefs" class="text-link">
-                    View All Briefs
-                </a>
-
-            </div>
-
-
-            {% if briefs %}
-            <div class="brief-card-grid">
-                {% for brief in briefs %}
-                <article class="project-brief-card" aria-labelledby="brief-card-{{ brief['id'] }}">
-                    {{ brief_ui.status_badge(brief) }}
-                    <h3 id="brief-card-{{ brief['id'] }}">{{ brief['title'] }}</h3>
-                    <p class="brief-card-questionnaire">{{ brief['questionnaire_title'] }}</p>
-                    {{ brief_ui.progress(brief) }}
-                    {{ brief_ui.actions(brief) }}
-                </article>
-                {% endfor %}
-            </div>
-            {% else %}
-            <div class="empty-state">
-                <p class="section-label">A PLACE FOR YOUR NEXT IDEA</p>
-                <h3>No project briefs yet.</h3>
-                <p>Start a brief and shape your project, one thoughtful detail at a time.</p>
-                <a href="{{ url_for('new_brief') }}" class="btn btn-secondary">Start Your First Brief</a>
-            </div>
-            {% endif %}
-
-        </section>
-
-
-        <!-- RECENT NOTIFICATIONS -->
-
-        <section class="dashboard-notifications"
-                 aria-labelledby="notifications-title">
-
-            <div class="section-header">
-
-                <h2 id="notifications-title">
-                    Recent Notifications
-                </h2>
-
-                <a href="/notifications" class="text-link">
-                    View All
-                </a>
-
-            </div>
-
-            <div class="notifications-content">
-
-                <p>
-                    You're all caught up!
-                    New notifications will appear here.
-                </p>
-
-            </div>
-
-        </section>
-
-    </main>
-
-
-    <!-- FOOTER -->
-
-    <footer class="dashboard-footer">
-
-        <p>
-            &copy; 2026 Elunette. All rights reserved.
-        </p>
-
-    </footer>
-
+            {% include '_signature_footer.html' %}
+        </main>
+    </div>
     {{ brief_ui.deletion_dialog('dashboard') }}
 </body>
-
 </html>

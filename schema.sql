@@ -461,3 +461,23 @@ CREATE TABLE IF NOT EXISTS brief_reviews (
 
 CREATE INDEX IF NOT EXISTS idx_brief_reviews_brief
 ON brief_reviews (brief_id, created_at);
+
+-- Step 85.3: additive revision history; existing briefs and answers are retained.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_brief_reviews_identity
+ON brief_reviews (id, brief_id);
+
+CREATE TABLE IF NOT EXISTS brief_revision_cycles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    brief_id INTEGER NOT NULL REFERENCES project_briefs(id),
+    review_id INTEGER NOT NULL UNIQUE,
+    response_text TEXT NOT NULL DEFAULT '' CHECK (LENGTH(response_text) <= 5000),
+    requested_answers_json TEXT NOT NULL,
+    resubmitted_answers_json TEXT,
+    response_updated_at TEXT,
+    resubmitted_at TEXT,
+    FOREIGN KEY (review_id, brief_id) REFERENCES brief_reviews(id, brief_id),
+    CHECK ((resubmitted_at IS NULL) = (resubmitted_answers_json IS NULL))
+);
+
+CREATE INDEX IF NOT EXISTS idx_brief_revision_cycles_brief
+ON brief_revision_cycles (brief_id, review_id);
