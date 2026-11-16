@@ -91,6 +91,26 @@
                     yours into an organised project brief.
                 </p>
 
+                <div class="guided-brief-invitation">
+                    <a href="{{ url_for('adaptive_new') }}" class="guided-brief-cta"
+                       aria-describedby="guided-brief-caption">
+                        <svg class="guided-brief-sparkle" width="20" height="20" viewBox="0 0 24 24"
+                             fill="none" aria-hidden="true" focusable="false">
+                            <path d="M10 3c.8 5 2 6.2 7 7-5 .8-6.2 2-7 7-.8-5-2-6.2-7-7 5-.8 6.2-2 7-7Z"
+                                  stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+                            <path d="m19 15 .9 3.1L23 19l-3.1.9L19 23l-.9-3.1L15 19l3.1-.9L19 15Z"
+                                  fill="currentColor"/>
+                        </svg>
+                        <span>Start Your Guided Brief</span>
+                        <svg class="guided-brief-arrow" width="18" height="18" viewBox="0 0 24 24"
+                             fill="none" aria-hidden="true" focusable="false">
+                            <path d="M6 18 18 6M6 6h12v12" stroke="currentColor"
+                                  stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </a>
+                    <p id="guided-brief-caption" class="guided-brief-caption">A personalised questionnaire for your creative project.</p>
+                </div>
+
                 <a href="/briefs" class="back-link">
                     Back to My Briefs
                 </a>
@@ -113,8 +133,7 @@
 
                 <p>
                     Give your project a name and choose
-                    the questionnaire that best suits
-                    your requirements.
+                    your design service.
                 </p>
 
             </div>
@@ -127,120 +146,45 @@
      CREATE NEW PROJECT BRIEF FORM
 ========================================== -->
 
-<form action="{{ url_for('new_brief') }}" method="GET" class="new-brief-form">
-    <div class="form-group"><label for="provider">Choose your Service Provider</label>
-        <select id="provider" name="provider_id" required><option value="">Choose your Service Provider</option>
-        {% for provider in providers %}<option value="{{ provider['id'] }}"{% if selected_provider == provider['id'] %} selected{% endif %}>{{ provider['full_name'] }}</option>{% endfor %}</select>
-        <small class="form-hint">Show your selected Provider's questionnaires before creating your brief. The Provider is fixed when the brief is created.</small>
-        {% if not providers %}<p>No Service Providers are currently available. Please return later.</p>{% endif %}
-    </div><button type="submit" class="btn btn-secondary">Show questionnaires</button>
+<form action="{{ url_for('new_brief') }}" method="POST" class="new-brief-form" id="new-project-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category,message in messages %}<p role="alert">{{ message }}</p>{% endfor %}
+    {% endwith %}
+    <div class="form-group">
+        <label for="project-title">Project Title</label>
+        <input type="text" id="project-title" name="project_title" value="{{ project_title }}"
+               placeholder="Enter your project title" maxlength="150" required>
+    </div>
+    <div class="form-group">
+        <label for="provider">Choose your Service Provider</label>
+        <select id="provider" name="provider_id" required>
+            <option value="">Choose your Service Provider</option>
+            {% for provider in providers %}
+                <option value="{{ provider['id'] }}"{% if selected_provider == provider['id'] %} selected{% endif %}>{{ provider['full_name'] }}</option>
+            {% endfor %}
+        </select>
+        {% if not providers %}<p class="form-hint">No Service Providers are currently available. Please return later.</p>{% endif %}
+        <noscript><button type="submit" formmethod="GET" formnovalidate class="btn btn-secondary">Show questionnaires</button></noscript>
+    </div>
+    <div class="form-group">
+        <label for="questionnaire">Design Service</label>
+        <select id="questionnaire" name="questionnaire_id" required>
+            <option value="">Select your design service</option>
+            <optgroup label="Design services">
+                {% for service in design_services %}<option value="service:{{ service.value }}">{{ service.label }}</option>{% endfor %}
+            </optgroup>
+            <optgroup id="provider-questionnaires" label="Provider questionnaires"{% if not questionnaires %} disabled hidden{% endif %}>
+                {% for questionnaire in questionnaires %}<option value="{{ questionnaire['id'] }}">{{ questionnaire['title'] }} (Version {{ questionnaire['version_number'] }})</option>{% endfor %}
+            </optgroup>
+        </select>
+        <small id="questionnaire-status" class="form-hint" role="status" aria-live="polite"></small>
+    </div>
+    <div class="form-actions">
+        <a href="/briefs" class="btn btn-secondary">Cancel</a>
+        <button type="submit" class="btn btn-primary"{% if not providers %} disabled{% endif %}>Continue to Questionnaire</button>
+    </div>
 </form>
-<form
-    action="{{ url_for('new_brief') }}"
-    method="POST"
-    class="new-brief-form">
-
-    <input type="hidden" name="provider_id" value="{{ selected_provider or '' }}">
-    <!-- CSRF PROTECTION -->
-
-    <input
-        type="hidden"
-        name="csrf_token"
-        value="{{ csrf_token() }}">
-
-    {% with messages = get_flashed_messages(with_categories=true) %}{% for category,message in messages %}<p role="alert">{{ message }}</p>{% endfor %}{% endwith %}
-    <!-- PROJECT TITLE -->
-
-                    <!-- PROJECT TITLE -->
-
-                    <div class="form-group">
-
-                        <label for="project-title">
-                            Project Title
-                        </label>
-
-                        <input
-                            type="text"
-                            id="project-title"
-                            name="project_title" value="{{ project_title }}"
-                            placeholder="Enter your project title"
-                            maxlength="150"
-                            required>
-
-                        <small class="form-hint">
-                            Choose a short, descriptive
-                            name for your project.
-                        </small>
-
-                    </div>
-
-
-                    <!-- QUESTIONNAIRE SELECTION -->
-
-                    <div class="form-group">
-
-                        <label for="questionnaire">
-                            Select a Questionnaire
-                        </label>
-
-
-<select
-    id="questionnaire"
-    name="questionnaire_id"
-    required{% if not questionnaires %} disabled{% endif %}>
-
-    <option value="" selected disabled>
-        Select a Questionnaire
-    </option>
-
-    {% for questionnaire in questionnaires %}
-
-        <option value="{{ questionnaire['id'] }}">
-            {{ questionnaire['title'] }}
-            (Version {{ questionnaire['version_number'] }})
-        </option>
-
-    {% else %}
-
-        <option value="" disabled>
-            {{ 'No questionnaires are currently available for this Provider' if selected_provider else 'Choose a Service Provider first' }}
-        </option>
-
-    {% endfor %}
-
-</select>
-
-{% if not questionnaires %}<p class="form-hint" role="status">{{ 'No questionnaires are currently available for this Provider. Choose another Provider or return later.' if selected_provider else 'Choose a Service Provider and show their questionnaires to continue.' }}</p>{% endif %}
-
-                        <small class="form-hint">
-                            Questionnaires are created
-                            and activated by authorised
-                            service providers.
-                        </small>
-
-                    </div>
-
-
-                    <!-- FORM ACTIONS -->
-
-                    <div class="form-actions">
-
-                        <a href="/briefs"
-                           class="btn btn-secondary">
-                            Cancel
-                        </a>
-
-                        
-<button
-    type="submit"
-    class="btn btn-primary"{% if not questionnaires %} disabled{% endif %}>
-    Continue to Questionnaire
-</button>
-
-
-                    </div>
-
-                </form>
 
             </div>
 
@@ -344,6 +288,7 @@
 
     {% include '_signature_footer.html' %}
 
+<script src="{{ url_for('static', filename='js/new-brief.js') }}" defer></script>
 </body>
 
 </html>

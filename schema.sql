@@ -485,3 +485,31 @@ CREATE TABLE IF NOT EXISTS brief_revision_cycles (
 
 CREATE INDEX IF NOT EXISTS idx_brief_revision_cycles_brief
 ON brief_revision_cycles (brief_id, review_id);
+
+-- Catalog definitions extend the existing questionnaire versions and briefs.
+CREATE TABLE IF NOT EXISTS adaptive_definitions (
+ version_id INTEGER PRIMARY KEY REFERENCES questionnaire_versions(id),
+ service TEXT NOT NULL, catalog_version TEXT NOT NULL, schema_json TEXT NOT NULL
+);
+CREATE TRIGGER IF NOT EXISTS adaptive_definition_immutable_update BEFORE UPDATE ON adaptive_definitions BEGIN SELECT RAISE(ABORT,'Definitions are immutable'); END;
+CREATE TRIGGER IF NOT EXISTS adaptive_definition_immutable_delete BEFORE DELETE ON adaptive_definitions BEGIN SELECT RAISE(ABORT,'Definitions are immutable'); END;
+CREATE TABLE IF NOT EXISTS adaptive_drafts (
+ brief_id INTEGER PRIMARY KEY REFERENCES project_briefs(id) ON DELETE CASCADE,
+ answers_json TEXT NOT NULL DEFAULT '{}', revision_response TEXT NOT NULL DEFAULT '',
+ generation INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS adaptive_submissions (
+ id INTEGER PRIMARY KEY, brief_id INTEGER NOT NULL REFERENCES project_briefs(id),
+ revision_number INTEGER NOT NULL, actor_id INTEGER NOT NULL REFERENCES users(id),
+ answers_json TEXT NOT NULL, assessment_json TEXT NOT NULL,
+ response_text TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ UNIQUE(brief_id,revision_number)
+);
+CREATE TRIGGER IF NOT EXISTS adaptive_snapshot_immutable_update BEFORE UPDATE ON adaptive_submissions BEGIN SELECT RAISE(ABORT,'Submissions are immutable'); END;
+CREATE TRIGGER IF NOT EXISTS adaptive_snapshot_immutable_delete BEFORE DELETE ON adaptive_submissions BEGIN SELECT RAISE(ABORT,'Submissions are immutable'); END;
+CREATE TABLE IF NOT EXISTS brief_assets (
+ id INTEGER PRIMARY KEY, brief_id INTEGER NOT NULL REFERENCES project_briefs(id) ON DELETE CASCADE,
+ uploader_id INTEGER NOT NULL REFERENCES users(id), storage_name TEXT NOT NULL UNIQUE,
+ original_name TEXT NOT NULL, media_type TEXT NOT NULL, size INTEGER NOT NULL,
+ created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

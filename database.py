@@ -1,6 +1,8 @@
 
 import os
 import sqlite3
+from datetime import datetime, timezone
+from contextlib import closing
 from pathlib import Path
 
 from flask import current_app, g
@@ -60,5 +62,12 @@ def init_app(app):
             encoding="utf-8"
         )
 
+        # Back up populated databases before the additive catalog extension.
+        adaptive_exists = db.execute("SELECT 1 FROM sqlite_master WHERE name='adaptive_definitions'").fetchone()
+        populated = db.execute("SELECT 1 FROM sqlite_master WHERE name='users'").fetchone()
+        if populated and not adaptive_exists:
+            backup = Path(app.config['DATABASE']).with_suffix('.pre-adaptive-' + datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%f') + '.db')
+            with closing(sqlite3.connect(str(backup))) as destination:
+                db.backup(destination)
         db.executescript(schema)
         db.commit()

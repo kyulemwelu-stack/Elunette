@@ -1,0 +1,11 @@
+{% macro answer(field, value) %}
+{% if field.type in ['single_choice','multi_choice'] %}
+{% for option in field.options %}{% if value==option.value or field.type=='multi_choice' and option.value in value %}<span class="review-choice">{{ option.label }} {% if provider %}<small>({{ option.value }})</small>{% endif %}</span>{% endif %}{% endfor %}
+{% elif field.type=='palette_select' %}{% for palette in catalog.palettes %}{% if palette.id==value %}<strong>{{ palette.name }}</strong><span class="swatches" aria-label="{{ palette.colors|join(', ') }}">{% for colour in palette.colors %}<span style="background-color:{{ colour }}" title="{{ colour }}"></span>{% endfor %}</span><small>{{ palette.colors|join(' · ') }}</small>{% endif %}{% endfor %}
+{% elif field.type=='repeater' %}{% for row in value %}<div class="review-row"><strong>Item {{ loop.index }}</strong><dl>{% for child in field.item_fields %}{% if child.id in row %}<dt>{{ child.label }}</dt><dd>{{ answer(child,row[child.id]) }}</dd>{% endif %}{% endfor %}</dl></div>{% endfor %}
+{% elif field.type=='money' %}{{ value.currency }} {{ value.amount }}
+{% elif field.type in ['file_upload','asset_reference'] %}<a href="{{ url_for('adaptive_download',asset_id=value) }}">Download supplied asset</a>
+{% elif field.type=='color_multi_picker' %}<ul>{% for colour in value %}<li><span class="review-colour" style="background:{{ colour }}"></span>{{ colour }}</li>{% endfor %}</ul>
+{% elif field.type=='boolean' %}{{ 'Yes' if value else 'No' }}
+{% else %}{{ value }}{% endif %}
+{% endmacro %}

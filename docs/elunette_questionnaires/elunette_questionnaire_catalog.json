@@ -1,0 +1,6485 @@
+{
+  "catalog_id": "elunette-adaptive-design-briefs",
+  "version": "1.0.0",
+  "status": "implementation_specification_candidate",
+  "authoring_note": "Source-of-truth candidate for a Flask/SQLite application. Preserve existing DB and live question IDs through explicit migration mapping. Do not eval untrusted conditions.",
+  "rules": {
+    "required": "Validated only when its field and ancestors are visible; an explicit pending choice is allowed for draft save but may block ready-for-design.",
+    "conditions": [
+      "eq",
+      "ne",
+      "in",
+      "not_in",
+      "contains",
+      "not_empty",
+      "all",
+      "any"
+    ],
+    "hidden_answers": "Retain privately in draft state if useful for reversibility, but exclude from active validated answers, summaries, exports and submission snapshots.",
+    "file_handling": "Never trust extension alone; enforce content sniffing, secure file names, ownership, size, and per-brief storage.",
+    "palette": "Palette swatches are sample choices, not restrictions; let clients select custom colours; respect service brand identity independently.",
+    "submission": "Never treat a saved draft as design-ready. Distinguish incomplete/pending/ready/approved/revision-requested and preserve revisions.",
+    "dates": "Store ISO 8601 local dates/times, include timezone when event or publication is time-zone relevant.",
+    "currency": "Currency per quoted amount, ISO 4217; default UI suggestion KES but do not force it.",
+    "svg_uploads": "SVG uploads require an actual sanitizer, strict file serving (as attachment), and security tests; otherwise exclude SVG from allowed uploads.",
+    "required_context": "Evaluate conditions using active service and subtype; repeated child IDs are locally scoped (e.g. EV05C[0].name), not global IDs.",
+    "spec_precedence": "Structured field catalog controls IDs, wording, types and branching. The accompanying narrative controls workflow/security. Existing app behavior is authoritative for route and data ownership.",
+    "readiness": "Approved TBA and designer-to-advise choices can be satisfied; unknown essential logistical, legal or pricing details must appear in readiness issues and block design_ready unless explicitly approved.",
+    "cross_field_checks": [
+      "Date range end >= start, event dates and design deadlines are distinct",
+      "Budget max >= min and all amounts non-negative with currency",
+      "Multi-choice required means at least one valid selection; public audience cannot coexist with targeted audience selections",
+      "Sale should require applicable offer details even when user selects subtype sale",
+      "QR requires a valid public destination or explicit existing eligible action URL; no empty QR targets",
+      "Private event access codes must not automatically be exposed on public flyers",
+      "All fields and options checked server-side; hidden/mismatched values excluded from submission snapshots",
+      "Uploaded assets must belong to the current brief and authorized user",
+      "Reused email/phone/URL values validated for chosen contact method",
+      "Flag unverifiable claims, sensitive dietary/allergen assertions, and regulated packaging text for human review"
+    ]
+  },
+  "palettes": [
+    {
+      "id": "warm_elegant",
+      "name": "Warm & Elegant",
+      "colors": [
+        "#653D30",
+        "#C88B59",
+        "#F1E7D3",
+        "#A3B18A"
+      ]
+    },
+    {
+      "id": "bold_energetic",
+      "name": "Bold & Energetic",
+      "colors": [
+        "#DD3A29",
+        "#FFC145",
+        "#184E77",
+        "#FFF9EF"
+      ]
+    },
+    {
+      "id": "soft_pastel",
+      "name": "Soft & Pastel",
+      "colors": [
+        "#D8A7B1",
+        "#E9D5CA",
+        "#B7C9B1",
+        "#F9F3EA"
+      ]
+    },
+    {
+      "id": "modern_minimal",
+      "name": "Modern & Minimal",
+      "colors": [
+        "#1C2329",
+        "#677880",
+        "#D5DDE0",
+        "#FAFAF8"
+      ]
+    },
+    {
+      "id": "luxury_premium",
+      "name": "Luxury & Premium",
+      "colors": [
+        "#232323",
+        "#B89452",
+        "#F2E7D0",
+        "#70414B"
+      ]
+    },
+    {
+      "id": "earthy_natural",
+      "name": "Earthy & Natural",
+      "colors": [
+        "#526547",
+        "#B6A17B",
+        "#DACDB3",
+        "#F4EFE3"
+      ]
+    }
+  ],
+  "meta_fields": [
+    {
+      "id": "META01",
+      "label": "Project title (for the client dashboard)",
+      "type": "short_text",
+      "required": true
+    },
+    {
+      "id": "META02",
+      "label": "What service do you need?",
+      "type": "single_choice",
+      "required": true,
+      "options": [
+        {
+          "value": "posters_flyers",
+          "label": "Posters & Flyers"
+        },
+        {
+          "value": "logo_branding",
+          "label": "Logo & Branding"
+        },
+        {
+          "value": "websites_applications",
+          "label": "Websites & Applications"
+        },
+        {
+          "value": "social_media_design",
+          "label": "Social Media Design"
+        },
+        {
+          "value": "events_invitations",
+          "label": "Events & Invitations"
+        },
+        {
+          "value": "brochures_menus",
+          "label": "Brochures & Menus"
+        },
+        {
+          "value": "packaging_design",
+          "label": "Packaging Design"
+        }
+      ]
+    }
+  ],
+  "shared_modules": {
+    "event": [
+      {
+        "id": "EV01",
+        "title": "Event identity",
+        "fields": [
+          {
+            "id": "EV01A",
+            "label": "What is the name of your event?",
+            "type": "short_text",
+            "required": true
+          },
+          {
+            "id": "EV01B",
+            "label": "Is this event name final?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "final",
+                "label": "Yes, this is final"
+              },
+              {
+                "value": "working",
+                "label": "It is a working title"
+              },
+              {
+                "value": "tba",
+                "label": "Name to be announced"
+              }
+            ]
+          },
+          {
+            "id": "EV01C",
+            "label": "What wording should we use until the name is confirmed?",
+            "type": "short_text",
+            "required": true,
+            "when": {
+              "field": "EV01B",
+              "op": "eq",
+              "value": "working"
+            }
+          }
+        ]
+      },
+      {
+        "id": "EV02",
+        "title": "Event date",
+        "fields": [
+          {
+            "id": "EV02A",
+            "label": "When will your event take place?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "single",
+                "label": "One date"
+              },
+              {
+                "value": "range",
+                "label": "Several consecutive dates"
+              },
+              {
+                "value": "recurring",
+                "label": "Recurring dates"
+              },
+              {
+                "value": "tba",
+                "label": "Use approved Date to be announced"
+              },
+              {
+                "value": "pending",
+                "label": "Date not yet confirmed"
+              }
+            ]
+          },
+          {
+            "id": "EV02B",
+            "label": "Event date",
+            "type": "date",
+            "required": true,
+            "when": {
+              "field": "EV02A",
+              "op": "eq",
+              "value": "single"
+            }
+          },
+          {
+            "id": "EV02C",
+            "label": "Starting date",
+            "type": "date",
+            "required": true,
+            "when": {
+              "field": "EV02A",
+              "op": "eq",
+              "value": "range"
+            }
+          },
+          {
+            "id": "EV02D",
+            "label": "Ending date",
+            "type": "date",
+            "required": true,
+            "when": {
+              "field": "EV02A",
+              "op": "eq",
+              "value": "range"
+            }
+          },
+          {
+            "id": "EV02E",
+            "label": "Describe the recurring schedule",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "EV02A",
+              "op": "eq",
+              "value": "recurring"
+            }
+          }
+        ]
+      },
+      {
+        "id": "EV03",
+        "title": "Event time",
+        "fields": [
+          {
+            "id": "EV03A",
+            "label": "What time will your event take place?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "fixed",
+                "label": "Specific start time"
+              },
+              {
+                "value": "all_day",
+                "label": "All-day event"
+              },
+              {
+                "value": "variable",
+                "label": "Different times across dates"
+              },
+              {
+                "value": "tba",
+                "label": "Approved Time to be announced"
+              },
+              {
+                "value": "pending",
+                "label": "Time not confirmed"
+              }
+            ]
+          },
+          {
+            "id": "EV03B",
+            "label": "Start time",
+            "type": "time",
+            "required": true,
+            "when": {
+              "field": "EV03A",
+              "op": "eq",
+              "value": "fixed"
+            }
+          },
+          {
+            "id": "EV03C",
+            "label": "End time (if known)",
+            "type": "time",
+            "required": false,
+            "when": {
+              "field": "EV03A",
+              "op": "eq",
+              "value": "fixed"
+            }
+          },
+          {
+            "id": "EV03D",
+            "label": "Describe the schedule by day",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "EV03A",
+              "op": "eq",
+              "value": "variable"
+            }
+          },
+          {
+            "id": "EV03E",
+            "label": "Time zone for online or international audiences",
+            "type": "short_text",
+            "required": false
+          }
+        ]
+      },
+      {
+        "id": "EV04",
+        "title": "Event location",
+        "fields": [
+          {
+            "id": "EV04A",
+            "label": "Where will your event take place?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "physical",
+                "label": "Physical venue"
+              },
+              {
+                "value": "online",
+                "label": "Online"
+              },
+              {
+                "value": "hybrid",
+                "label": "Both in person and online"
+              },
+              {
+                "value": "tba",
+                "label": "Approved Venue to be announced"
+              },
+              {
+                "value": "pending",
+                "label": "Venue not confirmed"
+              }
+            ]
+          },
+          {
+            "id": "EV04B",
+            "label": "Venue name",
+            "type": "short_text",
+            "required": true,
+            "when": {
+              "field": "EV04A",
+              "op": "in",
+              "values": [
+                "physical",
+                "hybrid"
+              ]
+            }
+          },
+          {
+            "id": "EV04C",
+            "label": "Town or city",
+            "type": "short_text",
+            "required": true,
+            "when": {
+              "field": "EV04A",
+              "op": "in",
+              "values": [
+                "physical",
+                "hybrid"
+              ]
+            }
+          },
+          {
+            "id": "EV04D",
+            "label": "Address, landmark or directions",
+            "type": "long_text",
+            "required": false,
+            "when": {
+              "field": "EV04A",
+              "op": "in",
+              "values": [
+                "physical",
+                "hybrid"
+              ]
+            }
+          },
+          {
+            "id": "EV04E",
+            "label": "Online platform",
+            "type": "short_text",
+            "required": true,
+            "when": {
+              "field": "EV04A",
+              "op": "in",
+              "values": [
+                "online",
+                "hybrid"
+              ]
+            }
+          },
+          {
+            "id": "EV04F",
+            "label": "Public event or registration link",
+            "type": "url",
+            "required": false,
+            "when": {
+              "field": "EV04A",
+              "op": "in",
+              "values": [
+                "online",
+                "hybrid"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "id": "EV05",
+        "title": "Admission",
+        "fields": [
+          {
+            "id": "EV05A",
+            "label": "How can people attend?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "free",
+                "label": "Free entry"
+              },
+              {
+                "value": "registration",
+                "label": "Free with RSVP or registration"
+              },
+              {
+                "value": "paid",
+                "label": "Paid tickets"
+              },
+              {
+                "value": "invitation",
+                "label": "Invitation only"
+              },
+              {
+                "value": "pending",
+                "label": "Not confirmed"
+              }
+            ]
+          },
+          {
+            "id": "EV05B",
+            "label": "Ticket pricing structure",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "single",
+                "label": "One price"
+              },
+              {
+                "value": "multiple",
+                "label": "Multiple price categories"
+              }
+            ],
+            "when": {
+              "field": "EV05A",
+              "op": "eq",
+              "value": "paid"
+            }
+          },
+          {
+            "id": "EV05C",
+            "label": "Ticket categories",
+            "type": "repeater",
+            "required": true,
+            "when": {
+              "field": "EV05A",
+              "op": "eq",
+              "value": "paid"
+            },
+            "item_fields": [
+              {
+                "id": "name",
+                "label": "Ticket/category name",
+                "type": "short_text",
+                "required": true
+              },
+              {
+                "id": "price",
+                "label": "Amount",
+                "type": "money",
+                "required": true
+              }
+            ],
+            "max_items": 30
+          }
+        ]
+      },
+      {
+        "id": "EV06",
+        "title": "Featured people",
+        "fields": [
+          {
+            "id": "EV06A",
+            "label": "Should any speakers, performers, hosts or guests be featured?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "yes",
+                "label": "Yes"
+              },
+              {
+                "value": "no",
+                "label": "No"
+              },
+              {
+                "value": "pending",
+                "label": "Not confirmed yet"
+              }
+            ]
+          },
+          {
+            "id": "EV06B",
+            "label": "Add featured people",
+            "type": "repeater",
+            "required": true,
+            "when": {
+              "field": "EV06A",
+              "op": "eq",
+              "value": "yes"
+            },
+            "item_fields": [
+              {
+                "id": "name",
+                "label": "Name as displayed",
+                "type": "short_text",
+                "required": true
+              },
+              {
+                "id": "role",
+                "label": "Title or role",
+                "type": "short_text",
+                "required": true
+              },
+              {
+                "id": "photo_asset",
+                "label": "Photo reference",
+                "type": "asset_reference",
+                "required": false
+              }
+            ],
+            "max_items": 30
+          }
+        ]
+      },
+      {
+        "id": "EV07",
+        "title": "Programme highlights",
+        "fields": [
+          {
+            "id": "EV07A",
+            "label": "Are there activities or programme highlights to include?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "yes",
+                "label": "Yes"
+              },
+              {
+                "value": "no",
+                "label": "No"
+              },
+              {
+                "value": "pending",
+                "label": "Not finalised"
+              }
+            ]
+          },
+          {
+            "id": "EV07B",
+            "label": "List the highlights",
+            "type": "repeater",
+            "required": true,
+            "when": {
+              "field": "EV07A",
+              "op": "eq",
+              "value": "yes"
+            },
+            "item_fields": [
+              {
+                "id": "activity",
+                "label": "Programme item",
+                "type": "short_text",
+                "required": true
+              },
+              {
+                "id": "day_or_time",
+                "label": "Relevant day or time",
+                "type": "short_text",
+                "required": false
+              }
+            ],
+            "max_items": 30
+          }
+        ]
+      },
+      {
+        "id": "EV08",
+        "title": "Organiser",
+        "fields": [
+          {
+            "id": "EV08A",
+            "label": "Who is organising or hosting the event?",
+            "type": "short_text",
+            "required": false
+          },
+          {
+            "id": "EV08B",
+            "label": "Should the organiser name appear on the design?",
+            "type": "single_choice",
+            "required": false,
+            "options": [
+              {
+                "value": "yes",
+                "label": "Yes"
+              },
+              {
+                "value": "no",
+                "label": "No"
+              },
+              {
+                "value": "recommend",
+                "label": "Let the designer advise"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "EV09",
+        "title": "Attendance notices",
+        "fields": [
+          {
+            "id": "EV09A",
+            "label": "Are there any important notices for attendees?",
+            "type": "multi_choice",
+            "required": false,
+            "options": [
+              {
+                "value": "dress",
+                "label": "Dress code"
+              },
+              {
+                "value": "age",
+                "label": "Age restriction"
+              },
+              {
+                "value": "bring",
+                "label": "What to bring"
+              },
+              {
+                "value": "arrival",
+                "label": "Arrival or entry instructions"
+              },
+              {
+                "value": "access",
+                "label": "Accessibility or participation details"
+              },
+              {
+                "value": "other",
+                "label": "Other"
+              }
+            ]
+          },
+          {
+            "id": "EV09B",
+            "label": "Provide the selected notice details",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "EV09A",
+              "op": "not_empty"
+            }
+          }
+        ]
+      },
+      {
+        "id": "EV10",
+        "title": "Sponsors and partners",
+        "fields": [
+          {
+            "id": "EV10A",
+            "label": "Should sponsors or partners appear in the design?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "yes",
+                "label": "Yes"
+              },
+              {
+                "value": "no",
+                "label": "No"
+              },
+              {
+                "value": "pending",
+                "label": "Not confirmed yet"
+              }
+            ]
+          },
+          {
+            "id": "EV10B",
+            "label": "Sponsors / partners",
+            "type": "repeater",
+            "required": true,
+            "when": {
+              "field": "EV10A",
+              "op": "eq",
+              "value": "yes"
+            },
+            "item_fields": [
+              {
+                "id": "name",
+                "label": "Organisation name",
+                "type": "short_text",
+                "required": true
+              },
+              {
+                "id": "role",
+                "label": "Role",
+                "type": "short_text",
+                "required": false
+              },
+              {
+                "id": "logo_asset",
+                "label": "Logo asset reference",
+                "type": "asset_reference",
+                "required": false
+              }
+            ],
+            "max_items": 30
+          }
+        ]
+      }
+    ],
+    "business": [
+      {
+        "id": "BIZ01",
+        "title": "Business identity",
+        "fields": [
+          {
+            "id": "BIZ01A",
+            "label": "What is the exact business or brand name?",
+            "type": "short_text",
+            "required": true
+          },
+          {
+            "id": "BIZ01B",
+            "label": "Should the business name appear in the design?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "yes",
+                "label": "Yes"
+              },
+              {
+                "value": "no",
+                "label": "No, internal reference only"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "BIZ02",
+        "title": "Products and services",
+        "fields": [
+          {
+            "id": "BIZ02A",
+            "label": "Which products or services should appear?",
+            "type": "repeater",
+            "required": false,
+            "item_fields": [
+              {
+                "id": "name",
+                "label": "Product or service name",
+                "type": "short_text",
+                "required": true
+              },
+              {
+                "id": "description",
+                "label": "Short description",
+                "type": "long_text",
+                "required": false
+              },
+              {
+                "id": "features",
+                "label": "Features/benefits",
+                "type": "long_text",
+                "required": false
+              }
+            ],
+            "max_items": 30
+          }
+        ]
+      },
+      {
+        "id": "BIZ03",
+        "title": "Prices",
+        "fields": [
+          {
+            "id": "BIZ03A",
+            "label": "Would you like prices to appear?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "exact",
+                "label": "Exact prices"
+              },
+              {
+                "value": "starting",
+                "label": "Starting prices"
+              },
+              {
+                "value": "range",
+                "label": "Price range"
+              },
+              {
+                "value": "no",
+                "label": "No prices"
+              },
+              {
+                "value": "quote",
+                "label": "Request a quote"
+              },
+              {
+                "value": "pending",
+                "label": "Prices not finalised"
+              }
+            ]
+          },
+          {
+            "id": "BIZ03B",
+            "label": "Prices to show",
+            "type": "repeater",
+            "required": true,
+            "when": {
+              "field": "BIZ03A",
+              "op": "in",
+              "values": [
+                "exact",
+                "starting",
+                "range"
+              ]
+            },
+            "item_fields": [
+              {
+                "id": "item",
+                "label": "Related product/service",
+                "type": "short_text",
+                "required": true
+              },
+              {
+                "id": "currency",
+                "label": "Currency (ISO 4217)",
+                "type": "currency",
+                "required": true
+              },
+              {
+                "id": "minimum",
+                "label": "Price or starting price",
+                "type": "money",
+                "required": true
+              },
+              {
+                "id": "maximum",
+                "label": "Maximum (range only)",
+                "type": "money",
+                "required": false
+              }
+            ],
+            "max_items": 30
+          }
+        ]
+      },
+      {
+        "id": "BIZ04",
+        "title": "Offers",
+        "fields": [
+          {
+            "id": "BIZ04A",
+            "label": "Is there a special offer or discount?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "yes",
+                "label": "Yes"
+              },
+              {
+                "value": "no",
+                "label": "No"
+              },
+              {
+                "value": "pending",
+                "label": "Not confirmed yet"
+              }
+            ]
+          },
+          {
+            "id": "BIZ04B",
+            "label": "What is the type of offer?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "percentage",
+                "label": "Percentage discount"
+              },
+              {
+                "value": "amount",
+                "label": "Fixed-amount discount"
+              },
+              {
+                "value": "bundle",
+                "label": "Bundle or package"
+              },
+              {
+                "value": "bogo",
+                "label": "Buy one get one / free item"
+              },
+              {
+                "value": "promo_price",
+                "label": "Promotional price"
+              },
+              {
+                "value": "gift",
+                "label": "Gift with purchase"
+              },
+              {
+                "value": "coupon",
+                "label": "Promotion code"
+              },
+              {
+                "value": "other",
+                "label": "Other"
+              }
+            ],
+            "when": {
+              "field": "BIZ04A",
+              "op": "eq",
+              "value": "yes"
+            }
+          },
+          {
+            "id": "BIZ04C",
+            "label": "Give the exact offer details, values and included items",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "BIZ04A",
+              "op": "eq",
+              "value": "yes"
+            }
+          },
+          {
+            "id": "BIZ04D",
+            "label": "List restrictions, exclusions or offer terms",
+            "type": "long_text",
+            "required": false,
+            "when": {
+              "field": "BIZ04A",
+              "op": "eq",
+              "value": "yes"
+            }
+          }
+        ]
+      },
+      {
+        "id": "BIZ05",
+        "title": "Availability",
+        "fields": [
+          {
+            "id": "BIZ05A",
+            "label": "When is this promotion or offering available?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "now",
+                "label": "Available now"
+              },
+              {
+                "value": "start",
+                "label": "From a date"
+              },
+              {
+                "value": "range",
+                "label": "Between dates"
+              },
+              {
+                "value": "stock",
+                "label": "While stocks last"
+              },
+              {
+                "value": "soon",
+                "label": "Coming soon"
+              },
+              {
+                "value": "pending",
+                "label": "Not yet confirmed"
+              }
+            ]
+          },
+          {
+            "id": "BIZ05B",
+            "label": "Start date",
+            "type": "date",
+            "required": true,
+            "when": {
+              "field": "BIZ05A",
+              "op": "in",
+              "values": [
+                "start",
+                "range"
+              ]
+            }
+          },
+          {
+            "id": "BIZ05C",
+            "label": "End date",
+            "type": "date",
+            "required": true,
+            "when": {
+              "field": "BIZ05A",
+              "op": "eq",
+              "value": "range"
+            }
+          }
+        ]
+      },
+      {
+        "id": "BIZ06",
+        "title": "How customers access it",
+        "fields": [
+          {
+            "id": "BIZ06A",
+            "label": "Where can customers buy, book or access it?",
+            "type": "multi_choice",
+            "required": false,
+            "options": [
+              {
+                "value": "store",
+                "label": "Physical shop"
+              },
+              {
+                "value": "online",
+                "label": "Online store or website"
+              },
+              {
+                "value": "both",
+                "label": "Both"
+              },
+              {
+                "value": "delivery",
+                "label": "Delivery/service area"
+              },
+              {
+                "value": "contact",
+                "label": "Contact to arrange"
+              },
+              {
+                "value": "other",
+                "label": "Other"
+              }
+            ]
+          },
+          {
+            "id": "BIZ06B",
+            "label": "Supply relevant outlet, service area or other access details",
+            "type": "long_text",
+            "required": false
+          }
+        ]
+      },
+      {
+        "id": "BIZ07",
+        "title": "Claims and features",
+        "fields": [
+          {
+            "id": "BIZ07A",
+            "label": "Are there facts, specifications, guarantees or claims that must appear?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "yes",
+                "label": "Yes"
+              },
+              {
+                "value": "no",
+                "label": "No"
+              },
+              {
+                "value": "pending",
+                "label": "Not confirmed yet"
+              }
+            ]
+          },
+          {
+            "id": "BIZ07B",
+            "label": "Claims to include",
+            "type": "repeater",
+            "required": true,
+            "when": {
+              "field": "BIZ07A",
+              "op": "eq",
+              "value": "yes"
+            },
+            "item_fields": [
+              {
+                "id": "claim",
+                "label": "Exact claim or fact",
+                "type": "long_text",
+                "required": true
+              },
+              {
+                "id": "evidence",
+                "label": "Source or supporting document",
+                "type": "asset_reference",
+                "required": false
+              }
+            ],
+            "max_items": 30
+          }
+        ]
+      },
+      {
+        "id": "BIZ08",
+        "title": "Terms and restrictions",
+        "fields": [
+          {
+            "id": "BIZ08A",
+            "label": "Are there important terms or restrictions customers should know?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "yes",
+                "label": "Yes"
+              },
+              {
+                "value": "no",
+                "label": "No"
+              },
+              {
+                "value": "pending",
+                "label": "Not confirmed yet"
+              }
+            ]
+          },
+          {
+            "id": "BIZ08B",
+            "label": "Provide exact terms and restrictions",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "BIZ08A",
+              "op": "eq",
+              "value": "yes"
+            }
+          }
+        ]
+      }
+    ],
+    "core_for_non_posters": [
+      {
+        "id": "CORE01",
+        "title": "Project foundation",
+        "fields": [
+          {
+            "id": "CORE01B",
+            "label": "Briefly describe what you need and why",
+            "type": "long_text",
+            "required": true
+          },
+          {
+            "id": "CORE01C",
+            "label": "Who is the intended audience?",
+            "type": "multi_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "public",
+                "label": "General public"
+              },
+              {
+                "value": "customers",
+                "label": "Customers"
+              },
+              {
+                "value": "staff",
+                "label": "Staff/team"
+              },
+              {
+                "value": "businesses",
+                "label": "Businesses"
+              },
+              {
+                "value": "students",
+                "label": "Students"
+              },
+              {
+                "value": "parents",
+                "label": "Parents"
+              },
+              {
+                "value": "other",
+                "label": "Other"
+              }
+            ]
+          },
+          {
+            "id": "CORE01D",
+            "label": "What should the audience understand, feel or do?",
+            "type": "long_text",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "CORE02",
+        "title": "Existing brand, content and assets",
+        "fields": [
+          {
+            "id": "CORE02A",
+            "label": "Do you have existing brand assets, content or design references?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "yes",
+                "label": "Yes"
+              },
+              {
+                "value": "no",
+                "label": "No"
+              },
+              {
+                "value": "later",
+                "label": "Will provide later"
+              }
+            ]
+          },
+          {
+            "id": "CORE02B",
+            "label": "Upload approved assets or a reference",
+            "type": "file_upload",
+            "required": false,
+            "when": {
+              "field": "CORE02A",
+              "op": "eq",
+              "value": "yes"
+            },
+            "validation": {
+              "extensions": [
+                "pdf",
+                "docx",
+                "txt",
+                "png",
+                "jpg",
+                "jpeg",
+                "webp",
+                "svg"
+              ],
+              "max_megabytes": 20
+            }
+          },
+          {
+            "id": "CORE02C",
+            "label": "What parts of your supplied material must remain unchanged?",
+            "type": "long_text",
+            "required": false
+          }
+        ]
+      },
+      {
+        "id": "CORE03",
+        "title": "Visual direction",
+        "fields": [
+          {
+            "id": "CORE03A",
+            "label": "What visual style do you prefer?",
+            "type": "multi_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "modern",
+                "label": "Modern"
+              },
+              {
+                "value": "elegant",
+                "label": "Elegant"
+              },
+              {
+                "value": "friendly",
+                "label": "Friendly"
+              },
+              {
+                "value": "minimal",
+                "label": "Minimal"
+              },
+              {
+                "value": "bold",
+                "label": "Bold"
+              },
+              {
+                "value": "playful",
+                "label": "Playful"
+              },
+              {
+                "value": "luxury",
+                "label": "Premium"
+              },
+              {
+                "value": "traditional",
+                "label": "Traditional"
+              },
+              {
+                "value": "designer",
+                "label": "Designer to recommend"
+              }
+            ]
+          },
+          {
+            "id": "CORE03B",
+            "label": "How should colours be chosen?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "palette",
+                "label": "Choose palette"
+              },
+              {
+                "value": "custom",
+                "label": "Select custom colours"
+              },
+              {
+                "value": "brand",
+                "label": "Use brand colours"
+              },
+              {
+                "value": "designer",
+                "label": "Designer to recommend"
+              }
+            ]
+          },
+          {
+            "id": "CORE03C",
+            "label": "Choose a palette",
+            "type": "palette_select",
+            "required": true,
+            "when": {
+              "field": "CORE03B",
+              "op": "eq",
+              "value": "palette"
+            }
+          },
+          {
+            "id": "CORE03D",
+            "label": "Choose custom colours",
+            "type": "color_multi_picker",
+            "required": true,
+            "when": {
+              "field": "CORE03B",
+              "op": "eq",
+              "value": "custom"
+            }
+          },
+          {
+            "id": "CORE03E",
+            "label": "Enter official brand colours or HEX codes",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "CORE03B",
+              "op": "eq",
+              "value": "brand"
+            }
+          },
+          {
+            "id": "CORE03F",
+            "label": "Which colours should be avoided?",
+            "type": "short_text",
+            "required": false
+          },
+          {
+            "id": "CORE03G",
+            "label": "Describe any imagery or typography preferences",
+            "type": "long_text",
+            "required": false
+          }
+        ]
+      },
+      {
+        "id": "CORE04",
+        "title": "Delivery and approvals",
+        "fields": [
+          {
+            "id": "CORE04A",
+            "label": "When do you need the finished work?",
+            "type": "date",
+            "required": true
+          },
+          {
+            "id": "CORE04B",
+            "label": "What files or handover materials are needed?",
+            "type": "multi_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "png",
+                "label": "PNG"
+              },
+              {
+                "value": "jpg",
+                "label": "JPG"
+              },
+              {
+                "value": "pdf",
+                "label": "PDF"
+              },
+              {
+                "value": "svg",
+                "label": "SVG"
+              },
+              {
+                "value": "editable",
+                "label": "Editable source"
+              },
+              {
+                "value": "web",
+                "label": "Web/app files"
+              },
+              {
+                "value": "other",
+                "label": "Other"
+              },
+              {
+                "value": "unsure",
+                "label": "Designer to recommend"
+              }
+            ]
+          },
+          {
+            "id": "CORE04C",
+            "label": "How do you want to handle the budget?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "range",
+                "label": "Budget range"
+              },
+              {
+                "value": "quote",
+                "label": "Request quote"
+              },
+              {
+                "value": "pending",
+                "label": "Undecided"
+              }
+            ]
+          },
+          {
+            "id": "CORE04D",
+            "label": "Minimum budget",
+            "type": "money",
+            "required": true,
+            "when": {
+              "field": "CORE04C",
+              "op": "eq",
+              "value": "range"
+            },
+            "validation": {
+              "min": 0,
+              "currency": "ISO_4217"
+            }
+          },
+          {
+            "id": "CORE04E",
+            "label": "Maximum budget",
+            "type": "money",
+            "required": true,
+            "when": {
+              "field": "CORE04C",
+              "op": "eq",
+              "value": "range"
+            },
+            "validation": {
+              "min": 0,
+              "currency": "ISO_4217"
+            }
+          },
+          {
+            "id": "CORE04F",
+            "label": "Who approves the result?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "me",
+                "label": "I do"
+              },
+              {
+                "value": "team",
+                "label": "Another person/team"
+              },
+              {
+                "value": "pending",
+                "label": "Not decided"
+              }
+            ]
+          },
+          {
+            "id": "CORE04G",
+            "label": "Any other constraints or approval instructions?",
+            "type": "long_text",
+            "required": false
+          }
+        ]
+      }
+    ]
+  },
+  "posters_flyers": {
+    "service_id": "posters_flyers",
+    "main_question_groups": [
+      {
+        "id": "PF01",
+        "title": "Design format",
+        "fields": [
+          {
+            "id": "PF01A",
+            "label": "What would you like us to design?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "poster",
+                "label": "Poster"
+              },
+              {
+                "value": "flyer",
+                "label": "Flyer"
+              },
+              {
+                "value": "both",
+                "label": "Both poster and flyer"
+              }
+            ]
+          },
+          {
+            "id": "PF01B",
+            "label": "Should both designs contain the same information?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "same",
+                "label": "Yes, same content"
+              },
+              {
+                "value": "different",
+                "label": "No, different content"
+              }
+            ],
+            "when": {
+              "field": "PF01A",
+              "op": "eq",
+              "value": "both"
+            }
+          }
+        ]
+      },
+      {
+        "id": "PF02",
+        "title": "Category and event type",
+        "fields": [
+          {
+            "id": "PF02A",
+            "label": "What is your design for?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "events_entertainment",
+                "label": "Events & Entertainment"
+              },
+              {
+                "value": "business_promotion",
+                "label": "Business & Product Promotion"
+              },
+              {
+                "value": "corporate",
+                "label": "Corporate & Professional"
+              },
+              {
+                "value": "educational",
+                "label": "Educational & Informational"
+              },
+              {
+                "value": "awareness",
+                "label": "Awareness & Campaigns"
+              },
+              {
+                "value": "recruitment",
+                "label": "Recruitment & Opportunities"
+              },
+              {
+                "value": "celebrations",
+                "label": "Celebrations & Personal Events"
+              },
+              {
+                "value": "religious_community",
+                "label": "Religious & Community"
+              },
+              {
+                "value": "other",
+                "label": "Other / Custom"
+              }
+            ]
+          },
+          {
+            "id": "PF02B",
+            "label": "Please describe your project category",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "PF02A",
+              "op": "eq",
+              "value": "other"
+            }
+          },
+          {
+            "id": "PF02C",
+            "label": "Is your design promoting a specific event or gathering?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "yes",
+                "label": "Yes"
+              },
+              {
+                "value": "no",
+                "label": "No"
+              }
+            ]
+          },
+          {
+            "id": "PF02D",
+            "label": "What type of event or project is this?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "concert",
+                "label": "Concert/live music"
+              },
+              {
+                "value": "festival",
+                "label": "Festival/cultural event"
+              },
+              {
+                "value": "party",
+                "label": "Party/nightlife"
+              },
+              {
+                "value": "performance",
+                "label": "Theatre/comedy/live performance"
+              },
+              {
+                "value": "film",
+                "label": "Film screening"
+              },
+              {
+                "value": "exhibition",
+                "label": "Exhibition/showcase"
+              },
+              {
+                "value": "sports",
+                "label": "Sport/recreation"
+              },
+              {
+                "value": "other",
+                "label": "Other entertainment event"
+              }
+            ],
+            "when": {
+              "field": "PF02A",
+              "op": "eq",
+              "value": "events_entertainment"
+            }
+          },
+          {
+            "id": "PF02E",
+            "label": "Which business promotion best describes your project?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "product",
+                "label": "Product advertisement"
+              },
+              {
+                "value": "service",
+                "label": "Service advertisement"
+              },
+              {
+                "value": "sale",
+                "label": "Sale/discount"
+              },
+              {
+                "value": "launch",
+                "label": "Product/service launch"
+              },
+              {
+                "value": "opening",
+                "label": "Business opening"
+              },
+              {
+                "value": "brand",
+                "label": "General brand promotion"
+              },
+              {
+                "value": "giveaway",
+                "label": "Giveaway/competition"
+              },
+              {
+                "value": "other",
+                "label": "Other promotion"
+              }
+            ],
+            "when": {
+              "field": "PF02A",
+              "op": "eq",
+              "value": "business_promotion"
+            }
+          },
+          {
+            "id": "PF02F",
+            "label": "What kind of corporate communication is it?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "announcement",
+                "label": "Official announcement"
+              },
+              {
+                "value": "seminar",
+                "label": "Seminar/workshop/webinar"
+              },
+              {
+                "value": "corporate_event",
+                "label": "Corporate event"
+              },
+              {
+                "value": "milestone",
+                "label": "Award/milestone"
+              },
+              {
+                "value": "policy",
+                "label": "Policy or official notice"
+              },
+              {
+                "value": "report",
+                "label": "Results or performance highlights"
+              },
+              {
+                "value": "brand",
+                "label": "Corporate profile promotion"
+              },
+              {
+                "value": "other",
+                "label": "Other corporate communication"
+              }
+            ],
+            "when": {
+              "field": "PF02A",
+              "op": "eq",
+              "value": "corporate"
+            }
+          },
+          {
+            "id": "PF02G",
+            "label": "What kind of educational material is it?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "class",
+                "label": "Class/course announcement"
+              },
+              {
+                "value": "school_event",
+                "label": "School event"
+              },
+              {
+                "value": "infographic",
+                "label": "Educational explainer"
+              },
+              {
+                "value": "timetable",
+                "label": "Timetable/calendar"
+              },
+              {
+                "value": "admission",
+                "label": "Admissions/enrolment"
+              },
+              {
+                "value": "workshop",
+                "label": "Workshop/training"
+              },
+              {
+                "value": "safety",
+                "label": "Educational safety notice"
+              },
+              {
+                "value": "other",
+                "label": "Other educational poster"
+              }
+            ],
+            "when": {
+              "field": "PF02A",
+              "op": "eq",
+              "value": "educational"
+            }
+          },
+          {
+            "id": "PF02H",
+            "label": "What kind of campaign is it?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "health",
+                "label": "Health/public-safety awareness"
+              },
+              {
+                "value": "environment",
+                "label": "Environment/sustainability"
+              },
+              {
+                "value": "charity",
+                "label": "Charity or social cause"
+              },
+              {
+                "value": "community",
+                "label": "Community civic information"
+              },
+              {
+                "value": "fundraiser",
+                "label": "Fundraising/donation appeal"
+              },
+              {
+                "value": "advocacy",
+                "label": "Advocacy campaign"
+              },
+              {
+                "value": "other",
+                "label": "Other awareness campaign"
+              }
+            ],
+            "when": {
+              "field": "PF02A",
+              "op": "eq",
+              "value": "awareness"
+            }
+          },
+          {
+            "id": "PF02I",
+            "label": "What kind of opportunity are you announcing?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "job",
+                "label": "Job vacancy"
+              },
+              {
+                "value": "internship",
+                "label": "Internship/attachment"
+              },
+              {
+                "value": "volunteer",
+                "label": "Volunteer opportunity"
+              },
+              {
+                "value": "scholarship",
+                "label": "Scholarship/grant"
+              },
+              {
+                "value": "applications",
+                "label": "Open call for applications"
+              },
+              {
+                "value": "casting",
+                "label": "Audition/casting"
+              },
+              {
+                "value": "other",
+                "label": "Other opportunity"
+              }
+            ],
+            "when": {
+              "field": "PF02A",
+              "op": "eq",
+              "value": "recruitment"
+            }
+          },
+          {
+            "id": "PF02J",
+            "label": "What kind of celebration is it?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "birthday",
+                "label": "Birthday"
+              },
+              {
+                "value": "wedding",
+                "label": "Wedding/engagement"
+              },
+              {
+                "value": "graduation",
+                "label": "Graduation"
+              },
+              {
+                "value": "anniversary",
+                "label": "Anniversary"
+              },
+              {
+                "value": "baby",
+                "label": "Baby shower/welcome"
+              },
+              {
+                "value": "retirement",
+                "label": "Retirement"
+              },
+              {
+                "value": "memorial",
+                "label": "Memorial/tribute"
+              },
+              {
+                "value": "other",
+                "label": "Other personal occasion"
+              }
+            ],
+            "when": {
+              "field": "PF02A",
+              "op": "eq",
+              "value": "celebrations"
+            }
+          },
+          {
+            "id": "PF02K",
+            "label": "What kind of religious or community design is it?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "service",
+                "label": "Worship/service"
+              },
+              {
+                "value": "youth",
+                "label": "Youth gathering/fellowship"
+              },
+              {
+                "value": "conference",
+                "label": "Conference/convention"
+              },
+              {
+                "value": "prayer",
+                "label": "Prayer retreat/meeting"
+              },
+              {
+                "value": "outreach",
+                "label": "Outreach/crusade"
+              },
+              {
+                "value": "harambee",
+                "label": "Fundraiser/harambee"
+              },
+              {
+                "value": "gospel",
+                "label": "Gospel concert/choir"
+              },
+              {
+                "value": "scripture",
+                "label": "Scripture/inspirational poster"
+              },
+              {
+                "value": "community",
+                "label": "Community announcement"
+              },
+              {
+                "value": "other",
+                "label": "Other religious/community"
+              }
+            ],
+            "when": {
+              "field": "PF02A",
+              "op": "eq",
+              "value": "religious_community"
+            }
+          },
+          {
+            "id": "PF02L",
+            "label": "Please specify your subtype or occasion",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "any": [
+                {
+                  "field": "PF02D",
+                  "op": "eq",
+                  "value": "other"
+                },
+                {
+                  "field": "PF02E",
+                  "op": "eq",
+                  "value": "other"
+                },
+                {
+                  "field": "PF02F",
+                  "op": "eq",
+                  "value": "other"
+                },
+                {
+                  "field": "PF02G",
+                  "op": "eq",
+                  "value": "other"
+                },
+                {
+                  "field": "PF02H",
+                  "op": "eq",
+                  "value": "other"
+                },
+                {
+                  "field": "PF02I",
+                  "op": "eq",
+                  "value": "other"
+                },
+                {
+                  "field": "PF02J",
+                  "op": "eq",
+                  "value": "other"
+                },
+                {
+                  "field": "PF02K",
+                  "op": "eq",
+                  "value": "other"
+                }
+              ]
+            }
+          }
+        ],
+        "notes": "Subtype fields depend on category; event data is collected in EV module only when PF02C=yes. Warn if subtype suggests an event but PF02C=no; allow valid non-event teaser/announcement cases."
+      },
+      {
+        "id": "PF03",
+        "title": "Intended use",
+        "fields": [
+          {
+            "id": "PF03A",
+            "label": "Where will your design be used?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "digital",
+                "label": "Digital only"
+              },
+              {
+                "value": "print",
+                "label": "Print only"
+              },
+              {
+                "value": "both",
+                "label": "Both digital and print"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "PF04",
+        "title": "Project objective",
+        "fields": [
+          {
+            "id": "PF04A",
+            "label": "What is the main thing you want the design to achieve?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "event",
+                "label": "Promote an event"
+              },
+              {
+                "value": "advertise",
+                "label": "Advertise product/service"
+              },
+              {
+                "value": "announce",
+                "label": "Make an announcement"
+              },
+              {
+                "value": "awareness",
+                "label": "Raise awareness"
+              },
+              {
+                "value": "educate",
+                "label": "Educate/inform"
+              },
+              {
+                "value": "register",
+                "label": "Encourage registration/application"
+              },
+              {
+                "value": "celebrate",
+                "label": "Celebrate an occasion"
+              },
+              {
+                "value": "other",
+                "label": "Other"
+              }
+            ]
+          },
+          {
+            "id": "PF04B",
+            "label": "What outcome would you like?",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "PF04A",
+              "op": "eq",
+              "value": "other"
+            }
+          }
+        ]
+      },
+      {
+        "id": "PF05",
+        "title": "Target audience",
+        "fields": [
+          {
+            "id": "PF05A",
+            "label": "Who would you like your design to reach?",
+            "type": "multi_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "public",
+                "label": "General public"
+              },
+              {
+                "value": "customers",
+                "label": "Existing customers"
+              },
+              {
+                "value": "potential",
+                "label": "Potential customers"
+              },
+              {
+                "value": "students",
+                "label": "Students"
+              },
+              {
+                "value": "parents",
+                "label": "Parents/guardians"
+              },
+              {
+                "value": "employees",
+                "label": "Employees/members"
+              },
+              {
+                "value": "attendees",
+                "label": "Event participants"
+              },
+              {
+                "value": "community",
+                "label": "Specific community/group"
+              },
+              {
+                "value": "other",
+                "label": "Other"
+              }
+            ]
+          },
+          {
+            "id": "PF05B",
+            "label": "Describe the specific or other audience",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "any": [
+                {
+                  "field": "PF05A",
+                  "op": "contains",
+                  "value": "community"
+                },
+                {
+                  "field": "PF05A",
+                  "op": "contains",
+                  "value": "other"
+                }
+              ]
+            }
+          },
+          {
+            "id": "PF05C",
+            "label": "Anything else we should know about your audience?",
+            "type": "long_text",
+            "required": false
+          }
+        ]
+      },
+      {
+        "id": "PF06",
+        "title": "Main message",
+        "fields": [
+          {
+            "id": "PF06A",
+            "label": "How prepared is your main headline or message?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "exact",
+                "label": "I have exact wording"
+              },
+              {
+                "value": "draft",
+                "label": "I need wording refined"
+              },
+              {
+                "value": "help",
+                "label": "I need help creating it"
+              }
+            ]
+          },
+          {
+            "id": "PF06B",
+            "label": "What is the main message you want people to remember?",
+            "type": "long_text",
+            "required": true,
+            "help": "Exact wording if selected; otherwise a draft or description of the intended message"
+          }
+        ]
+      },
+      {
+        "id": "PF07",
+        "title": "Supporting content",
+        "fields": [
+          {
+            "id": "PF07A",
+            "label": "Do you already have supporting content?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "ready",
+                "label": "All ready"
+              },
+              {
+                "value": "partial",
+                "label": "Some ready"
+              },
+              {
+                "value": "help",
+                "label": "Need content-writing help"
+              },
+              {
+                "value": "later",
+                "label": "Will provide later"
+              }
+            ]
+          },
+          {
+            "id": "PF07B",
+            "label": "How would you like to provide the content?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "type",
+                "label": "Type or paste"
+              },
+              {
+                "value": "upload",
+                "label": "Upload document"
+              }
+            ],
+            "when": {
+              "field": "PF07A",
+              "op": "in",
+              "values": [
+                "ready",
+                "partial"
+              ]
+            }
+          },
+          {
+            "id": "PF07C",
+            "label": "Paste the supporting content",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "all": [
+                {
+                  "field": "PF07A",
+                  "op": "in",
+                  "values": [
+                    "ready",
+                    "partial"
+                  ]
+                },
+                {
+                  "field": "PF07B",
+                  "op": "eq",
+                  "value": "type"
+                }
+              ]
+            }
+          },
+          {
+            "id": "PF07D",
+            "label": "Upload supporting document",
+            "type": "file_upload",
+            "required": true,
+            "when": {
+              "all": [
+                {
+                  "field": "PF07A",
+                  "op": "in",
+                  "values": [
+                    "ready",
+                    "partial"
+                  ]
+                },
+                {
+                  "field": "PF07B",
+                  "op": "eq",
+                  "value": "upload"
+                }
+              ]
+            },
+            "validation": {
+              "extensions": [
+                "pdf",
+                "docx",
+                "txt",
+                "png",
+                "jpg",
+                "jpeg",
+                "webp",
+                "svg"
+              ],
+              "max_megabytes": 20
+            }
+          },
+          {
+            "id": "PF07E",
+            "label": "What supporting content should the designer help develop?",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "PF07A",
+              "op": "eq",
+              "value": "help"
+            }
+          }
+        ]
+      },
+      {
+        "id": "PF08",
+        "title": "Call to action",
+        "fields": [
+          {
+            "id": "PF08A",
+            "label": "What would you like viewers to do next?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "attend",
+                "label": "Attend an event"
+              },
+              {
+                "value": "buy",
+                "label": "Buy/order"
+              },
+              {
+                "value": "register",
+                "label": "Register/sign up"
+              },
+              {
+                "value": "contact",
+                "label": "Contact us"
+              },
+              {
+                "value": "apply",
+                "label": "Apply"
+              },
+              {
+                "value": "visit",
+                "label": "Visit website"
+              },
+              {
+                "value": "follow",
+                "label": "Follow social media"
+              },
+              {
+                "value": "share",
+                "label": "Share information"
+              },
+              {
+                "value": "none",
+                "label": "No specific action"
+              },
+              {
+                "value": "other",
+                "label": "Other"
+              }
+            ]
+          },
+          {
+            "id": "PF08B",
+            "label": "Describe the other action",
+            "type": "short_text",
+            "required": true,
+            "when": {
+              "field": "PF08A",
+              "op": "eq",
+              "value": "other"
+            }
+          },
+          {
+            "id": "PF08C",
+            "label": "How can viewers take this action?",
+            "type": "multi_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "website",
+                "label": "Website/link"
+              },
+              {
+                "value": "phone",
+                "label": "Phone/WhatsApp"
+              },
+              {
+                "value": "email",
+                "label": "Email"
+              },
+              {
+                "value": "social",
+                "label": "Social media"
+              },
+              {
+                "value": "physical",
+                "label": "Physical location"
+              },
+              {
+                "value": "pending",
+                "label": "Details not yet available"
+              }
+            ],
+            "when": {
+              "field": "PF08A",
+              "op": "not_in",
+              "values": [
+                "none",
+                "share"
+              ]
+            }
+          },
+          {
+            "id": "PF08D",
+            "label": "Action destinations",
+            "type": "repeater",
+            "required": false,
+            "when": {
+              "field": "PF08C",
+              "op": "not_empty"
+            },
+            "item_fields": [
+              {
+                "id": "method",
+                "label": "Method",
+                "type": "single_choice",
+                "required": true,
+                "options": [
+                  {
+                    "value": "website",
+                    "label": "Website/link"
+                  },
+                  {
+                    "value": "phone",
+                    "label": "Phone/WhatsApp"
+                  },
+                  {
+                    "value": "email",
+                    "label": "Email"
+                  },
+                  {
+                    "value": "social",
+                    "label": "Social media"
+                  },
+                  {
+                    "value": "physical",
+                    "label": "Physical location"
+                  }
+                ]
+              },
+              {
+                "id": "value",
+                "label": "URL/number/email/location",
+                "type": "short_text",
+                "required": true
+              }
+            ],
+            "max_items": 30
+          },
+          {
+            "id": "PF08E",
+            "label": "Would you like a QR code?",
+            "type": "single_choice",
+            "required": false,
+            "options": [
+              {
+                "value": "yes",
+                "label": "Yes"
+              },
+              {
+                "value": "no",
+                "label": "No"
+              },
+              {
+                "value": "unsure",
+                "label": "Designer to advise"
+              }
+            ]
+          },
+          {
+            "id": "PF08F",
+            "label": "QR destination if different from the existing action link",
+            "type": "url",
+            "required": false,
+            "when": {
+              "field": "PF08E",
+              "op": "eq",
+              "value": "yes"
+            }
+          }
+        ],
+        "notes": "When QR is yes, require at least one valid pre-existing or new destination at submission; never generate invalid QR targets."
+      },
+      {
+        "id": "PF09",
+        "title": "Category-specific questions",
+        "fields": [],
+        "notes": "Display exactly one corresponding category branch; also load shared_event only if PF02C=yes; load shared_business for business branch."
+      },
+      {
+        "id": "PF10",
+        "title": "Existing branding and supplied assets",
+        "fields": [
+          {
+            "id": "PF10A",
+            "label": "Do you have existing branding or materials to use?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "yes",
+                "label": "Yes"
+              },
+              {
+                "value": "no",
+                "label": "No"
+              },
+              {
+                "value": "later",
+                "label": "Will supply later"
+              }
+            ]
+          },
+          {
+            "id": "PF10B",
+            "label": "Which materials do you have?",
+            "type": "multi_choice",
+            "required": false,
+            "options": [
+              {
+                "value": "logo",
+                "label": "Logo"
+              },
+              {
+                "value": "guidelines",
+                "label": "Brand guidelines"
+              },
+              {
+                "value": "photos",
+                "label": "Photos"
+              },
+              {
+                "value": "illustrations",
+                "label": "Illustrations"
+              },
+              {
+                "value": "fonts",
+                "label": "Fonts"
+              },
+              {
+                "value": "previous",
+                "label": "Previous designs"
+              },
+              {
+                "value": "other",
+                "label": "Other"
+              }
+            ],
+            "when": {
+              "field": "PF10A",
+              "op": "eq",
+              "value": "yes"
+            }
+          },
+          {
+            "id": "PF10C",
+            "label": "Upload brand material or visual reference",
+            "type": "file_upload",
+            "required": false,
+            "when": {
+              "field": "PF10A",
+              "op": "eq",
+              "value": "yes"
+            },
+            "validation": {
+              "extensions": [
+                "pdf",
+                "docx",
+                "txt",
+                "png",
+                "jpg",
+                "jpeg",
+                "webp",
+                "svg"
+              ],
+              "max_megabytes": 20
+            }
+          },
+          {
+            "id": "PF10D",
+            "label": "Do you have permission to use the supplied materials?",
+            "type": "single_choice",
+            "required": false,
+            "options": [
+              {
+                "value": "yes",
+                "label": "Yes"
+              },
+              {
+                "value": "needs_check",
+                "label": "Need to confirm"
+              }
+            ],
+            "when": {
+              "field": "PF10A",
+              "op": "eq",
+              "value": "yes"
+            }
+          }
+        ]
+      },
+      {
+        "id": "PF11",
+        "title": "Visual direction",
+        "fields": [
+          {
+            "id": "PF11A",
+            "label": "Which feelings or styles suit your design?",
+            "type": "multi_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "elegant",
+                "label": "Elegant"
+              },
+              {
+                "value": "bold",
+                "label": "Bold"
+              },
+              {
+                "value": "playful",
+                "label": "Playful"
+              },
+              {
+                "value": "formal",
+                "label": "Formal"
+              },
+              {
+                "value": "luxury",
+                "label": "Premium"
+              },
+              {
+                "value": "minimal",
+                "label": "Minimal"
+              },
+              {
+                "value": "traditional",
+                "label": "Traditional"
+              },
+              {
+                "value": "modern",
+                "label": "Modern"
+              },
+              {
+                "value": "warm",
+                "label": "Warm"
+              },
+              {
+                "value": "energetic",
+                "label": "Energetic"
+              },
+              {
+                "value": "designer",
+                "label": "Designer to recommend"
+              }
+            ]
+          },
+          {
+            "id": "PF11B",
+            "label": "What kind of imagery do you prefer?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "photo",
+                "label": "Photography"
+              },
+              {
+                "value": "illustration",
+                "label": "Illustration"
+              },
+              {
+                "value": "graphic",
+                "label": "Graphic shapes/icons"
+              },
+              {
+                "value": "type",
+                "label": "Typography-focused"
+              },
+              {
+                "value": "mixed",
+                "label": "Mixed"
+              },
+              {
+                "value": "designer",
+                "label": "Designer to recommend"
+              }
+            ]
+          },
+          {
+            "id": "PF11C",
+            "label": "Which typography direction do you prefer?",
+            "type": "single_choice",
+            "required": false,
+            "options": [
+              {
+                "value": "clean",
+                "label": "Clean and modern"
+              },
+              {
+                "value": "classic",
+                "label": "Classic/elegant"
+              },
+              {
+                "value": "expressive",
+                "label": "Bold/expressive"
+              },
+              {
+                "value": "designer",
+                "label": "Designer to recommend"
+              }
+            ]
+          },
+          {
+            "id": "PF11D",
+            "label": "What should stand out most?",
+            "type": "short_text",
+            "required": true
+          },
+          {
+            "id": "PF11E",
+            "label": "Do you have inspiration or example designs?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "yes",
+                "label": "Yes"
+              },
+              {
+                "value": "no",
+                "label": "No"
+              }
+            ]
+          },
+          {
+            "id": "PF11F",
+            "label": "Upload visual references",
+            "type": "file_upload",
+            "required": false,
+            "when": {
+              "field": "PF11E",
+              "op": "eq",
+              "value": "yes"
+            },
+            "validation": {
+              "extensions": [
+                "pdf",
+                "docx",
+                "txt",
+                "png",
+                "jpg",
+                "jpeg",
+                "webp",
+                "svg"
+              ],
+              "max_megabytes": 20
+            }
+          },
+          {
+            "id": "PF11G",
+            "label": "What do you like about these references?",
+            "type": "long_text",
+            "required": false,
+            "when": {
+              "field": "PF11E",
+              "op": "eq",
+              "value": "yes"
+            }
+          },
+          {
+            "id": "PF11H",
+            "label": "Which language(s) should appear on the design?",
+            "type": "multi_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "en",
+                "label": "English"
+              },
+              {
+                "value": "sw",
+                "label": "Kiswahili"
+              },
+              {
+                "value": "other",
+                "label": "Other"
+              }
+            ]
+          },
+          {
+            "id": "PF11I",
+            "label": "Specify the other language(s)",
+            "type": "short_text",
+            "required": true,
+            "when": {
+              "field": "PF11H",
+              "op": "contains",
+              "value": "other"
+            }
+          },
+          {
+            "id": "PF11J",
+            "label": "Is the translation supplied?",
+            "type": "single_choice",
+            "required": false,
+            "options": [
+              {
+                "value": "yes",
+                "label": "Yes"
+              },
+              {
+                "value": "help",
+                "label": "Translation help needed"
+              },
+              {
+                "value": "na",
+                "label": "Not applicable"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "PF12",
+        "title": "Colour selection",
+        "fields": [
+          {
+            "id": "PF12A",
+            "label": "How would you like to choose colours?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "palette",
+                "label": "Choose a suggested palette"
+              },
+              {
+                "value": "custom",
+                "label": "Choose my own colours"
+              },
+              {
+                "value": "brand",
+                "label": "Use brand colours"
+              },
+              {
+                "value": "designer",
+                "label": "Designer to recommend"
+              }
+            ]
+          },
+          {
+            "id": "PF12B",
+            "label": "Choose a suggested colour palette",
+            "type": "palette_select",
+            "required": true,
+            "when": {
+              "field": "PF12A",
+              "op": "eq",
+              "value": "palette"
+            }
+          },
+          {
+            "id": "PF12C",
+            "label": "Choose your own colours",
+            "type": "color_multi_picker",
+            "required": true,
+            "when": {
+              "field": "PF12A",
+              "op": "eq",
+              "value": "custom"
+            }
+          },
+          {
+            "id": "PF12D",
+            "label": "Enter brand colours or HEX values",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "PF12A",
+              "op": "eq",
+              "value": "brand"
+            }
+          },
+          {
+            "id": "PF12E",
+            "label": "Any colours to avoid?",
+            "type": "short_text",
+            "required": false
+          },
+          {
+            "id": "PF12F",
+            "label": "How strictly should your selected colours be followed?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "strict",
+                "label": "Use only these colours"
+              },
+              {
+                "value": "main",
+                "label": "Use as primary; complementary colours allowed"
+              },
+              {
+                "value": "inspire",
+                "label": "Use for inspiration"
+              }
+            ],
+            "when": {
+              "field": "PF12A",
+              "op": "in",
+              "values": [
+                "palette",
+                "custom",
+                "brand"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "id": "PF13",
+        "title": "Sizes and versions",
+        "fields": [
+          {
+            "id": "PF13A",
+            "label": "Which sizes, platforms or formats do you need?",
+            "type": "repeater",
+            "required": true,
+            "item_fields": [
+              {
+                "id": "use",
+                "label": "Platform/use (e.g. A3 print, IG post, WhatsApp Status)",
+                "type": "short_text",
+                "required": true
+              },
+              {
+                "id": "size",
+                "label": "Size, preset or dimensions",
+                "type": "short_text",
+                "required": true
+              },
+              {
+                "id": "units",
+                "label": "Units (px/mm/cm/in)",
+                "type": "single_choice",
+                "required": true,
+                "options": [
+                  {
+                    "value": "px",
+                    "label": "px"
+                  },
+                  {
+                    "value": "mm",
+                    "label": "mm"
+                  },
+                  {
+                    "value": "cm",
+                    "label": "cm"
+                  },
+                  {
+                    "value": "in",
+                    "label": "in"
+                  },
+                  {
+                    "value": "preset",
+                    "label": "preset"
+                  }
+                ]
+              },
+              {
+                "id": "content_variant",
+                "label": "Content version name if different",
+                "type": "short_text",
+                "required": false
+              }
+            ],
+            "max_items": 30
+          },
+          {
+            "id": "PF13B",
+            "label": "Do the versions require different content or layouts?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "resize",
+                "label": "Mostly resizing"
+              },
+              {
+                "value": "layout",
+                "label": "Different layouts"
+              },
+              {
+                "value": "content",
+                "label": "Different information"
+              },
+              {
+                "value": "unsure",
+                "label": "Need designer advice"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "PF14",
+        "title": "Print preparation",
+        "fields": [
+          {
+            "id": "PF14A",
+            "label": "Will any of these designs be printed?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "yes",
+                "label": "Yes"
+              },
+              {
+                "value": "no",
+                "label": "No"
+              }
+            ],
+            "when": {
+              "field": "PF03A",
+              "op": "in",
+              "values": [
+                "print",
+                "both"
+              ]
+            }
+          },
+          {
+            "id": "PF14B",
+            "label": "Is print single- or double-sided?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "single",
+                "label": "Single-sided"
+              },
+              {
+                "value": "double",
+                "label": "Double-sided"
+              },
+              {
+                "value": "unsure",
+                "label": "Not sure"
+              }
+            ],
+            "when": {
+              "field": "PF14A",
+              "op": "eq",
+              "value": "yes"
+            }
+          },
+          {
+            "id": "PF14C",
+            "label": "Expected print quantity (if known)",
+            "type": "short_text",
+            "required": false,
+            "when": {
+              "field": "PF14A",
+              "op": "eq",
+              "value": "yes"
+            }
+          },
+          {
+            "id": "PF14D",
+            "label": "Do you have printer size, bleed, safe-area or colour requirements?",
+            "type": "long_text",
+            "required": false,
+            "when": {
+              "field": "PF14A",
+              "op": "eq",
+              "value": "yes"
+            }
+          }
+        ]
+      },
+      {
+        "id": "PF15",
+        "title": "Deliverables",
+        "fields": [
+          {
+            "id": "PF15A",
+            "label": "Which final files do you need?",
+            "type": "multi_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "png",
+                "label": "PNG"
+              },
+              {
+                "value": "jpg",
+                "label": "JPG"
+              },
+              {
+                "value": "pdf",
+                "label": "PDF"
+              },
+              {
+                "value": "pdfprint",
+                "label": "Print-ready PDF"
+              },
+              {
+                "value": "editable",
+                "label": "Editable source file"
+              },
+              {
+                "value": "unsure",
+                "label": "Designer to recommend"
+              }
+            ]
+          },
+          {
+            "id": "PF15B",
+            "label": "Any handover or file-naming requirements?",
+            "type": "long_text",
+            "required": false
+          }
+        ]
+      },
+      {
+        "id": "PF16",
+        "title": "Deadline",
+        "fields": [
+          {
+            "id": "PF16A",
+            "label": "When do you need the completed design?",
+            "type": "date",
+            "required": true
+          },
+          {
+            "id": "PF16B",
+            "label": "How flexible is this deadline?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "fixed",
+                "label": "Fixed deadline"
+              },
+              {
+                "value": "some",
+                "label": "Some flexibility"
+              },
+              {
+                "value": "flexible",
+                "label": "Flexible"
+              }
+            ]
+          },
+          {
+            "id": "PF16C",
+            "label": "Is there an earlier approval or publishing deadline?",
+            "type": "long_text",
+            "required": false
+          }
+        ]
+      },
+      {
+        "id": "PF17",
+        "title": "Budget and approval",
+        "fields": [
+          {
+            "id": "PF17A",
+            "label": "How would you prefer to discuss the budget?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "range",
+                "label": "I have a budget range"
+              },
+              {
+                "value": "quote",
+                "label": "Please provide a quotation"
+              },
+              {
+                "value": "undecided",
+                "label": "Budget not decided"
+              }
+            ]
+          },
+          {
+            "id": "PF17B",
+            "label": "Minimum budget",
+            "type": "money",
+            "required": true,
+            "when": {
+              "field": "PF17A",
+              "op": "eq",
+              "value": "range"
+            },
+            "validation": {
+              "min": 0,
+              "currency": "ISO_4217"
+            }
+          },
+          {
+            "id": "PF17C",
+            "label": "Maximum budget",
+            "type": "money",
+            "required": true,
+            "when": {
+              "field": "PF17A",
+              "op": "eq",
+              "value": "range"
+            },
+            "validation": {
+              "min": 0,
+              "currency": "ISO_4217"
+            }
+          },
+          {
+            "id": "PF17D",
+            "label": "Who will approve the final design?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "self",
+                "label": "I will"
+              },
+              {
+                "value": "team",
+                "label": "Another person or team"
+              },
+              {
+                "value": "unsure",
+                "label": "Not decided"
+              }
+            ]
+          },
+          {
+            "id": "PF17E",
+            "label": "Explain any approval process or special instructions",
+            "type": "long_text",
+            "required": false
+          },
+          {
+            "id": "PF17F",
+            "label": "Anything else the designer should know?",
+            "type": "long_text",
+            "required": false
+          }
+        ]
+      }
+    ],
+    "category_branches": [
+      {
+        "id": "events_entertainment",
+        "title": "Events & Entertainment",
+        "when": {
+          "field": "PF02A",
+          "op": "eq",
+          "value": "events_entertainment"
+        },
+        "fields": [
+          {
+            "id": "ENT01",
+            "label": "What genre, theme or atmosphere should the entertainment communicate?",
+            "type": "short_text",
+            "required": false
+          },
+          {
+            "id": "ENT02",
+            "label": "Which performers or attractions should be highlighted?",
+            "type": "repeater",
+            "required": false,
+            "when": {
+              "field": "PF02D",
+              "op": "in",
+              "values": [
+                "concert",
+                "festival",
+                "performance",
+                "exhibition"
+              ]
+            },
+            "item_fields": [
+              {
+                "id": "name",
+                "label": "Featured performer / attraction",
+                "type": "short_text",
+                "required": true
+              },
+              {
+                "id": "priority",
+                "label": "Is this the headline attraction?",
+                "type": "boolean",
+                "required": false
+              }
+            ],
+            "max_items": 30
+          },
+          {
+            "id": "ENT03",
+            "label": "Will the event feature several stages, sessions or areas?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "yes",
+                "label": "Yes"
+              },
+              {
+                "value": "no",
+                "label": "No"
+              },
+              {
+                "value": "pending",
+                "label": "Not confirmed yet"
+              }
+            ],
+            "when": {
+              "field": "PF02D",
+              "op": "in",
+              "values": [
+                "festival",
+                "exhibition"
+              ]
+            }
+          },
+          {
+            "id": "ENT04",
+            "label": "Describe the areas, stages or sessions",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "ENT03",
+              "op": "eq",
+              "value": "yes"
+            }
+          },
+          {
+            "id": "ENT05",
+            "label": "What is the party theme or dress concept?",
+            "type": "short_text",
+            "required": false,
+            "when": {
+              "field": "PF02D",
+              "op": "eq",
+              "value": "party"
+            }
+          },
+          {
+            "id": "ENT06",
+            "label": "Which film titles will be screened?",
+            "type": "repeater",
+            "required": true,
+            "when": {
+              "field": "PF02D",
+              "op": "eq",
+              "value": "film"
+            },
+            "item_fields": [
+              {
+                "id": "title",
+                "label": "Film title",
+                "type": "short_text",
+                "required": true
+              },
+              {
+                "id": "rating",
+                "label": "Official age classification if applicable",
+                "type": "short_text",
+                "required": false
+              }
+            ],
+            "max_items": 30
+          },
+          {
+            "id": "ENT07",
+            "label": "Which teams, athletes or activities should appear?",
+            "type": "repeater",
+            "required": true,
+            "when": {
+              "field": "PF02D",
+              "op": "eq",
+              "value": "sports"
+            },
+            "item_fields": [
+              {
+                "id": "name",
+                "label": "Team/athlete/activity",
+                "type": "short_text",
+                "required": true
+              }
+            ],
+            "max_items": 30
+          },
+          {
+            "id": "ENT08",
+            "label": "Who is the sports poster primarily for?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "spectators",
+                "label": "Spectators"
+              },
+              {
+                "value": "participants",
+                "label": "Participants"
+              },
+              {
+                "value": "both",
+                "label": "Both"
+              }
+            ],
+            "when": {
+              "field": "PF02D",
+              "op": "eq",
+              "value": "sports"
+            }
+          },
+          {
+            "id": "ENT09",
+            "label": "Are there production credits or featured collaborators?",
+            "type": "long_text",
+            "required": false,
+            "when": {
+              "field": "PF02D",
+              "op": "eq",
+              "value": "performance"
+            }
+          },
+          {
+            "id": "ENT10",
+            "label": "List any eligibility, participation or age-rating information",
+            "type": "long_text",
+            "required": false
+          }
+        ]
+      },
+      {
+        "id": "business_promotion",
+        "title": "Business & Product Promotion",
+        "when": {
+          "field": "PF02A",
+          "op": "eq",
+          "value": "business_promotion"
+        },
+        "fields": [
+          {
+            "id": "BP01",
+            "label": "What product category or service industry is this about?",
+            "type": "short_text",
+            "required": true
+          },
+          {
+            "id": "BP02",
+            "label": "Does the product have variants or options customers should know?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "yes",
+                "label": "Yes"
+              },
+              {
+                "value": "no",
+                "label": "No"
+              }
+            ],
+            "when": {
+              "field": "PF02E",
+              "op": "eq",
+              "value": "product"
+            }
+          },
+          {
+            "id": "BP03",
+            "label": "List the variants",
+            "type": "repeater",
+            "required": true,
+            "when": {
+              "field": "BP02",
+              "op": "eq",
+              "value": "yes"
+            },
+            "item_fields": [
+              {
+                "id": "variant",
+                "label": "Variant name",
+                "type": "short_text",
+                "required": true
+              },
+              {
+                "id": "details",
+                "label": "Size/model/colour",
+                "type": "short_text",
+                "required": false
+              }
+            ],
+            "max_items": 30
+          },
+          {
+            "id": "BP04",
+            "label": "What exactly is included in your service?",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "PF02E",
+              "op": "eq",
+              "value": "service"
+            }
+          },
+          {
+            "id": "BP05",
+            "label": "How is the service delivered?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "onsite",
+                "label": "At your premises"
+              },
+              {
+                "value": "client",
+                "label": "At customer location"
+              },
+              {
+                "value": "online",
+                "label": "Online"
+              },
+              {
+                "value": "mixed",
+                "label": "More than one method"
+              }
+            ],
+            "when": {
+              "field": "PF02E",
+              "op": "eq",
+              "value": "service"
+            }
+          },
+          {
+            "id": "BP06",
+            "label": "Do customers need to book appointments?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "yes",
+                "label": "Yes"
+              },
+              {
+                "value": "no",
+                "label": "No"
+              }
+            ],
+            "when": {
+              "field": "PF02E",
+              "op": "eq",
+              "value": "service"
+            }
+          },
+          {
+            "id": "BP07",
+            "label": "Which products/services are covered by the sale?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "all",
+                "label": "All"
+              },
+              {
+                "value": "selected",
+                "label": "Selected"
+              },
+              {
+                "value": "category",
+                "label": "Specific categories"
+              }
+            ],
+            "when": {
+              "field": "PF02E",
+              "op": "eq",
+              "value": "sale"
+            }
+          },
+          {
+            "id": "BP08",
+            "label": "What is new about the product or service?",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "PF02E",
+              "op": "eq",
+              "value": "launch"
+            }
+          },
+          {
+            "id": "BP09",
+            "label": "How much should the launch reveal?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "full",
+                "label": "Full reveal"
+              },
+              {
+                "value": "partial",
+                "label": "Partial reveal"
+              },
+              {
+                "value": "teaser",
+                "label": "Coming-soon teaser"
+              }
+            ],
+            "when": {
+              "field": "PF02E",
+              "op": "eq",
+              "value": "launch"
+            }
+          },
+          {
+            "id": "BP10",
+            "label": "What kind of business opening is this?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "new",
+                "label": "New business"
+              },
+              {
+                "value": "branch",
+                "label": "New branch"
+              },
+              {
+                "value": "reopen",
+                "label": "Reopening"
+              },
+              {
+                "value": "move",
+                "label": "Relocation"
+              }
+            ],
+            "when": {
+              "field": "PF02E",
+              "op": "eq",
+              "value": "opening"
+            }
+          },
+          {
+            "id": "BP11",
+            "label": "Which branch or business location is opening or changing?",
+            "type": "short_text",
+            "required": true,
+            "when": {
+              "field": "PF02E",
+              "op": "eq",
+              "value": "opening"
+            }
+          },
+          {
+            "id": "BP12",
+            "label": "What makes your business unique?",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "PF02E",
+              "op": "eq",
+              "value": "brand"
+            }
+          },
+          {
+            "id": "BP13",
+            "label": "What prizes or rewards can participants win?",
+            "type": "repeater",
+            "required": true,
+            "when": {
+              "field": "PF02E",
+              "op": "eq",
+              "value": "giveaway"
+            },
+            "item_fields": [
+              {
+                "id": "prize",
+                "label": "Prize",
+                "type": "short_text",
+                "required": true
+              }
+            ],
+            "max_items": 30
+          },
+          {
+            "id": "BP14",
+            "label": "What steps must someone take to enter?",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "PF02E",
+              "op": "eq",
+              "value": "giveaway"
+            }
+          },
+          {
+            "id": "BP15",
+            "label": "Who is eligible?",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "PF02E",
+              "op": "eq",
+              "value": "giveaway"
+            }
+          },
+          {
+            "id": "BP16",
+            "label": "When does the giveaway close?",
+            "type": "date",
+            "required": true,
+            "when": {
+              "field": "PF02E",
+              "op": "eq",
+              "value": "giveaway"
+            }
+          },
+          {
+            "id": "BP17",
+            "label": "How and when are winners selected or announced?",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "PF02E",
+              "op": "eq",
+              "value": "giveaway"
+            }
+          },
+          {
+            "id": "BP18",
+            "label": "Describe the other promotion",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "PF02E",
+              "op": "eq",
+              "value": "other"
+            }
+          }
+        ]
+      },
+      {
+        "id": "corporate",
+        "title": "Corporate & Professional",
+        "when": {
+          "field": "PF02A",
+          "op": "eq",
+          "value": "corporate"
+        },
+        "fields": [
+          {
+            "id": "COR01",
+            "label": "What is the official organisation or department name?",
+            "type": "short_text",
+            "required": true
+          },
+          {
+            "id": "COR02",
+            "label": "What tone should the official communication have?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "formal",
+                "label": "Strictly formal"
+              },
+              {
+                "value": "friendly",
+                "label": "Professional and approachable"
+              },
+              {
+                "value": "celebratory",
+                "label": "Professional and celebratory"
+              },
+              {
+                "value": "designer",
+                "label": "Designer to recommend"
+              }
+            ]
+          },
+          {
+            "id": "COR03",
+            "label": "What official information must be stated exactly as approved?",
+            "type": "long_text",
+            "required": true
+          },
+          {
+            "id": "COR04",
+            "label": "Who is issuing or authorising the communication?",
+            "type": "short_text",
+            "required": false
+          },
+          {
+            "id": "COR05",
+            "label": "Does the communication require an official sign-off or approval notice?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "yes",
+                "label": "Yes"
+              },
+              {
+                "value": "no",
+                "label": "No"
+              },
+              {
+                "value": "pending",
+                "label": "Not known"
+              }
+            ]
+          },
+          {
+            "id": "COR06",
+            "label": "Provide the signature, title, approval wording or protocol",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "COR05",
+              "op": "eq",
+              "value": "yes"
+            }
+          },
+          {
+            "id": "COR07",
+            "label": "Seminar/workshop topics or sessions",
+            "type": "repeater",
+            "required": true,
+            "when": {
+              "field": "PF02F",
+              "op": "eq",
+              "value": "seminar"
+            },
+            "item_fields": [
+              {
+                "id": "name",
+                "label": "Topic/session",
+                "type": "short_text",
+                "required": true
+              },
+              {
+                "id": "presenter",
+                "label": "Presenter",
+                "type": "short_text",
+                "required": false
+              }
+            ],
+            "max_items": 30
+          },
+          {
+            "id": "COR08",
+            "label": "What milestone or achievement is being celebrated?",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "PF02F",
+              "op": "eq",
+              "value": "milestone"
+            }
+          },
+          {
+            "id": "COR09",
+            "label": "What policy or notice is being communicated?",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "PF02F",
+              "op": "eq",
+              "value": "policy"
+            }
+          },
+          {
+            "id": "COR10",
+            "label": "Provide the verified statistics or highlights to display",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "PF02F",
+              "op": "eq",
+              "value": "report"
+            }
+          },
+          {
+            "id": "COR11",
+            "label": "What are the key corporate strengths or services to highlight?",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "PF02F",
+              "op": "eq",
+              "value": "brand"
+            }
+          },
+          {
+            "id": "COR12",
+            "label": "Describe the custom corporate communication",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "PF02F",
+              "op": "eq",
+              "value": "other"
+            }
+          }
+        ]
+      },
+      {
+        "id": "educational",
+        "title": "Educational & Informational",
+        "when": {
+          "field": "PF02A",
+          "op": "eq",
+          "value": "educational"
+        },
+        "fields": [
+          {
+            "id": "EDU01",
+            "label": "What is the school, institution, course or subject?",
+            "type": "short_text",
+            "required": true
+          },
+          {
+            "id": "EDU02",
+            "label": "Who needs to understand this material?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "learners",
+                "label": "Students/learners"
+              },
+              {
+                "value": "parents",
+                "label": "Parents"
+              },
+              {
+                "value": "teachers",
+                "label": "Teachers/staff"
+              },
+              {
+                "value": "public",
+                "label": "General public"
+              },
+              {
+                "value": "other",
+                "label": "Other"
+              }
+            ]
+          },
+          {
+            "id": "EDU03",
+            "label": "Which facts, learning points or instructions must be accurate and included?",
+            "type": "long_text",
+            "required": true
+          },
+          {
+            "id": "EDU04",
+            "label": "Are references or source citations needed on the design?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "yes",
+                "label": "Yes"
+              },
+              {
+                "value": "no",
+                "label": "No"
+              },
+              {
+                "value": "unsure",
+                "label": "Designer to advise"
+              }
+            ]
+          },
+          {
+            "id": "EDU05",
+            "label": "References or approved information sources",
+            "type": "repeater",
+            "required": true,
+            "when": {
+              "field": "EDU04",
+              "op": "eq",
+              "value": "yes"
+            },
+            "item_fields": [
+              {
+                "id": "citation",
+                "label": "Source/citation",
+                "type": "short_text",
+                "required": true
+              },
+              {
+                "id": "link",
+                "label": "URL, if any",
+                "type": "url",
+                "required": false
+              }
+            ],
+            "max_items": 30
+          },
+          {
+            "id": "EDU06",
+            "label": "Course or workshop details",
+            "type": "repeater",
+            "required": true,
+            "when": {
+              "field": "PF02G",
+              "op": "in",
+              "values": [
+                "class",
+                "workshop"
+              ]
+            },
+            "item_fields": [
+              {
+                "id": "name",
+                "label": "Course / workshop",
+                "type": "short_text",
+                "required": true
+              },
+              {
+                "id": "duration",
+                "label": "Duration",
+                "type": "short_text",
+                "required": false
+              },
+              {
+                "id": "cost",
+                "label": "Fee if advertised",
+                "type": "short_text",
+                "required": false
+              }
+            ],
+            "max_items": 30
+          },
+          {
+            "id": "EDU07",
+            "label": "Timetable entries",
+            "type": "repeater",
+            "required": true,
+            "when": {
+              "field": "PF02G",
+              "op": "eq",
+              "value": "timetable"
+            },
+            "item_fields": [
+              {
+                "id": "day",
+                "label": "Day/date",
+                "type": "short_text",
+                "required": true
+              },
+              {
+                "id": "activity",
+                "label": "Activity/lesson",
+                "type": "short_text",
+                "required": true
+              },
+              {
+                "id": "time",
+                "label": "Time",
+                "type": "short_text",
+                "required": false
+              }
+            ],
+            "max_items": 30
+          },
+          {
+            "id": "EDU08",
+            "label": "What are the admission requirements and application steps?",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "PF02G",
+              "op": "eq",
+              "value": "admission"
+            }
+          },
+          {
+            "id": "EDU09",
+            "label": "When does admission or registration close?",
+            "type": "date",
+            "required": false,
+            "when": {
+              "field": "PF02G",
+              "op": "eq",
+              "value": "admission"
+            }
+          },
+          {
+            "id": "EDU10",
+            "label": "Describe the educational or safety instructions to communicate",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "PF02G",
+              "op": "in",
+              "values": [
+                "infographic",
+                "safety"
+              ]
+            }
+          },
+          {
+            "id": "EDU11",
+            "label": "Describe the other educational material",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "PF02G",
+              "op": "eq",
+              "value": "other"
+            }
+          }
+        ]
+      },
+      {
+        "id": "awareness",
+        "title": "Awareness & Campaigns",
+        "when": {
+          "field": "PF02A",
+          "op": "eq",
+          "value": "awareness"
+        },
+        "fields": [
+          {
+            "id": "AW01",
+            "label": "What cause, issue or campaign name is this about?",
+            "type": "short_text",
+            "required": true
+          },
+          {
+            "id": "AW02",
+            "label": "What is the key fact, problem or message people should understand?",
+            "type": "long_text",
+            "required": true
+          },
+          {
+            "id": "AW03",
+            "label": "Which response are you asking the audience to make?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "learn",
+                "label": "Learn more"
+              },
+              {
+                "value": "participate",
+                "label": "Participate"
+              },
+              {
+                "value": "change",
+                "label": "Change behaviour"
+              },
+              {
+                "value": "donate",
+                "label": "Donate"
+              },
+              {
+                "value": "volunteer",
+                "label": "Volunteer"
+              },
+              {
+                "value": "share",
+                "label": "Spread awareness"
+              },
+              {
+                "value": "other",
+                "label": "Other"
+              }
+            ]
+          },
+          {
+            "id": "AW04",
+            "label": "Facts, data or statistics to include",
+            "type": "repeater",
+            "required": false,
+            "item_fields": [
+              {
+                "id": "claim",
+                "label": "Claim/statistic",
+                "type": "long_text",
+                "required": true
+              },
+              {
+                "id": "source",
+                "label": "Source and date",
+                "type": "short_text",
+                "required": true
+              }
+            ],
+            "max_items": 30
+          },
+          {
+            "id": "AW05",
+            "label": "Does the poster include sensitive or potentially distressing material?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "yes",
+                "label": "Yes"
+              },
+              {
+                "value": "no",
+                "label": "No"
+              },
+              {
+                "value": "unsure",
+                "label": "Not sure"
+              }
+            ]
+          },
+          {
+            "id": "AW06",
+            "label": "What sensitive-content precautions or tone should the design follow?",
+            "type": "long_text",
+            "required": false,
+            "when": {
+              "field": "AW05",
+              "op": "eq",
+              "value": "yes"
+            }
+          },
+          {
+            "id": "AW07",
+            "label": "Who is the campaign organiser or sponsoring organisation?",
+            "type": "long_text",
+            "required": false
+          },
+          {
+            "id": "AW08",
+            "label": "What contribution instructions and beneficiary details must appear?",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "PF02H",
+              "op": "in",
+              "values": [
+                "fundraiser",
+                "charity"
+              ]
+            }
+          },
+          {
+            "id": "AW09",
+            "label": "What action can viewers take locally?",
+            "type": "long_text",
+            "required": false,
+            "when": {
+              "field": "PF02H",
+              "op": "eq",
+              "value": "community"
+            }
+          },
+          {
+            "id": "AW10",
+            "label": "Describe the other awareness campaign",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "PF02H",
+              "op": "eq",
+              "value": "other"
+            }
+          }
+        ]
+      },
+      {
+        "id": "recruitment",
+        "title": "Recruitment & Opportunities",
+        "when": {
+          "field": "PF02A",
+          "op": "eq",
+          "value": "recruitment"
+        },
+        "fields": [
+          {
+            "id": "REC01",
+            "label": "Which organisation is offering the opportunity?",
+            "type": "short_text",
+            "required": true
+          },
+          {
+            "id": "REC02",
+            "label": "Which positions or opportunities are available?",
+            "type": "repeater",
+            "required": true,
+            "item_fields": [
+              {
+                "id": "title",
+                "label": "Position/opportunity",
+                "type": "short_text",
+                "required": true
+              },
+              {
+                "id": "count",
+                "label": "Number of openings (if advertised)",
+                "type": "integer",
+                "required": false
+              },
+              {
+                "id": "location",
+                "label": "Work/study location or remote status",
+                "type": "short_text",
+                "required": false
+              }
+            ],
+            "max_items": 30
+          },
+          {
+            "id": "REC03",
+            "label": "What are the eligibility criteria and qualifications?",
+            "type": "long_text",
+            "required": true
+          },
+          {
+            "id": "REC04",
+            "label": "What responsibilities, benefits or opportunity details should be highlighted?",
+            "type": "long_text",
+            "required": false
+          },
+          {
+            "id": "REC05",
+            "label": "How should applicants submit their applications?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "email",
+                "label": "Email"
+              },
+              {
+                "value": "website",
+                "label": "Application portal"
+              },
+              {
+                "value": "physical",
+                "label": "Physical delivery"
+              },
+              {
+                "value": "other",
+                "label": "Other"
+              }
+            ]
+          },
+          {
+            "id": "REC06",
+            "label": "Give exact application instructions and destination",
+            "type": "long_text",
+            "required": true
+          },
+          {
+            "id": "REC07",
+            "label": "What is the application deadline?",
+            "type": "date",
+            "required": true
+          },
+          {
+            "id": "REC08",
+            "label": "Which documents are required from applicants?",
+            "type": "long_text",
+            "required": false
+          },
+          {
+            "id": "REC09",
+            "label": "Must an equal opportunity or official disclaimer appear?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "yes",
+                "label": "Yes"
+              },
+              {
+                "value": "no",
+                "label": "No"
+              },
+              {
+                "value": "unsure",
+                "label": "Not sure"
+              }
+            ]
+          },
+          {
+            "id": "REC10",
+            "label": "Provide the exact disclaimer",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "REC09",
+              "op": "eq",
+              "value": "yes"
+            }
+          },
+          {
+            "id": "REC11",
+            "label": "Describe any interview, audition or selection instructions",
+            "type": "long_text",
+            "required": false,
+            "when": {
+              "field": "PF02I",
+              "op": "eq",
+              "value": "casting"
+            }
+          },
+          {
+            "id": "REC12",
+            "label": "Describe the custom opportunity",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "PF02I",
+              "op": "eq",
+              "value": "other"
+            }
+          }
+        ]
+      },
+      {
+        "id": "celebrations",
+        "title": "Celebrations & Personal Events",
+        "when": {
+          "field": "PF02A",
+          "op": "eq",
+          "value": "celebrations"
+        },
+        "fields": [
+          {
+            "id": "CEL01",
+            "label": "Whose occasion is being celebrated? (Name exactly as it should appear)",
+            "type": "short_text",
+            "required": true
+          },
+          {
+            "id": "CEL02",
+            "label": "What is the occasion, theme or celebration message?",
+            "type": "long_text",
+            "required": true
+          },
+          {
+            "id": "CEL03",
+            "label": "Is this a public announcement or a private invitation?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "public",
+                "label": "Public announcement"
+              },
+              {
+                "value": "invite",
+                "label": "Private invitation"
+              },
+              {
+                "value": "both",
+                "label": "Both"
+              }
+            ]
+          },
+          {
+            "id": "CEL04",
+            "label": "Should RSVP information appear?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "yes",
+                "label": "Yes"
+              },
+              {
+                "value": "no",
+                "label": "No"
+              }
+            ],
+            "when": {
+              "field": "CEL03",
+              "op": "eq",
+              "value": "invite"
+            }
+          },
+          {
+            "id": "CEL05",
+            "label": "Provide RSVP contact or instructions",
+            "type": "short_text",
+            "required": true,
+            "when": {
+              "field": "CEL04",
+              "op": "eq",
+              "value": "yes"
+            }
+          },
+          {
+            "id": "CEL06",
+            "label": "What birthday age or milestone should appear (if any)?",
+            "type": "short_text",
+            "required": false,
+            "when": {
+              "field": "PF02J",
+              "op": "eq",
+              "value": "birthday"
+            }
+          },
+          {
+            "id": "CEL07",
+            "label": "Names of the couple",
+            "type": "repeater",
+            "required": true,
+            "when": {
+              "field": "PF02J",
+              "op": "eq",
+              "value": "wedding"
+            },
+            "item_fields": [
+              {
+                "id": "name",
+                "label": "Name",
+                "type": "short_text",
+                "required": true
+              }
+            ],
+            "max_items": 30
+          },
+          {
+            "id": "CEL08",
+            "label": "Degree, institution or graduation accomplishment to mention",
+            "type": "short_text",
+            "required": false,
+            "when": {
+              "field": "PF02J",
+              "op": "eq",
+              "value": "graduation"
+            }
+          },
+          {
+            "id": "CEL09",
+            "label": "Which anniversary or milestone is being marked?",
+            "type": "short_text",
+            "required": true,
+            "when": {
+              "field": "PF02J",
+              "op": "eq",
+              "value": "anniversary"
+            }
+          },
+          {
+            "id": "CEL10",
+            "label": "Are there special cultural, family or memorial sensitivities to follow?",
+            "type": "long_text",
+            "required": false
+          },
+          {
+            "id": "CEL11",
+            "label": "What remembrance wording or service details must be used?",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "PF02J",
+              "op": "eq",
+              "value": "memorial"
+            }
+          },
+          {
+            "id": "CEL12",
+            "label": "Describe the other personal occasion",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "PF02J",
+              "op": "eq",
+              "value": "other"
+            }
+          }
+        ]
+      },
+      {
+        "id": "religious_community",
+        "title": "Religious & Community",
+        "when": {
+          "field": "PF02A",
+          "op": "eq",
+          "value": "religious_community"
+        },
+        "fields": [
+          {
+            "id": "REL01",
+            "label": "What is the name of the church, ministry or community organisation?",
+            "type": "short_text",
+            "required": true
+          },
+          {
+            "id": "REL02",
+            "label": "What is the theme or main spiritual/community message?",
+            "type": "long_text",
+            "required": false
+          },
+          {
+            "id": "REL03",
+            "label": "Should any scripture or quotation appear?",
+            "type": "single_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "yes",
+                "label": "Yes"
+              },
+              {
+                "value": "no",
+                "label": "No"
+              }
+            ]
+          },
+          {
+            "id": "REL04",
+            "label": "Give the scripture reference and translation, or exact quotation source",
+            "type": "short_text",
+            "required": true,
+            "when": {
+              "field": "REL03",
+              "op": "eq",
+              "value": "yes"
+            }
+          },
+          {
+            "id": "REL05",
+            "label": "Provide the exact scripture/quotation text or request approved wording",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "REL03",
+              "op": "eq",
+              "value": "yes"
+            }
+          },
+          {
+            "id": "REL06",
+            "label": "Will a pastor, guest minister, leader or speaker be featured?",
+            "type": "single_choice",
+            "required": false,
+            "options": [
+              {
+                "value": "yes",
+                "label": "Yes"
+              },
+              {
+                "value": "no",
+                "label": "No"
+              },
+              {
+                "value": "pending",
+                "label": "Not confirmed"
+              }
+            ],
+            "when": {
+              "field": "PF02K",
+              "op": "in",
+              "values": [
+                "service",
+                "youth",
+                "conference",
+                "prayer",
+                "outreach",
+                "gospel"
+              ]
+            }
+          },
+          {
+            "id": "REL07",
+            "label": "Describe the ministry focus, activities or special programme",
+            "type": "long_text",
+            "required": false
+          },
+          {
+            "id": "REL08",
+            "label": "What is the fundraising purpose or beneficiary?",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "PF02K",
+              "op": "eq",
+              "value": "harambee"
+            }
+          },
+          {
+            "id": "REL09",
+            "label": "Is there a fundraising target to display? (optional)",
+            "type": "short_text",
+            "required": false,
+            "when": {
+              "field": "PF02K",
+              "op": "eq",
+              "value": "harambee"
+            }
+          },
+          {
+            "id": "REL10",
+            "label": "Provide approved contribution instructions and payee confirmation",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "PF02K",
+              "op": "eq",
+              "value": "harambee"
+            }
+          },
+          {
+            "id": "REL11",
+            "label": "Should the design quote a Bible passage rather than announce an event?",
+            "type": "single_choice",
+            "required": false,
+            "options": [
+              {
+                "value": "yes",
+                "label": "Yes"
+              },
+              {
+                "value": "no",
+                "label": "No"
+              }
+            ],
+            "when": {
+              "field": "PF02K",
+              "op": "eq",
+              "value": "scripture"
+            }
+          },
+          {
+            "id": "REL12",
+            "label": "Describe the community announcement and who it applies to",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "PF02K",
+              "op": "eq",
+              "value": "community"
+            }
+          },
+          {
+            "id": "REL13",
+            "label": "Describe the other religious/community purpose",
+            "type": "long_text",
+            "required": true,
+            "when": {
+              "field": "PF02K",
+              "op": "eq",
+              "value": "other"
+            }
+          }
+        ]
+      },
+      {
+        "id": "other",
+        "title": "Other / Custom",
+        "when": {
+          "field": "PF02A",
+          "op": "eq",
+          "value": "other"
+        },
+        "fields": [
+          {
+            "id": "CUS01",
+            "label": "Tell us exactly what you are creating and who it is for",
+            "type": "long_text",
+            "required": true
+          },
+          {
+            "id": "CUS02",
+            "label": "What information absolutely must appear?",
+            "type": "long_text",
+            "required": true
+          },
+          {
+            "id": "CUS03",
+            "label": "Are there any unusual specifications or constraints?",
+            "type": "long_text",
+            "required": false
+          },
+          {
+            "id": "CUS04",
+            "label": "Upload a sample brief or design reference",
+            "type": "file_upload",
+            "required": false,
+            "validation": {
+              "extensions": [
+                "pdf",
+                "docx",
+                "txt",
+                "png",
+                "jpg",
+                "jpeg",
+                "webp",
+                "svg"
+              ],
+              "max_megabytes": 20
+            }
+          }
+        ]
+      }
+    ],
+    "module_rules": [
+      {
+        "module": "event",
+        "when": {
+          "field": "PF02C",
+          "op": "eq",
+          "value": "yes"
+        }
+      },
+      {
+        "module": "business",
+        "when": {
+          "field": "PF02A",
+          "op": "eq",
+          "value": "business_promotion"
+        }
+      }
+    ],
+    "extra_rules": [
+      "PF02D-PF02K: show one subtype picker matching PF02A; event and business modules must not duplicate collected answers.",
+      "A PF02C=no religious scripture poster must not require EV dates/venue.",
+      "If PF01B=different, permit deliverable-specific PF06–PF08 content variants without repeating shared project identity or brand information.",
+      "Some branches need exact verified claim sources; treat designer recommendations and TBA as distinct from missing details."
+    ]
+  },
+  "other_services": [
+    {
+      "id": "logo_branding",
+      "title": "Logo & Branding",
+      "subtype_field": {
+        "id": "LOGO_BRANDING00",
+        "label": "Which type of logo & branding do you need?",
+        "type": "single_choice",
+        "required": true,
+        "options": [
+          {
+            "value": "logo",
+            "label": "Logo only"
+          },
+          {
+            "value": "refresh",
+            "label": "Logo refresh"
+          },
+          {
+            "value": "identity",
+            "label": "Full visual identity"
+          },
+          {
+            "value": "guidelines",
+            "label": "Brand guidelines"
+          },
+          {
+            "value": "stationery",
+            "label": "Business stationery"
+          },
+          {
+            "value": "other",
+            "label": "Other branding"
+          }
+        ]
+      },
+      "groups": [
+        {
+          "id": "LOGO_BRANDING-DETAILS",
+          "title": "Specific requirements",
+          "fields": [
+            {
+              "id": "LB01",
+              "label": "What exact brand name should appear?",
+              "type": "short_text",
+              "required": true
+            },
+            {
+              "id": "LB02",
+              "label": "Is a tagline or slogan required?",
+              "type": "short_text",
+              "required": false
+            },
+            {
+              "id": "LB03",
+              "label": "Is this an existing brand or a new one?",
+              "type": "single_choice",
+              "required": true,
+              "options": [
+                {
+                  "value": "new",
+                  "label": "New brand"
+                },
+                {
+                  "value": "existing",
+                  "label": "Existing brand"
+                }
+              ]
+            },
+            {
+              "id": "LB04",
+              "label": "What does the brand do and what makes it distinctive?",
+              "type": "long_text",
+              "required": true
+            },
+            {
+              "id": "LB05",
+              "label": "What personality should the logo communicate?",
+              "type": "long_text",
+              "required": true
+            },
+            {
+              "id": "LB06",
+              "label": "Which logo structures appeal to you?",
+              "type": "multi_choice",
+              "required": true,
+              "options": [
+                {
+                  "value": "wordmark",
+                  "label": "Wordmark"
+                },
+                {
+                  "value": "symbol",
+                  "label": "Symbol/icon"
+                },
+                {
+                  "value": "combo",
+                  "label": "Combination mark"
+                },
+                {
+                  "value": "monogram",
+                  "label": "Monogram"
+                },
+                {
+                  "value": "emblem",
+                  "label": "Emblem"
+                },
+                {
+                  "value": "designer",
+                  "label": "Designer recommendation"
+                }
+              ]
+            },
+            {
+              "id": "LB07",
+              "label": "Where will the logo be used?",
+              "type": "single_choice",
+              "required": true,
+              "options": [
+                {
+                  "value": "digital",
+                  "label": "Digital"
+                },
+                {
+                  "value": "print",
+                  "label": "Print"
+                },
+                {
+                  "value": "products",
+                  "label": "Physical products"
+                },
+                {
+                  "value": "all",
+                  "label": "Across all applications"
+                }
+              ]
+            },
+            {
+              "id": "LB08",
+              "label": "Do you need variants?",
+              "type": "single_choice",
+              "required": true,
+              "options": [
+                {
+                  "value": "yes",
+                  "label": "Yes"
+                },
+                {
+                  "value": "no",
+                  "label": "No"
+                },
+                {
+                  "value": "advice",
+                  "label": "Designer to recommend"
+                }
+              ]
+            },
+            {
+              "id": "LB09",
+              "label": "Which variants matter?",
+              "type": "multi_choice",
+              "required": false,
+              "options": [
+                {
+                  "value": "horizontal",
+                  "label": "Horizontal"
+                },
+                {
+                  "value": "stacked",
+                  "label": "Stacked"
+                },
+                {
+                  "value": "icon",
+                  "label": "Icon only"
+                },
+                {
+                  "value": "mono",
+                  "label": "Monochrome"
+                },
+                {
+                  "value": "reverse",
+                  "label": "Light-on-dark"
+                },
+                {
+                  "value": "favicon",
+                  "label": "Favicon"
+                }
+              ],
+              "when": {
+                "field": "LB08",
+                "op": "eq",
+                "value": "yes"
+              }
+            },
+            {
+              "id": "LB10",
+              "label": "What parts of the existing identity must be retained?",
+              "type": "long_text",
+              "required": true,
+              "when": {
+                "field": "LB03",
+                "op": "eq",
+                "value": "existing"
+              }
+            },
+            {
+              "id": "LB11",
+              "label": "What stationery pieces are required?",
+              "type": "long_text",
+              "required": true,
+              "when": {
+                "field": "LOGO_BRANDING00",
+                "op": "eq",
+                "value": "stationery"
+              }
+            },
+            {
+              "id": "LB12",
+              "label": "Which brand guidelines or applications are expected?",
+              "type": "long_text",
+              "required": true,
+              "when": {
+                "field": "LOGO_BRANDING00",
+                "op": "in",
+                "values": [
+                  "identity",
+                  "guidelines"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "websites_applications",
+      "title": "Websites & Applications",
+      "subtype_field": {
+        "id": "WEBSITES_APPLICATIONS00",
+        "label": "Which type of websites & applications do you need?",
+        "type": "single_choice",
+        "required": true,
+        "options": [
+          {
+            "value": "marketing",
+            "label": "Business/marketing website"
+          },
+          {
+            "value": "portfolio",
+            "label": "Portfolio"
+          },
+          {
+            "value": "ecommerce",
+            "label": "E-commerce"
+          },
+          {
+            "value": "booking",
+            "label": "Booking/service platform"
+          },
+          {
+            "value": "dashboard",
+            "label": "Dashboard/portal"
+          },
+          {
+            "value": "mobile",
+            "label": "Mobile app"
+          },
+          {
+            "value": "webapp",
+            "label": "Custom web application"
+          },
+          {
+            "value": "redesign",
+            "label": "Redesign"
+          },
+          {
+            "value": "other",
+            "label": "Other"
+          }
+        ]
+      },
+      "groups": [
+        {
+          "id": "WEBSITES_APPLICATIONS-DETAILS",
+          "title": "Specific requirements",
+          "fields": [
+            {
+              "id": "WA01",
+              "label": "What is the project, business or product name?",
+              "type": "short_text",
+              "required": true
+            },
+            {
+              "id": "WA02",
+              "label": "What primary problem should the website or app solve?",
+              "type": "long_text",
+              "required": true
+            },
+            {
+              "id": "WA03",
+              "label": "Is this a new product or a redesign?",
+              "type": "single_choice",
+              "required": true,
+              "options": [
+                {
+                  "value": "new",
+                  "label": "New"
+                },
+                {
+                  "value": "redesign",
+                  "label": "Redesign/upgrade"
+                }
+              ]
+            },
+            {
+              "id": "WA04",
+              "label": "Link to the existing website or app",
+              "type": "url",
+              "required": false,
+              "when": {
+                "field": "WA03",
+                "op": "eq",
+                "value": "redesign"
+              }
+            },
+            {
+              "id": "WA05",
+              "label": "Which pages or main screens do you need?",
+              "type": "repeater",
+              "required": true,
+              "item_fields": [
+                {
+                  "id": "name",
+                  "label": "Page/screen",
+                  "type": "short_text",
+                  "required": true
+                },
+                {
+                  "id": "purpose",
+                  "label": "Main function",
+                  "type": "long_text",
+                  "required": false
+                }
+              ],
+              "max_items": 30
+            },
+            {
+              "id": "WA06",
+              "label": "What functionality is required?",
+              "type": "multi_choice",
+              "required": true,
+              "options": [
+                {
+                  "value": "contact",
+                  "label": "Contact form"
+                },
+                {
+                  "value": "auth",
+                  "label": "Login/accounts"
+                },
+                {
+                  "value": "roles",
+                  "label": "User roles"
+                },
+                {
+                  "value": "booking",
+                  "label": "Bookings"
+                },
+                {
+                  "value": "payments",
+                  "label": "Payments"
+                },
+                {
+                  "value": "store",
+                  "label": "Product catalogue/cart"
+                },
+                {
+                  "value": "admin",
+                  "label": "Admin dashboard"
+                },
+                {
+                  "value": "search",
+                  "label": "Search/filter"
+                },
+                {
+                  "value": "upload",
+                  "label": "File upload"
+                },
+                {
+                  "value": "notifications",
+                  "label": "Notifications"
+                },
+                {
+                  "value": "analytics",
+                  "label": "Analytics"
+                },
+                {
+                  "value": "api",
+                  "label": "External integrations"
+                },
+                {
+                  "value": "other",
+                  "label": "Other"
+                }
+              ]
+            },
+            {
+              "id": "WA07",
+              "label": "Describe the main user journey or task flow",
+              "type": "long_text",
+              "required": true
+            },
+            {
+              "id": "WA08",
+              "label": "Which user roles exist?",
+              "type": "repeater",
+              "required": false,
+              "when": {
+                "field": "WA06",
+                "op": "contains",
+                "value": "roles"
+              },
+              "item_fields": [
+                {
+                  "id": "role",
+                  "label": "Role",
+                  "type": "short_text",
+                  "required": true
+                },
+                {
+                  "id": "permissions",
+                  "label": "Key permissions",
+                  "type": "long_text",
+                  "required": true
+                }
+              ],
+              "max_items": 30
+            },
+            {
+              "id": "WA09",
+              "label": "What content, photos, products or records must be migrated or supplied?",
+              "type": "long_text",
+              "required": false
+            },
+            {
+              "id": "WA10",
+              "label": "Which third-party integrations or systems are required?",
+              "type": "long_text",
+              "required": false,
+              "when": {
+                "field": "WA06",
+                "op": "contains",
+                "value": "api"
+              }
+            },
+            {
+              "id": "WA11",
+              "label": "Do you already have a domain and hosting?",
+              "type": "single_choice",
+              "required": false,
+              "options": [
+                {
+                  "value": "both",
+                  "label": "Both"
+                },
+                {
+                  "value": "domain",
+                  "label": "Domain only"
+                },
+                {
+                  "value": "hosting",
+                  "label": "Hosting only"
+                },
+                {
+                  "value": "none",
+                  "label": "Neither"
+                },
+                {
+                  "value": "unsure",
+                  "label": "Not sure"
+                }
+              ]
+            },
+            {
+              "id": "WA12",
+              "label": "Which languages, accessibility or device requirements apply?",
+              "type": "long_text",
+              "required": false
+            },
+            {
+              "id": "WA13",
+              "label": "Are there data privacy, payment or other compliance requirements?",
+              "type": "long_text",
+              "required": false
+            },
+            {
+              "id": "WA14",
+              "label": "What should be delivered as the minimum first release?",
+              "type": "long_text",
+              "required": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "social_media_design",
+      "title": "Social Media Design",
+      "subtype_field": {
+        "id": "SOCIAL_MEDIA_DESIGN00",
+        "label": "Which type of social media design do you need?",
+        "type": "single_choice",
+        "required": true,
+        "options": [
+          {
+            "value": "post",
+            "label": "Single social post"
+          },
+          {
+            "value": "carousel",
+            "label": "Multi-slide carousel"
+          },
+          {
+            "value": "story",
+            "label": "Story/status"
+          },
+          {
+            "value": "cover",
+            "label": "Cover/banner"
+          },
+          {
+            "value": "ads",
+            "label": "Paid ad creative"
+          },
+          {
+            "value": "templates",
+            "label": "Reusable template set"
+          },
+          {
+            "value": "campaign",
+            "label": "Campaign pack"
+          },
+          {
+            "value": "other",
+            "label": "Other social design"
+          }
+        ]
+      },
+      "groups": [
+        {
+          "id": "SOCIAL_MEDIA_DESIGN-DETAILS",
+          "title": "Specific requirements",
+          "fields": [
+            {
+              "id": "SM01",
+              "label": "Which social platforms will use the designs?",
+              "type": "multi_choice",
+              "required": true,
+              "options": [
+                {
+                  "value": "ig",
+                  "label": "Instagram"
+                },
+                {
+                  "value": "fb",
+                  "label": "Facebook"
+                },
+                {
+                  "value": "tiktok",
+                  "label": "TikTok"
+                },
+                {
+                  "value": "linkedin",
+                  "label": "LinkedIn"
+                },
+                {
+                  "value": "x",
+                  "label": "X"
+                },
+                {
+                  "value": "youtube",
+                  "label": "YouTube"
+                },
+                {
+                  "value": "whatsapp",
+                  "label": "WhatsApp"
+                },
+                {
+                  "value": "other",
+                  "label": "Other"
+                }
+              ]
+            },
+            {
+              "id": "SM02",
+              "label": "Which posts, sizes or placements do you need?",
+              "type": "repeater",
+              "required": true,
+              "item_fields": [
+                {
+                  "id": "platform",
+                  "label": "Platform/placement",
+                  "type": "short_text",
+                  "required": true
+                },
+                {
+                  "id": "quantity",
+                  "label": "Number of designs",
+                  "type": "integer",
+                  "required": true
+                },
+                {
+                  "id": "size",
+                  "label": "Size if known",
+                  "type": "short_text",
+                  "required": false
+                }
+              ],
+              "max_items": 30
+            },
+            {
+              "id": "SM03",
+              "label": "What message or offer should each design communicate?",
+              "type": "long_text",
+              "required": true
+            },
+            {
+              "id": "SM04",
+              "label": "Who will provide captions and hashtags?",
+              "type": "single_choice",
+              "required": true,
+              "options": [
+                {
+                  "value": "client",
+                  "label": "I will"
+                },
+                {
+                  "value": "designer",
+                  "label": "Need content help"
+                },
+                {
+                  "value": "joint",
+                  "label": "Work together"
+                }
+              ]
+            },
+            {
+              "id": "SM05",
+              "label": "Should the design include people, products or supplied photos?",
+              "type": "single_choice",
+              "required": true,
+              "options": [
+                {
+                  "value": "yes",
+                  "label": "Yes"
+                },
+                {
+                  "value": "no",
+                  "label": "No"
+                },
+                {
+                  "value": "designer",
+                  "label": "Designer to recommend"
+                }
+              ]
+            },
+            {
+              "id": "SM06",
+              "label": "Are these paid advertising creatives?",
+              "type": "single_choice",
+              "required": true,
+              "options": [
+                {
+                  "value": "yes",
+                  "label": "Yes"
+                },
+                {
+                  "value": "no",
+                  "label": "No"
+                }
+              ],
+              "when": {
+                "field": "SOCIAL_MEDIA_DESIGN00",
+                "op": "eq",
+                "value": "ads"
+              }
+            },
+            {
+              "id": "SM07",
+              "label": "What advertising objective, approved claims and required disclosures apply?",
+              "type": "long_text",
+              "required": true,
+              "when": {
+                "field": "SM06",
+                "op": "eq",
+                "value": "yes"
+              }
+            },
+            {
+              "id": "SM08",
+              "label": "Do you need a consistent template for future posts?",
+              "type": "single_choice",
+              "required": false,
+              "options": [
+                {
+                  "value": "yes",
+                  "label": "Yes"
+                },
+                {
+                  "value": "no",
+                  "label": "No"
+                }
+              ]
+            },
+            {
+              "id": "SM09",
+              "label": "Carousel slides / content order",
+              "type": "repeater",
+              "required": true,
+              "when": {
+                "field": "SOCIAL_MEDIA_DESIGN00",
+                "op": "eq",
+                "value": "carousel"
+              },
+              "item_fields": [
+                {
+                  "id": "slide",
+                  "label": "Slide number or title",
+                  "type": "short_text",
+                  "required": true
+                },
+                {
+                  "id": "content",
+                  "label": "Slide content",
+                  "type": "long_text",
+                  "required": true
+                }
+              ],
+              "max_items": 30
+            },
+            {
+              "id": "SM10",
+              "label": "What is the publishing date or schedule?",
+              "type": "short_text",
+              "required": false
+            },
+            {
+              "id": "SM11",
+              "label": "Are there platform brand guidelines or prohibited content to consider?",
+              "type": "long_text",
+              "required": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "events_invitations",
+      "title": "Events & Invitations",
+      "subtype_field": {
+        "id": "EVENTS_INVITATIONS00",
+        "label": "Which type of events & invitations do you need?",
+        "type": "single_choice",
+        "required": true,
+        "options": [
+          {
+            "value": "wedding",
+            "label": "Wedding invitation"
+          },
+          {
+            "value": "birthday",
+            "label": "Birthday invitation"
+          },
+          {
+            "value": "corporate",
+            "label": "Corporate invitation"
+          },
+          {
+            "value": "church",
+            "label": "Church/community event"
+          },
+          {
+            "value": "graduation",
+            "label": "Graduation"
+          },
+          {
+            "value": "save_date",
+            "label": "Save-the-date"
+          },
+          {
+            "value": "ticket",
+            "label": "Event ticket/pass"
+          },
+          {
+            "value": "digital",
+            "label": "Digital invitation"
+          },
+          {
+            "value": "other",
+            "label": "Other invitation"
+          }
+        ]
+      },
+      "groups": [
+        {
+          "id": "EVENTS_INVITATIONS-DETAILS",
+          "title": "Specific requirements",
+          "fields": [
+            {
+              "id": "EI01",
+              "label": "What is the event or occasion name?",
+              "type": "short_text",
+              "required": true
+            },
+            {
+              "id": "EI02",
+              "label": "Is this a public invitation, private invite or announcement?",
+              "type": "single_choice",
+              "required": true,
+              "options": [
+                {
+                  "value": "public",
+                  "label": "Public event"
+                },
+                {
+                  "value": "private",
+                  "label": "Private invitation"
+                },
+                {
+                  "value": "announcement",
+                  "label": "Announcement"
+                }
+              ]
+            },
+            {
+              "id": "EI03",
+              "label": "Who is hosting or inviting?",
+              "type": "short_text",
+              "required": true
+            },
+            {
+              "id": "EI04",
+              "label": "Do you need personalised guest names or individual invitations?",
+              "type": "single_choice",
+              "required": true,
+              "options": [
+                {
+                  "value": "yes",
+                  "label": "Yes"
+                },
+                {
+                  "value": "no",
+                  "label": "No"
+                }
+              ]
+            },
+            {
+              "id": "EI05",
+              "label": "Guest/personalisation fields",
+              "type": "repeater",
+              "required": false,
+              "when": {
+                "field": "EI04",
+                "op": "eq",
+                "value": "yes"
+              },
+              "item_fields": [
+                {
+                  "id": "name",
+                  "label": "Guest identifier or placeholder",
+                  "type": "short_text",
+                  "required": true
+                }
+              ],
+              "max_items": 30
+            },
+            {
+              "id": "EI06",
+              "label": "What invitation wording should be printed exactly?",
+              "type": "long_text",
+              "required": true
+            },
+            {
+              "id": "EI07",
+              "label": "Does RSVP need to appear?",
+              "type": "single_choice",
+              "required": true,
+              "options": [
+                {
+                  "value": "yes",
+                  "label": "Yes"
+                },
+                {
+                  "value": "no",
+                  "label": "No"
+                }
+              ]
+            },
+            {
+              "id": "EI08",
+              "label": "Provide RSVP deadline and instructions",
+              "type": "long_text",
+              "required": true,
+              "when": {
+                "field": "EI07",
+                "op": "eq",
+                "value": "yes"
+              }
+            },
+            {
+              "id": "EI09",
+              "label": "Are there dress code, access, gift or etiquette notes?",
+              "type": "long_text",
+              "required": false
+            },
+            {
+              "id": "EI10",
+              "label": "Should a map, location link or QR code be used?",
+              "type": "single_choice",
+              "required": true,
+              "options": [
+                {
+                  "value": "map",
+                  "label": "Map/link"
+                },
+                {
+                  "value": "qr",
+                  "label": "QR code"
+                },
+                {
+                  "value": "both",
+                  "label": "Both"
+                },
+                {
+                  "value": "none",
+                  "label": "Neither"
+                }
+              ]
+            },
+            {
+              "id": "EI11",
+              "label": "What should each invitation version differ by?",
+              "type": "long_text",
+              "required": false
+            },
+            {
+              "id": "EI12",
+              "label": "What is the event date?",
+              "type": "short_text",
+              "required": true
+            },
+            {
+              "id": "EI13",
+              "label": "What is the event time and time zone?",
+              "type": "short_text",
+              "required": true
+            },
+            {
+              "id": "EI14",
+              "label": "What is the event venue or online access information?",
+              "type": "long_text",
+              "required": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "brochures_menus",
+      "title": "Brochures & Menus",
+      "subtype_field": {
+        "id": "BROCHURES_MENUS00",
+        "label": "Which type of brochures & menus do you need?",
+        "type": "single_choice",
+        "required": true,
+        "options": [
+          {
+            "value": "brochure",
+            "label": "Corporate/product brochure"
+          },
+          {
+            "value": "catalogue",
+            "label": "Product catalogue"
+          },
+          {
+            "value": "restaurant",
+            "label": "Restaurant menu"
+          },
+          {
+            "value": "service",
+            "label": "Service price list"
+          },
+          {
+            "value": "programme",
+            "label": "Event programme booklet"
+          },
+          {
+            "value": "trifold",
+            "label": "Tri-fold leaflet"
+          },
+          {
+            "value": "digital",
+            "label": "Digital brochure/menu"
+          },
+          {
+            "value": "other",
+            "label": "Other"
+          }
+        ]
+      },
+      "groups": [
+        {
+          "id": "BROCHURES_MENUS-DETAILS",
+          "title": "Specific requirements",
+          "fields": [
+            {
+              "id": "BM01",
+              "label": "What kind of publication do you need?",
+              "type": "single_choice",
+              "required": true,
+              "options": [
+                {
+                  "value": "print",
+                  "label": "Printed"
+                },
+                {
+                  "value": "digital",
+                  "label": "Digital"
+                },
+                {
+                  "value": "both",
+                  "label": "Both"
+                }
+              ]
+            },
+            {
+              "id": "BM02",
+              "label": "Which sections or pages should be included?",
+              "type": "repeater",
+              "required": true,
+              "item_fields": [
+                {
+                  "id": "section",
+                  "label": "Section/page title",
+                  "type": "short_text",
+                  "required": true
+                },
+                {
+                  "id": "notes",
+                  "label": "Main content",
+                  "type": "long_text",
+                  "required": false
+                }
+              ],
+              "max_items": 30
+            },
+            {
+              "id": "BM03",
+              "label": "Do you already have approved text and item details?",
+              "type": "single_choice",
+              "required": true,
+              "options": [
+                {
+                  "value": "ready",
+                  "label": "Yes"
+                },
+                {
+                  "value": "partial",
+                  "label": "Some"
+                },
+                {
+                  "value": "help",
+                  "label": "Need help"
+                },
+                {
+                  "value": "later",
+                  "label": "Will provide later"
+                }
+              ]
+            },
+            {
+              "id": "BM04",
+              "label": "Upload your approved content or existing menu/catalogue",
+              "type": "file_upload",
+              "required": false,
+              "validation": {
+                "extensions": [
+                  "pdf",
+                  "docx",
+                  "txt",
+                  "png",
+                  "jpg",
+                  "jpeg",
+                  "webp",
+                  "svg"
+                ],
+                "max_megabytes": 20
+              }
+            },
+            {
+              "id": "BM05",
+              "label": "Products/dishes/services and descriptions",
+              "type": "repeater",
+              "required": true,
+              "when": {
+                "field": "BROCHURES_MENUS00",
+                "op": "in",
+                "values": [
+                  "catalogue",
+                  "restaurant",
+                  "service"
+                ]
+              },
+              "item_fields": [
+                {
+                  "id": "name",
+                  "label": "Item name",
+                  "type": "short_text",
+                  "required": true
+                },
+                {
+                  "id": "description",
+                  "label": "Description",
+                  "type": "long_text",
+                  "required": false
+                },
+                {
+                  "id": "price",
+                  "label": "Price and currency if applicable",
+                  "type": "short_text",
+                  "required": false
+                },
+                {
+                  "id": "category",
+                  "label": "Section/category",
+                  "type": "short_text",
+                  "required": false
+                }
+              ],
+              "max_items": 30
+            },
+            {
+              "id": "BM06",
+              "label": "Do dietary, allergen or ingredient labels apply?",
+              "type": "single_choice",
+              "required": true,
+              "options": [
+                {
+                  "value": "yes",
+                  "label": "Yes"
+                },
+                {
+                  "value": "no",
+                  "label": "No"
+                },
+                {
+                  "value": "unsure",
+                  "label": "Not sure"
+                }
+              ],
+              "when": {
+                "field": "BROCHURES_MENUS00",
+                "op": "eq",
+                "value": "restaurant"
+              }
+            },
+            {
+              "id": "BM07",
+              "label": "Provide verified dietary/allergen labels and ingredients",
+              "type": "long_text",
+              "required": true,
+              "when": {
+                "field": "BM06",
+                "op": "eq",
+                "value": "yes"
+              }
+            },
+            {
+              "id": "BM08",
+              "label": "Is this folded, bound or single-sheet?",
+              "type": "single_choice",
+              "required": true,
+              "options": [
+                {
+                  "value": "folded",
+                  "label": "Folded"
+                },
+                {
+                  "value": "bound",
+                  "label": "Bound"
+                },
+                {
+                  "value": "sheet",
+                  "label": "Single-sheet"
+                },
+                {
+                  "value": "digital",
+                  "label": "Digital only"
+                },
+                {
+                  "value": "unsure",
+                  "label": "Need advice"
+                }
+              ]
+            },
+            {
+              "id": "BM09",
+              "label": "Specify paper size, number of pages and printer requirements",
+              "type": "long_text",
+              "required": false
+            },
+            {
+              "id": "BM10",
+              "label": "Will prices or availability change often?",
+              "type": "single_choice",
+              "required": true,
+              "options": [
+                {
+                  "value": "yes",
+                  "label": "Yes"
+                },
+                {
+                  "value": "no",
+                  "label": "No"
+                }
+              ]
+            },
+            {
+              "id": "BM11",
+              "label": "What should remain editable for future updates?",
+              "type": "long_text",
+              "required": false,
+              "when": {
+                "field": "BM10",
+                "op": "eq",
+                "value": "yes"
+              }
+            },
+            {
+              "id": "BM12",
+              "label": "Any required disclaimers, business contacts or ordering details?",
+              "type": "long_text",
+              "required": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "packaging_design",
+      "title": "Packaging Design",
+      "subtype_field": {
+        "id": "PACKAGING_DESIGN00",
+        "label": "Which type of packaging design do you need?",
+        "type": "single_choice",
+        "required": true,
+        "options": [
+          {
+            "value": "label",
+            "label": "Product label"
+          },
+          {
+            "value": "box",
+            "label": "Box/carton"
+          },
+          {
+            "value": "pouch",
+            "label": "Bag/pouch"
+          },
+          {
+            "value": "bottle",
+            "label": "Bottle/jar wrap"
+          },
+          {
+            "value": "sleeve",
+            "label": "Sleeve/band"
+          },
+          {
+            "value": "sticker",
+            "label": "Sticker/seal"
+          },
+          {
+            "value": "set",
+            "label": "Complete packaging range"
+          },
+          {
+            "value": "other",
+            "label": "Other packaging"
+          }
+        ]
+      },
+      "groups": [
+        {
+          "id": "PACKAGING_DESIGN-DETAILS",
+          "title": "Specific requirements",
+          "fields": [
+            {
+              "id": "PK01",
+              "label": "What exact product and brand name should appear?",
+              "type": "short_text",
+              "required": true
+            },
+            {
+              "id": "PK02",
+              "label": "Describe the product and how it is used",
+              "type": "long_text",
+              "required": true
+            },
+            {
+              "id": "PK03",
+              "label": "What packaging structure or material will be used?",
+              "type": "single_choice",
+              "required": true,
+              "options": [
+                {
+                  "value": "box",
+                  "label": "Box/carton"
+                },
+                {
+                  "value": "flexible",
+                  "label": "Pouch/bag"
+                },
+                {
+                  "value": "bottle",
+                  "label": "Bottle/jar"
+                },
+                {
+                  "value": "paper",
+                  "label": "Paper label/sticker"
+                },
+                {
+                  "value": "other",
+                  "label": "Other"
+                },
+                {
+                  "value": "unsure",
+                  "label": "Need advice"
+                }
+              ]
+            },
+            {
+              "id": "PK04",
+              "label": "Which package sizes or variants exist?",
+              "type": "repeater",
+              "required": true,
+              "item_fields": [
+                {
+                  "id": "sku",
+                  "label": "Variant/SKU",
+                  "type": "short_text",
+                  "required": true
+                },
+                {
+                  "id": "quantity",
+                  "label": "Net quantity/pack size",
+                  "type": "short_text",
+                  "required": false
+                },
+                {
+                  "id": "dimensions",
+                  "label": "Dimensions (mm)",
+                  "type": "short_text",
+                  "required": false
+                }
+              ],
+              "max_items": 30
+            },
+            {
+              "id": "PK05",
+              "label": "Do you have a manufacturer dieline/template?",
+              "type": "single_choice",
+              "required": true,
+              "options": [
+                {
+                  "value": "yes",
+                  "label": "Yes"
+                },
+                {
+                  "value": "no",
+                  "label": "No"
+                },
+                {
+                  "value": "pending",
+                  "label": "Will request from manufacturer"
+                }
+              ]
+            },
+            {
+              "id": "PK06",
+              "label": "Upload manufacturer dieline (PDF/SVG/image)",
+              "type": "file_upload",
+              "required": true,
+              "when": {
+                "field": "PK05",
+                "op": "eq",
+                "value": "yes"
+              },
+              "validation": {
+                "extensions": [
+                  "pdf",
+                  "docx",
+                  "txt",
+                  "png",
+                  "jpg",
+                  "jpeg",
+                  "webp",
+                  "svg"
+                ],
+                "max_megabytes": 20
+              }
+            },
+            {
+              "id": "PK07",
+              "label": "What must appear on the front of the package?",
+              "type": "long_text",
+              "required": true
+            },
+            {
+              "id": "PK08",
+              "label": "What must appear on the back or sides?",
+              "type": "long_text",
+              "required": false
+            },
+            {
+              "id": "PK09",
+              "label": "Are ingredients, nutrition, warnings or regulatory marks required?",
+              "type": "single_choice",
+              "required": true,
+              "options": [
+                {
+                  "value": "yes",
+                  "label": "Yes"
+                },
+                {
+                  "value": "no",
+                  "label": "No"
+                },
+                {
+                  "value": "unsure",
+                  "label": "Not sure"
+                }
+              ]
+            },
+            {
+              "id": "PK10",
+              "label": "Provide exact approved regulatory and safety wording",
+              "type": "long_text",
+              "required": true,
+              "when": {
+                "field": "PK09",
+                "op": "eq",
+                "value": "yes"
+              }
+            },
+            {
+              "id": "PK11",
+              "label": "Are barcodes, QR codes, batch/expiry placeholders required?",
+              "type": "single_choice",
+              "required": true,
+              "options": [
+                {
+                  "value": "yes",
+                  "label": "Yes"
+                },
+                {
+                  "value": "no",
+                  "label": "No"
+                }
+              ]
+            },
+            {
+              "id": "PK12",
+              "label": "Give code and variable-data requirements",
+              "type": "long_text",
+              "required": true,
+              "when": {
+                "field": "PK11",
+                "op": "eq",
+                "value": "yes"
+              }
+            },
+            {
+              "id": "PK13",
+              "label": "What printing technique, material finish or colour constraints apply?",
+              "type": "long_text",
+              "required": false
+            },
+            {
+              "id": "PK14",
+              "label": "Will a physical print proof be checked before production?",
+              "type": "single_choice",
+              "required": true,
+              "options": [
+                {
+                  "value": "yes",
+                  "label": "Yes"
+                },
+                {
+                  "value": "no",
+                  "label": "No"
+                },
+                {
+                  "value": "unsure",
+                  "label": "Not decided"
+                }
+              ]
+            },
+            {
+              "id": "PK15",
+              "label": "What pack claims need evidence and approval?",
+              "type": "long_text",
+              "required": false
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "application_notes": {
+    "existing_code": "Codex must first inspect app.py, database.py, templates/client_questionnaire.html, templates/review_brief.html, existing JS/CSS, tests and routes; names from screenshot are context only, not proof of implementation.",
+    "db": "Use existing SQLite conventions with non-destructive migrations; questionnaire version and answer snapshots linked to brief/revisions.",
+    "testing": "Cover deterministic conditional visibility/validation, authorization, autosave, draft, submit, revision, payload tampering, uploads and cross-service smoke tests."
+  }
+}

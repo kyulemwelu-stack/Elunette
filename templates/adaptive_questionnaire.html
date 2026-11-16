@@ -1,0 +1,128 @@
+{% from '_adaptive_answers.html' import answer with context %}
+{% macro input(field, name, value, nested=false) %}
+{% set kind=field.type %}
+{% if kind in ['single_choice','palette_select','asset_reference','file_upload'] %}
+{% set option_cards = kind=='single_choice' and field.options|length <= 6 and field.id!='META02' and not nested %}
+<select id="{{ name }}" data-input="{{ field.id }}" data-kind="{{ kind }}" {% if option_cards or kind=='palette_select' %}class="adaptive-sr-only" tabindex="-1" aria-hidden="true"{% endif %} {% if field.id=='META02' %}disabled{% endif %}>
+<option value="">Choose an answer</option>
+{% if kind=='palette_select' %}{% for palette in catalog.palettes %}<option value="{{ palette.id }}" {% if value==palette.id %}selected{% endif %}>{{ palette.name }}</option>{% endfor %}
+{% elif kind in ['file_upload','asset_reference'] %}{% for asset in assets %}<option value="{{ asset.id }}" {% if value==asset.id %}selected{% endif %}>{{ asset.original_name }}</option>{% endfor %}
+{% else %}{% for option in field.options %}<option value="{{ option.value }}" {% if value==option.value %}selected{% endif %}>{{ option.label }}</option>{% endfor %}{% endif %}</select>
+{% if option_cards %}<div class="single-choice-grid" role="radiogroup" aria-label="{{ field.label }}">{% for option in field.options %}<label class="option-card"><input type="radio" name="{{ name }}-choice" data-choice="{{ option.value }}" value="{{ option.value }}" {% if value==option.value %}checked{% endif %}><span>{{ option.label }}</span></label>{% endfor %}</div>{% endif %}
+{% if kind=='palette_select' %}<div class="palette-gallery">{% for palette in catalog.palettes %}<button type="button" class="palette-choice" data-palette="{{ palette.id }}" aria-label="{{ palette.name }}: {{ palette.colors|join(', ') }}" aria-pressed="{{ 'true' if value==palette.id else 'false' }}"><span class="palette-name">{{ palette.name }}<span class="palette-check" aria-hidden="true">&#10003;</span></span><span class="swatches">{% for colour in palette.colors %}<span style="background-color:{{ colour }}" title="{{ colour }}"></span>{% endfor %}</span><small>{{ palette.colors|join(' · ') }}</small></button>{% endfor %}</div>{% endif %}
+{% if kind in ['file_upload','asset_reference'] %}<div class="upload-area"><span class="upload-emblem" aria-hidden="true">&#8593;</span><label class="upload-label" for="{{ name }}-upload">Add your files</label><p>Images, documents or references, up to 20 MB each.</p><input id="{{ name }}-upload" type="file" data-upload="{{ field.id }}" accept=".pdf,.docx,.txt,.png,.jpg,.jpeg,.webp" aria-describedby="{{ name }}-formats"><small id="{{ name }}-formats">PDF, DOCX, TXT, PNG, JPEG or WebP</small><span class="upload-status" role="status"></span></div>{% endif %}
+{% elif kind=='multi_choice' %}<div id="{{ name }}" data-input="{{ field.id }}" data-kind="multi_choice" class="choice-grid">{% for option in field.options %}<label><input type="checkbox" value="{{ option.value }}" {% if value and option.value in value %}checked{% endif %}> {{ option.label }}</label>{% endfor %}</div>
+{% elif kind=='repeater' %}<div id="{{ name }}" data-input="{{ field.id }}" data-kind="repeater" data-max="{{ field.get('max_items',30) }}"><div class="rows">{% for row in value or [] %}<div class="repeat-row">{% set row_number=loop.index %}{% for child in field.item_fields %}<div class="child-field"><label for="{{ name }}-{{ row_number }}-{{ child.id }}">{{ child.label }}{% if child.required %}<span class="required-mark" aria-label="Required">*</span>{% else %} <small>Optional</small>{% endif %}</label>{{ input(child,name~'-'~row_number~'-'~child.id,row.get(child.id),true) }}</div>{% endfor %}<button type="button" class="remove-row">Remove row</button></div>{% endfor %}</div><template>{% set row_number='NEW' %}<div class="repeat-row">{% for child in field.item_fields %}<div class="child-field"><label for="{{ name }}-NEW-{{ child.id }}">{{ child.label }}{% if child.required %}<span class="required-mark" aria-label="Required">*</span>{% else %} <small>Optional</small>{% endif %}</label>{{ input(child,name~'-NEW-'~child.id,none,true) }}</div>{% endfor %}<button type="button" class="remove-row">Remove row</button></div></template><button type="button" class="add-row">+ Add row</button></div>
+{% elif kind=='money' %}<div id="{{ name }}" data-input="{{ field.id }}" data-kind="money" class="money-input"><label>Amount<input inputmode="decimal" data-amount value="{{ value.amount if value else '' }}" placeholder="0.00"></label><label>Currency<input data-currency value="{{ value.currency if value else 'KES' }}" maxlength="3" placeholder="KES"></label></div>
+{% elif kind=='color_multi_picker' %}<div id="{{ name }}" data-input="{{ field.id }}" data-kind="color_multi_picker"><div class="colour-rows">{% for colour in value or [] %}<label>HEX colour <input type="color" value="{{ colour }}"><input data-hex value="{{ colour }}" pattern="#[0-9A-Fa-f]{6}" aria-label="HEX value"><button type="button" class="remove-colour">Remove colour</button></label>{% endfor %}</div><button type="button" class="add-colour">+ Add a colour</button></div>
+{% elif kind=='long_text' %}<textarea id="{{ name }}" data-input="{{ field.id }}" data-kind="{{ kind }}" rows="4" maxlength="12000" placeholder="Share the details in your own words&#8230;">{{ value or '' }}</textarea>
+{% elif kind=='boolean' %}<input id="{{ name }}" type="checkbox" data-input="{{ field.id }}" data-kind="{{ kind }}" {% if value %}checked{% endif %}>
+{% else %}<input id="{{ name }}" data-input="{{ field.id }}" data-kind="{{ kind }}" type="{{ kind if kind in ['date','time','url'] else 'number' if kind=='integer' else 'text' }}" {% if kind=='integer' %}min="0" step="1"{% endif %} value="{{ value if value is not none else '' }}" {% if kind=='url' %}placeholder="https://"{% elif kind=='short_text' %}placeholder="Your answer&#8230;"{% endif %} maxlength="2000">{% endif %}
+{% endmacro %}
+{% set introductions = {
+    'META': 'A few details to give your creative project a home.',
+    'PF01': 'Let?s begin with what you would like to create.',
+    'PF02': 'Tell us a little about your design so we can personalise the questions that follow.',
+    'PF03': 'Help us picture where your design will be seen.',
+    'PF04': 'Every design starts with a purpose. What matters most to you?',
+    'PF05': 'Tell us about the people you want to connect with.',
+    'PF06': 'What is the one thing you want people to remember?',
+    'PF07': 'Gather the words and details that will bring your design to life.',
+    'PF08': 'Help your audience take the next step.',
+    'PF10': 'Share the materials that make your brand feel like you.',
+    'PF11': 'Let?s find a visual direction that feels right.',
+    'PF12': 'Find a palette you love, choose your own colours, or leave it to your designer.',
+    'PF13': 'Tell us which versions you will need.',
+    'PF14': 'A few finishing details to help prepare your design for print.',
+    'PF15': 'Let?s make sure you receive the files you need.',
+    'PF16': 'Help us plan around your ideal timing.',
+    'PF17': 'A few final details before we bring your ideas together.',
+    'CORE01': 'Tell us what you are imagining and who it is for.',
+    'CORE02': 'Share the starting points your designer should keep in mind.',
+    'CORE03': 'Explore the look, colours and feeling of your project.',
+    'CORE04': 'Let?s plan the timing, handover and final approval.'
+} %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{{ brief.title }} | Elunette</title>
+    <link rel="stylesheet" href="{{ url_for('static',filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static',filename='css/adaptive.css') }}">
+    {% if review_view %}<link rel="stylesheet" href="{{ url_for('static',filename='css/adaptive-review.css') }}">{% endif %}
+</head>
+<body class="adaptive-page{% if review_view %} adaptive-review-page{% endif %}">
+<main class="adaptive-shell">
+    <nav class="consultation-nav" aria-label="Studio navigation">
+        <a href="{{ url_for('provider_dashboard' if provider else 'client_dashboard') }}">&larr; Your Studio</a>
+        <span class="consultation-wordmark">Elunette<span aria-hidden="true"> &#10023;</span></span>
+    </nav>
+    <header class="consultation-intro">
+        <p class="eyebrow">{{ 'Review your brief' if review_view else 'Your ideas, beautifully considered' }}</p>
+        <h1>{{ brief.title }}</h1>
+        <p>{{ 'Check the details, add any finishing touches, and share your brief with your designer.' if review_view and editable else 'Your creative brief, prepared for your designer.' if review_view else 'A little inspiration. A few thoughtful details. A brief that feels like you.' }}</p>
+        <span class="brief-state">{{ brief.status|replace('_',' ')|capitalize }}</span>
+    </header>
+    {% for category,message in get_flashed_messages(with_categories=true) %}<p role="status">{{ message }}</p>{% endfor %}
+    {% for feedback_item in feedback %}<aside class="adaptive-card"><p class="eyebrow">A note from your designer</p><strong>{{ feedback_item.decision|replace('_',' ') }}</strong><p>{{ feedback_item.comment }}</p></aside>{% endfor %}
+{% if editable and not review %}
+    <div class="adaptive-progress">
+        <div class="progress-heading"><span id="current-step">Your next step</span><span><strong id="progress-label">{{ result.percentage }}%</strong> complete</span></div>
+        <progress id="completion" max="100" value="{{ result.percentage }}" aria-label="Required answers completed"></progress>
+        <div class="progress-navigation">
+            <nav class="section-nav" id="section-nav" aria-label="Questionnaire sections">
+                <label for="section-select" class="adaptive-sr-only">Go to a questionnaire section</label>
+                <select id="section-select"></select>
+            </nav>
+            <p id="save-status" role="status" aria-live="polite">Your saved draft is ready.</p>
+        </div>
+    </div>
+    <p id="visibility-status" class="adaptive-sr-only" role="status" aria-live="polite"></p>
+    <div id="errors" role="alert" tabindex="-1"></div>
+    <div id="save-recovery" hidden>
+        <p>Your changes remain on this page. Keep this tab open until saving succeeds.</p>
+        <a href="{{ url_for('login') }}" id="save-sign-in" target="_blank" rel="noopener" hidden>Sign in in another tab</a>
+        <button type="button" id="download-unsaved">Download a copy of your answers</button>
+    </div>
+    <form id="adaptive-form" novalidate>
+        {% for group in groups %}
+        <section class="adaptive-card wizard-section" data-section="{{ group.id }}" aria-labelledby="heading-{{ group.id }}">
+            <header class="question-card-heading">
+                <span class="section-position eyebrow">Your creative brief</span>
+                <h2 id="heading-{{ group.id }}">{{ group.title }}</h2>
+                <p>{{ introductions.get(group.id, 'A few thoughtful details to help your designer understand what you have in mind.') }}</p>
+            </header>
+            {% for field in group.fields %}
+            <div class="adaptive-field" data-field="{{ field.id }}">
+                <label class="question-label" for="{{ field.id }}">{{ field.label }}{% if field.required %}<span class="required-mark" aria-label="Required">*</span>{% else %}<small class="optional-label">Optional</small>{% endif %}</label>
+                {{ input(field,field.id,answers.get(field.id)) }}
+                <small class="field-error" id="error-{{ field.id }}"></small>
+            </div>
+            {% endfor %}
+        </section>
+        {% endfor %}
+        {% if brief.status=='revision_requested' %}<section class="adaptive-card revision-note"><label for="revision-response">Your revision response <span class="required-mark" aria-label="Required">*</span></label><p>Let your designer know what you have updated.</p><textarea id="revision-response" maxlength="5000" placeholder="Tell us about your changes&#8230;">{{ brief.revision_response }}</textarea></section>{% endif %}
+        <footer class="wizard-footer">
+            <div class="wizard-actions">
+                <button type="button" id="back" class="action-back"><span aria-hidden="true">&larr;</span> Back</button>
+                <div class="draft-actions"><button type="button" id="save" class="action-save">Save draft</button><button type="button" id="review" class="action-review">Review your brief</button></div>
+                <button type="button" id="next" class="action-next"><span id="next-label">Continue</span><span aria-hidden="true">&rarr;</span></button>
+            </div>
+            <p class="wizard-reassurance">Make it yours, at your own pace. You can save and return whenever you like.</p>
+        </footer>
+    </form>
+    <noscript><p>Enable JavaScript to personalise your questionnaire and save your answers.</p></noscript>
+    <script id="adaptive-data" type="application/json">{{ {'groups':groups,'answers':answers,'generation':brief.generation,'palettes':catalog.palettes,'saveUrl':url_for('adaptive_save',brief_id=brief.id),'stateUrl':url_for('adaptive_draft_state',brief_id=brief.id),'uploadUrl':url_for('adaptive_upload',brief_id=brief.id),'reviewUrl':url_for('adaptive_review',brief_id=brief.id)}|tojson }}</script>
+    <script src="{{ url_for('static',filename='js/adaptive.js') }}" defer></script>
+{% elif review_view %}
+{% include '_adaptive_review.html' %}
+{% else %}
+<section class="adaptive-card"><h2>{{ 'Designer brief' if provider else 'Review your brief' }}</h2><p>{{ result.percentage }}% of required information complete.</p>{% if result.errors %}<h3>Information still needed</h3><ul>{% for key,message in result.errors.items() %}<li>{{ fieldmap.get(key,{}).get('label',key) }}: {{ message }}</li>{% endfor %}</ul>{% endif %}{% if result.issues and brief.status!='approved' %}<h3>Before design approval</h3><ul>{% for issue in result.issues %}<li>{{ issue }}</li>{% endfor %}</ul>{% endif %}<p>{{ 'Approved for design.' if brief.status=='approved' else 'Ready for designer review. Approval is a separate step.' if result.ready else 'Submitted information may need clarification or human verification before design approval.' }}</p><dl>{% for item in summary %}<dt>{{ item.label }} {% if provider %}<small>{{ item.field_id }}</small>{% endif %}</dt><dd>{{ answer(fieldmap[item.field_id],item.value) }}</dd>{% endfor %}</dl></section>
+{% if editable %}<a href="{{ url_for('adaptive_edit',brief_id=brief.id) }}">← Continue editing</a><form method="post" action="{{ url_for('adaptive_submit',brief_id=brief.id) }}" class="adaptive-card"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="generation" value="{{ brief.generation }}"><label><input type="checkbox" name="confirm" value="yes" required> I have reviewed the active answers and approve sending them to my designer.</label><button {% if result.errors %}disabled{% endif %}>{{ 'Resubmit for review' if brief.status=='revision_requested' else 'Submit for review' }}</button></form>{% endif %}
+{% if provider and brief.status in ['submitted','under_review'] %}<form method="post" action="{{ url_for('adaptive_provider',brief_id=brief.id) }}" class="adaptive-card"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label for="provider-comment">Feedback / revision instructions</label><textarea id="provider-comment" name="comment" maxlength="5000"></textarea><button name="decision" value="revision_requested">Request revision</button><label><input type="checkbox" name="verified" value="yes"> I have verified any claims, legal, dietary and regulatory wording.</label><button name="decision" value="approved" {% if result.errors %}disabled{% endif %}>Approve for design</button></form>{% endif %}
+{% endif %}
+{% if assets and not provider and not review_view %}<details class="adaptive-card"><summary>Your uploaded assets</summary><ul>{% for asset in assets %}<li><a href="{{ url_for('adaptive_download',asset_id=asset.id) }}">{{ asset.original_name }}</a></li>{% endfor %}</ul></details>{% endif %}
+{% for submission in history %}<details class="adaptive-card"><summary>Submission {{ submission.revision_number }} · {{ submission.created_at }}</summary>{% if submission.response_text %}<p>{{ submission.response_text }}</p>{% endif %}<dl>{% for item in submission['items'] %}<dt>{{ item.label }} {% if provider %}({{ item.field_id }}){% endif %}</dt><dd>{{ answer(fieldmap[item.field_id],item.value) }}</dd>{% endfor %}</dl></details>{% endfor %}
+</main></body></html>

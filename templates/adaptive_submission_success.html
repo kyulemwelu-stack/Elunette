@@ -1,0 +1,25 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Your brief has been submitted | Elunette</title>
+    <link rel="stylesheet" href="{{ url_for('static',filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static',filename='css/adaptive.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static',filename='css/adaptive-review.css') }}">
+</head>
+<body class="adaptive-page adaptive-review-page adaptive-submission-page">
+<main class="adaptive-shell">
+    <nav class="consultation-nav" aria-label="Studio navigation"><a href="{{ url_for('client_dashboard') }}">&larr; Your Studio</a><span class="consultation-wordmark">Elunette<span aria-hidden="true"> &#10023;</span></span></nav>
+    <section class="submission-success-card" aria-labelledby="submission-success-heading">
+        <span class="submission-success-mark" aria-hidden="true"><svg width="31" height="31" viewBox="0 0 32 32" fill="none"><path d="m9 16 4.5 4.5L24 10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <p class="eyebrow">Submitted for review</p>
+        <h1 id="submission-success-heading">Your ideas are on their way.</h1>
+        <p>Your creative brief has been submitted for review. You can follow its progress from your Studio.</p>
+        <div class="submission-receipt"><strong>{{ brief.title }}</strong><span>Submission {{ submission.revision_number }} &middot; {{ submission.created_at[:10]|review_date }}</span></div>
+        <a class="review-primary-action" href="{{ url_for('client_dashboard') }}">Return to Studio <span aria-hidden="true">&rarr;</span></a>
+        <a class="review-secondary-action" href="{{ url_for('adaptive_review',brief_id=brief.id) }}">View my submitted brief</a>
+    </section>
+</main>
+</body>
+</html>

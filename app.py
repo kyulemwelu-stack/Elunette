@@ -132,6 +132,8 @@ def version_is_published(db, version_id):
 
 
 def questionnaire_is_editable(db, questionnaire):
+    if db.execute('SELECT 1 FROM adaptive_definitions d JOIN questionnaire_versions v ON v.id=d.version_id WHERE v.questionnaire_id=?',(questionnaire['id'],)).fetchone():
+        return False
     if questionnaire["status"] != "inactive":
         return False
 
@@ -420,6 +422,10 @@ def delete_draft_brief(brief_id):
 @app.route("/briefs/new", methods=["GET", "POST"])
 @role_required("client")
 def new_brief():
+    import questionnaire_engine as questionnaire_catalog
+    design_services = questionnaire_catalog.services(questionnaire_catalog.load_catalog())
+    if request.method == 'POST' and request.form.get('questionnaire_id', '').startswith('service:'):
+        return app.view_functions['adaptive_new']()
     db = get_db()
     providers = db.execute("SELECT id,full_name FROM users WHERE role='service_provider' AND status='active' ORDER BY full_name COLLATE NOCASE,id").fetchall()
     values = request.form if request.method == 'POST' else request.args
@@ -431,7 +437,7 @@ def new_brief():
         FROM questionnaires q
         JOIN questionnaire_versions v ON v.questionnaire_id=q.id
         JOIN questionnaire_publications p ON p.questionnaire_version_id=v.id
-        WHERE q.created_by=? AND q.status='active'
+        WHERE q.created_by=? AND q.status='active' AND NOT EXISTS (SELECT 1 FROM adaptive_definitions ad WHERE ad.version_id=v.id)
           AND v.version_number=(SELECT MAX(v2.version_number) FROM questionnaire_versions v2
               JOIN questionnaire_publications p2 ON p2.questionnaire_version_id=v2.id
               WHERE v2.questionnaire_id=q.id)
@@ -449,19 +455,19 @@ def new_brief():
             JOIN users u ON u.id=q.created_by
             JOIN questionnaire_versions v ON v.questionnaire_id=q.id
             JOIN questionnaire_publications p ON p.questionnaire_version_id=v.id
-            WHERE q.id=? AND q.created_by=? AND q.status='active'
+            WHERE q.id=? AND q.created_by=? AND q.status='active' AND NOT EXISTS (SELECT 1 FROM adaptive_definitions ad WHERE ad.version_id=v.id)
               AND u.role='service_provider' AND u.status='active'
             ORDER BY v.version_number DESC LIMIT 1""", (questionnaire_id,provider_id)).fetchone()
         if not title or len(title)>150 or eligible is None:
             db.rollback()
             flash('Enter a valid project title and choose an available questionnaire from your selected Service Provider.', 'error')
-            return render_template('new_brief.html',user=current_user(),providers=providers,selected_provider=provider_id,questionnaires=questionnaires,project_title=title),400
+            return render_template('new_brief.html',user=current_user(),providers=providers,selected_provider=provider_id,questionnaires=questionnaires,project_title=title,design_services=design_services),400
         cursor = db.execute("""INSERT INTO project_briefs
             (client_id,questionnaire_version_id,assigned_provider_id,title,status,completeness_percentage)
             VALUES (?,?,?,?,'draft',0)""",(current_user()['id'],eligible['version_id'],provider_id,title))
         db.commit()
         return redirect(url_for('client_questionnaire',questionnaire_id=questionnaire_id,brief_id=cursor.lastrowid))
-    return render_template('new_brief.html',user=current_user(),providers=providers,selected_provider=provider_id,questionnaires=questionnaires,project_title=title)
+    return render_template('new_brief.html',user=current_user(),providers=providers,selected_provider=provider_id,questionnaires=questionnaires,project_title=title,design_services=design_services)
 
 
 # ==========================================
@@ -629,6 +635,8 @@ def review_brief_preview():
 )
 @role_required("service_provider")
 def review_brief(brief_id):
+    if get_db().execute('SELECT 1 FROM project_briefs b JOIN adaptive_definitions d ON d.version_id=b.questionnaire_version_id WHERE b.id=?', (brief_id,)).fetchone():
+        return app.view_functions['adaptive_provider'](brief_id)
     db = get_db()
     provider = current_user()
     if request.method == "POST":
@@ -2223,6 +2231,11 @@ def client_questionnaire(questionnaire_id):
     client = current_user()
     brief_id = request.args.get("brief_id", type=int)
     saved_answers = {}
+    if brief_id is not None:
+        adaptive = db.execute('SELECT v.questionnaire_id FROM project_briefs b JOIN adaptive_definitions d ON d.version_id=b.questionnaire_version_id JOIN questionnaire_versions v ON v.id=d.version_id WHERE b.id=? AND b.client_id=?', (brief_id,client['id'])).fetchone()
+        if adaptive:
+            if adaptive['questionnaire_id'] != questionnaire_id: abort(404)
+            return redirect(url_for('adaptive_edit',brief_id=brief_id))
 
     if brief_id is not None:
         questionnaire = db.execute(
@@ -2385,6 +2398,9 @@ def save_brief_answers(brief_id):
 
 
 def persist_brief_answers(brief_id, commit=True):
+    if get_db().execute('SELECT 1 FROM project_briefs b JOIN adaptive_definitions d ON d.version_id=b.questionnaire_version_id WHERE b.id=?', (brief_id,)).fetchone():
+        abort(409, 'Use the adaptive questionnaire review and save actions for this brief.')
+
     db = get_db()
     client = current_user()
 
@@ -2629,6 +2645,9 @@ def persist_brief_answers(brief_id, commit=True):
 @app.route("/briefs/<int:brief_id>/resubmit", methods=["POST"], endpoint="resubmit_brief")
 @role_required("client")
 def submit_brief(brief_id):
+    if get_db().execute('SELECT 1 FROM project_briefs b JOIN adaptive_definitions d ON d.version_id=b.questionnaire_version_id WHERE b.id=?', (brief_id,)).fetchone():
+        abort(409, 'Use the adaptive questionnaire review and save actions for this brief.')
+
 
     db = get_db()
     client = current_user()
@@ -2901,6 +2920,9 @@ def submit_brief(brief_id):
 # ==========================================
 # RUN ELUNETTE
 # ==========================================
+
+from adaptive_questionnaires import register as register_adaptive
+register_adaptive(app, current_user, role_required)
 
 if __name__ == "__main__":
     app.run(debug=True)

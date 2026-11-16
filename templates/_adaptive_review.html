@@ -1,0 +1,68 @@
+{% from '_adaptive_review_answers.html' import review_answer with context %}
+{% macro missing_card(item) %}
+<a class="review-missing-card" href="{{ item.href }}" data-review-field="{{ item.field_id }}">
+    <span class="review-missing-content"><strong>{{ item.title }}</strong><span class="review-missing-question adaptive-sr-only">{{ item.question }}</span><span>{{ item.description }}</span></span>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false"><path d="M5 12h14m-5-5 5 5-5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</a>
+{% endmacro %}
+<section class="review-completion{% if review_data.can_submit %} is-ready{% endif %}" aria-labelledby="review-completion-heading">
+    <div class="review-completion-copy">
+        <p class="eyebrow">{{ 'Your saved brief' if not editable else 'A final look' }}</p>
+        <h2 id="review-completion-heading">{% if brief.status=='approved' %}Your brief is approved{% elif not editable %}Your brief is with your designer{% elif review_data.can_submit %}Your brief is ready for review.{% elif result.percentage>0 %}Your brief needs a few more details.{% else %}Let&rsquo;s bring your brief together{% endif %}</h2>
+        <p>{% if not editable %}You can revisit the details and submission history here.{% elif review_data.can_submit %}Your required details are complete. Take a moment to check them before sharing.{% else %}A few details still need your attention. Everything you have saved is kept here.{% endif %}</p>
+    </div>
+    <div class="review-completion-meter"><span class="review-percentage">{{ result.percentage }}<small>%</small></span><span>of required details complete</span></div>
+    <progress class="review-progress" value="{{ result.percentage }}" max="100" aria-label="Applicable required details complete"></progress>
+    <div class="review-completion-note">
+        <span>{% if review_data.outstanding_required %}<strong>{{ review_data.outstanding_required }}</strong> required {{ 'detail' if review_data.outstanding_required==1 else 'details' }} to complete{% elif review_data.missing %}Your required details are complete; a few answers need a correction.{% else %}<span class="review-ready-mark" aria-hidden="true">&#10003;</span> All required details included{% endif %}</span>
+        {% if editable %}<span>Your draft is saved</span>{% endif %}
+    </div>
+</section>
+{% if editable and review_data.missing %}
+<section class="review-missing" aria-labelledby="review-missing-heading">
+    <div class="review-section-intro"><h2 id="review-missing-heading">Before submitting</h2><p>Select a detail to finish it in your questionnaire.</p></div>
+    <div class="review-missing-grid">{% for item in review_data.missing[:4] %}{{ missing_card(item) }}{% endfor %}</div>
+    {% if review_data.missing|length>4 %}<details class="review-more-missing"><summary>Show {{ review_data.missing|length-4 }} more details to complete</summary><div class="review-missing-grid">{% for item in review_data.missing[4:] %}{{ missing_card(item) }}{% endfor %}</div></details>{% endif %}
+</section>
+{% endif %}
+<section class="review-collection" aria-labelledby="review-summary-heading">
+    <div class="review-section-intro"><div><p class="eyebrow">The creative direction</p><h2 id="review-summary-heading">Your brief, at a glance</h2></div><p>Open a section to check the details.</p></div>
+    {% for section in review_data.sections %}
+    <article class="review-answer-section">
+        <details class="review-answer-details"{% if loop.first %} open{% endif %}>
+            <summary><span class="review-section-number" aria-hidden="true">{{ '%02d'|format(loop.index) }}</span><span class="review-section-name"><strong>{{ section.title }}</strong><small>{{ section.answers|length }} {{ 'detail' if section.answers|length==1 else 'details' }}</small></span><span class="review-chevron" aria-hidden="true">&#8964;</span></summary>
+            <div class="review-section-body"><p>{{ section.description }}</p><dl class="review-answer-list">{% for item in section.answers %}<div class="review-answer"><dt>{{ item.label }}{% if item.pending %}<span class="review-pending">Pending confirmation</span>{% elif item.attention %}<span class="review-pending">Needs attention</span>{% endif %}</dt><dd>{{ review_answer(item.field,item.value) }}</dd></div>{% endfor %}</dl></div>
+        </details>
+        {% if editable %}<a class="review-section-edit" href="{{ section.edit_url }}" aria-label="Edit {{ section.title }}">Edit <span aria-hidden="true">&#8599;</span></a>{% endif %}
+    </article>
+    {% endfor %}
+</section>
+{% if result.issues and brief.status!='approved' %}
+<aside class="review-readiness"><h3>Notes for your designer</h3><p>These details may need clarification or human verification before design approval.</p><ul>{% for issue in result.issues %}<li>{{ issue }}</li>{% endfor %}</ul></aside>
+{% endif %}
+{% if editable %}
+<section class="review-final-actions final-submission-card" aria-labelledby="review-actions-heading">
+    <span class="submission-flourish" aria-hidden="true"><svg width="23" height="23" viewBox="0 0 24 24" fill="none"><path d="M10 3c.8 5 2 6.2 7 7-5 .8-6.2 2-7 7-.8-5-2-6.2-7-7 5-.8 6.2-2 7-7Z" stroke="currentColor" stroke-width="1.15" stroke-linejoin="round"/><path d="m19 16 .7 2.3L22 19l-2.3.7L19 22l-.7-2.3L16 19l2.3-.7L19 16Z" fill="currentColor"/></svg></span>
+    <div class="submission-card-intro"><p class="eyebrow">Your creative direction, ready to share</p><h2 id="review-actions-heading">One final step&hellip;</h2><p>Your designer will review your brief and get in touch about the next steps. Submission is the start of that conversation, not design approval.</p></div>
+    <p id="submit-guidance" class="submission-readiness{% if review_data.can_submit %} is-complete{% endif %}">{% if review_data.can_submit %}<span class="submission-sage-check" aria-hidden="true">&#10003;</span> Your brief is ready for review.{% elif review_data.outstanding_required %}Your brief needs a few more details. {{ review_data.outstanding_required }} required {{ 'answer is' if review_data.outstanding_required==1 else 'answers are' }} still outstanding.{% else %}A few answers need a correction before you can submit.{% endif %}</p>
+    <form method="post" action="{{ url_for('adaptive_submit',brief_id=brief.id) }}" class="review-submit-form"
+          data-can-submit="{{ 'true' if review_data.can_submit else 'false' }}"
+          data-generation="{{ brief.generation }}" data-last-submission-id="{{ history[0].id if history else 0 }}"
+          data-state-url="{{ url_for('adaptive_submission_state',brief_id=brief.id) }}"
+          data-review-url="{{ url_for('adaptive_review',brief_id=brief.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="generation" value="{{ brief.generation }}">
+        <label class="review-confirm" for="review-confirm-submit"><input id="review-confirm-submit" type="checkbox" name="confirm" value="yes" required{% if not review_data.can_submit %} disabled{% endif %} aria-describedby="submit-guidance"><span>I've reviewed my brief and I'm ready to submit it for review.</span></label>
+        <div class="submission-error" role="alert" tabindex="-1" hidden></div>
+        <div class="submission-recovery" hidden><a class="submission-sign-in" href="{{ url_for('login') }}" target="_blank" rel="noopener" hidden>Sign in in another tab</a><a class="submission-latest-review" href="{{ url_for('adaptive_review',brief_id=brief.id) }}" hidden>Check the latest saved brief</a></div>
+        <div class="review-action-row">
+            {% if not review_data.can_submit %}<a class="review-primary-action" href="{{ review_data.first_edit_url }}">Complete My Brief <span aria-hidden="true">&rarr;</span></a>{% endif %}
+            <button id="review-submit" type="submit" class="review-primary-action{% if not review_data.can_submit %} review-submit-disabled{% endif %}" disabled aria-describedby="submit-guidance"><span class="submission-spinner" aria-hidden="true" hidden></span><span data-submit-label>{{ 'Resubmit for Review' if brief.status=='revision_requested' else 'Submit for Review' }}</span><span data-submit-arrow aria-hidden="true">&rarr;</span></button>
+            <a class="review-secondary-action" href="{{ url_for('adaptive_edit',brief_id=brief.id,return_to='review') }}">Continue editing my brief</a>
+        </div>
+        <p class="submission-status" role="status" aria-live="polite">{% if review_data.can_submit %}Confirm above to enable submission.{% else %}You can keep editing and saving your draft.{% endif %}</p>
+    </form>
+    <noscript><p>Enable JavaScript to confirm your brief and submit it securely.</p></noscript>
+</section>
+<script src="{{ url_for('static',filename='js/adaptive-submit.js') }}" defer></script>
+{% endif %}

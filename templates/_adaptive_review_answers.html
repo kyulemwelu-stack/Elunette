@@ -1,0 +1,15 @@
+﻿{% macro review_answer(field, value) %}
+{% if field.type in ['single_choice','multi_choice'] %}
+    {% for option in field.options %}{% if value==option.value or field.type=='multi_choice' and option.value in value %}<span class="review-value-pill{% if option.value in ['pending','partial','working'] %} is-pending{% endif %}">{{ option.label }}</span>{% endif %}{% endfor %}
+{% elif field.type=='palette_select' %}
+    {% for palette in catalog.palettes %}{% if palette.id==value %}<div class="review-palette"><strong>{{ palette.name }}</strong><span class="swatches" role="img" aria-label="{{ palette.name }}: {{ palette.colors|join(', ') }}">{% for colour in palette.colors %}<span style="background-color:{{ colour }}" title="{{ colour }}"></span>{% endfor %}</span><small>{{ palette.colors|join(' · ') }}</small></div>{% endif %}{% endfor %}
+{% elif field.type=='repeater' %}
+    <ol class="review-repeat-list">{% for row in value %}<li><dl>{% for child in field.item_fields %}{% if child.id in row and row[child.id] is not none and row[child.id]!='' %}<div><dt>{{ child.label }}</dt><dd>{{ review_answer(child,row[child.id]) }}</dd></div>{% endif %}{% endfor %}</dl>{% if not row %}<span class="review-pending">Details to add</span>{% endif %}</li>{% endfor %}</ol>
+{% elif field.type=='date' %}<time datetime="{{ value }}">{{ value|review_date }}</time>
+{% elif field.type=='time' %}<time datetime="{{ value }}">{{ value|review_time }}</time>
+{% elif field.type=='money' %}<span class="review-price">{{ value|review_money }}</span>
+{% elif field.type in ['file_upload','asset_reference'] %}<a class="review-attachment" href="{{ url_for('adaptive_download',asset_id=value) }}"><span aria-hidden="true">&#8595;</span><span>{{ asset_names.get(value,'Download supplied asset') }}</span><span class="adaptive-sr-only"> — Download supplied asset</span></a>
+{% elif field.type=='color_multi_picker' %}<ul class="review-custom-colours">{% for colour in value %}<li><span style="background:{{ colour }}" aria-hidden="true"></span>{{ colour }}</li>{% endfor %}</ul>
+{% elif field.type=='boolean' %}{{ 'Yes' if value else 'No' }}
+{% else %}<span class="review-prose">{{ value }}</span>{% endif %}
+{% endmacro %}
