@@ -9,7 +9,7 @@ from functools import wraps
 from sqlite3 import IntegrityError
 
 from flask import (
-    Flask, abort, flash, redirect, render_template,
+    Flask, abort, flash, g, redirect, render_template,
     request, session, url_for
 )
 from flask_wtf.csrf import CSRFProtect
@@ -30,6 +30,8 @@ app.config["SECRET_KEY"] = (
 )
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = os.environ.get("ELUNETTE_COOKIE_SECURE") == "1"
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(hours=8)
 
 csrf = CSRFProtect(app)
 init_app(app)
@@ -63,6 +65,10 @@ def current_user():
     if user_id is None:
         return None
 
+    cached = g.get("current_user_record")
+    if cached is not None and cached["id"] == user_id:
+        return cached
+
     db = get_db()
     user = db.execute(
         "SELECT id, full_name, email, role, status "
@@ -74,6 +80,7 @@ def current_user():
         session.clear()
         return None
 
+    g.current_user_record = user
     return user
 
 
@@ -3032,4 +3039,4 @@ from adaptive_questionnaires import register as register_adaptive
 register_adaptive(app, current_user, role_required)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()

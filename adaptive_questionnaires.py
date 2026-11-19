@@ -358,9 +358,15 @@ def register(app, current_user, role_required):
         user=current_user()
         if not user: abort(401)
         asset=get_db().execute('''SELECT a.*,b.client_id,b.assigned_provider_id,b.status FROM brief_assets a JOIN project_briefs b ON b.id=a.brief_id WHERE a.id=?''',(asset_id,)).fetchone()
-        if asset is None or not (user['id']==asset['client_id'] or (user['id']==asset['assigned_provider_id'] and asset['status']!='draft')): abort(404)
+        if asset is None:
+            abort(404)
+        owner = user['role'] == 'client' and user['id'] == asset['client_id']
+        designer = (user['role'] == 'service_provider' and user['id'] == asset['assigned_provider_id']
+                    and asset['status'] != 'draft')
+        if not (owner or designer):
+            abort(404)
         # Providers may only access files referenced by immutable submitted snapshots.
-        if user['id']!=asset['client_id']:
+        if designer:
             row=record(asset['brief_id'],provider=True)
             catalog=json.loads(row['schema_json'])
             fields=engine.fields_for(engine.sections(catalog,row['service']))
