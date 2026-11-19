@@ -15,6 +15,13 @@
 </svg>
 {%- endmacro %}
 
+{% macro notification_bell(count=0) -%}
+<a class="studio-notifications" href="{{ url_for('notifications') }}" aria-label="View notifications{% if count %} ({{ count }} unread){% endif %}">
+    {{ icon('bell') }}
+    {% if count %}<span class="studio-notification-count" aria-hidden="true">{{ '99+' if count > 99 else count }}</span>{% endif %}
+</a>
+{%- endmacro %}
+
 {% macro paper_motif() -%}
 <svg class="studio-paper-art" viewBox="0 0 190 200" fill="none" aria-hidden="true" focusable="false">
     <rect x="34" y="23" width="112" height="146" rx="7" transform="rotate(-13 34 23)" fill="#A3B18A"/>

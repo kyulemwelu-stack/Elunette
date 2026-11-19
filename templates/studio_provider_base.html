@@ -1,5 +1,5 @@
 {% import '_brief_components.html' as brief_ui %}
-{% from '_studio_icons.html' import icon, paper_motif %}
+{% from '_studio_icons.html' import icon, paper_motif, notification_bell %}
 {% set initials = user['full_name'].split()[0][0] ~ (user['full_name'].split()[-1][0] if user['full_name'].split() | length > 1 else '') %}
 {% set workspace_role = user['role'] %}
 {% set workspace_endpoint = 'client_dashboard' if workspace_role == 'client' else 'provider_dashboard' if workspace_role == 'service_provider' else 'admin_dashboard' %}
@@ -37,7 +37,7 @@
         <header class="studio-toolbar">
             <p class="studio-breadcrumb">Your workspace <span aria-hidden="true">/</span> <strong>{% block breadcrumb %}Review Library{% endblock %}</strong></p>
             <div class="studio-toolbar-actions">
-                <a class="studio-notifications" href="{{ url_for('notifications') }}" aria-label="View notifications">{{ icon('bell') }}</a>
+                {{ notification_bell(unread_notification_count()) }}
                 <details class="studio-account">
                     <summary aria-label="Account controls for {{ user['full_name'] }}"><span class="studio-avatar">{{ initials | upper }}</span><span class="studio-account-name">{{ user['full_name'] }}</span>{{ icon('chevron') }}</summary>
                     <div class="studio-account-menu"><strong>{{ user['full_name'] }}</strong><p>{{ 'Client' if workspace_role == 'client' else 'Provider' if workspace_role == 'service_provider' else 'Administrator' }} workspace</p><a href="{{ url_for(collection_endpoint) }}">{{ 'Your review workspace' if workspace_role == 'service_provider' else 'Manage your briefs' if workspace_role == 'client' else 'Manage users' }} {{ icon('arrow') }}</a><form action="{{ url_for('logout') }}" method="POST"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit">Log out {{ icon('logout') }}</button></form></div>

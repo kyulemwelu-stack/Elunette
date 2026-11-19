@@ -311,7 +311,50 @@ class Workflows(unittest.TestCase):
         self.assertEqual(self.db.execute('SELECT assigned_provider_id FROM project_briefs WHERE id=?',(brief_id,)).fetchone()[0],aid)
         self.assertEqual(self.db.execute("SELECT COUNT(*) FROM project_briefs WHERE title='Trial project'").fetchone()[0],1)
         self.assertEqual(self.db.execute('SELECT COUNT(*) FROM brief_reviews WHERE brief_id=?',(brief_id,)).fetchone()[0],2)
-        self.assertIn('All caught up, lovely.',c.get('/notifications').get_data(as_text=True))
+        client_updates = c.get('/notifications').get_data(as_text=True)
+        provider_updates = a.get('/notifications').get_data(as_text=True)
+        for updates, first, second, link in (
+            (client_updates, 'Brief approved', 'Revision requested', f'/client/questionnaires/{qid}?brief_id={brief_id}'),
+            (provider_updates, 'Revised brief submitted', 'New brief submitted', review),
+        ):
+            self.assertIn('Trial project', updates)
+            self.assertIn(f'href="{link}"', updates)
+            self.assertLess(updates.index(first), updates.index(second))
+            self.assertNotIn('All caught up, lovely.', updates)
+        for browser in (other, b):
+            self.assertIn('All caught up, lovely.', browser.get('/notifications').get_data(as_text=True))
+
+        updates = self.db.execute(
+            'SELECT id, event_type FROM notifications WHERE brief_id=? ORDER BY id', (brief_id,)
+        ).fetchall()
+        self.assertEqual([row['event_type'] for row in updates],
+                         ['submitted', 'revision_requested', 'resubmitted', 'approved'])
+        read_url = f"/notifications/{updates[-1]['id']}/read"
+        self.assertEqual(c.post(read_url).status_code, 400)
+        self.assertEqual(self.post(read_url, client=other).status_code, 404)
+        self.assertEqual(self.post(read_url, client=a).status_code, 404)
+        self.assertIn('(2 unread)', c.get('/dashboard/client').get_data(as_text=True))
+        self.assertIn('(2 unread)', a.get('/dashboard/provider').get_data(as_text=True))
+        self.assertEqual(self.post(read_url, client=c).status_code, 303)
+        self.assertIn('(1 unread)', c.get('/dashboard/client').get_data(as_text=True))
+        self.assertEqual(self.post('/notifications/read', client=c).status_code, 303)
+        self.assertEqual(self.post('/logout', client=c).status_code, 302)
+        self.assertEqual(c.get('/notifications').status_code, 302)
+        self.assertEqual(self.post('/login', {
+            'email': 'trialclienta@example.test', 'password': 'Trial-password-123',
+        }, c).status_code, 302)
+        reread = c.get('/notifications').get_data(as_text=True)
+        self.assertIn('Brief approved', reread)
+        self.assertIn('Revision requested', reread)
+        self.assertNotIn('Mark as read', reread)
+        self.assertNotIn('unread)', c.get('/dashboard/client').get_data(as_text=True))
+        self.assertIn('(2 unread)', a.get('/dashboard/provider').get_data(as_text=True))
+        self.db.execute('UPDATE project_briefs SET assigned_provider_id=? WHERE id=?', (bid, brief_id))
+        self.db.commit()
+        self.assertIn('All caught up, lovely.', a.get('/notifications').get_data(as_text=True))
+        self.assertEqual(self.post(f"/notifications/{updates[0]['id']}/read", client=a).status_code, 404)
+        self.assertEqual(a.get(review).status_code, 404)
+        self.assertIn('All caught up, lovely.', b.get('/notifications').get_data(as_text=True))
 
     def test_assignment_migration_repeatable_and_preserves_legacy_history(self):
         schema=Path('schema.sql').read_text(encoding='utf-8')

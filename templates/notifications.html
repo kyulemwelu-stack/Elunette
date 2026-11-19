@@ -20,8 +20,36 @@
 {{ envelope('postroom-header-art') }}
 </section>
 <section class="postroom-collection" aria-labelledby="postroom-collection-title">
-<div class="postroom-section-heading"><h2 id="postroom-collection-title">Your postroom</h2><span>All updates</span></div>
-{# No notification storage/feed exists yet. Do not fabricate records or read controls. #}
+<div class="postroom-section-heading">
+<h2 id="postroom-collection-title">Your postroom</h2>
+{% if updates|selectattr('read_at', 'none')|first is defined %}
+<form method="post" action="{{ url_for('read_notifications') }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button class="postroom-action" type="submit">Mark all as read</button>
+</form>
+{% else %}<span>All updates</span>{% endif %}
+</div>
+{% if updates %}
+<ul class="postroom-updates">
+{% for update in updates %}
+<li class="postroom-update">
+<div class="postroom-update-icon">{{ icon(update.icon) }}</div>
+<div class="postroom-update-body">
+<h3>{{ update.title }}{% if not update.read_at %} <span class="postroom-unread">Unread</span>{% endif %}</h3>
+<p>{{ update.message }}</p>
+<a class="studio-text-link" href="{{ update.link }}">{{ update.project_title }} {{ icon('arrow') }}</a>
+<time datetime="{{ update.timestamp }}">{{ update.display_time }}</time>
+</div>
+{% if not update.read_at %}
+<form method="post" action="{{ url_for('read_notifications', notification_id=update.id) }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button class="postroom-action" type="submit" aria-label="Mark {{ update.title }} for {{ update.project_title }} as read">Mark as read</button>
+</form>
+{% endif %}
+</li>
+{% endfor %}
+</ul>
+{% else %}
 <div class="postroom-empty">
 {{ envelope() }}
 <p class="studio-eyebrow">A QUIET MOMENT</p>
@@ -29,5 +57,6 @@
 <p>There's nothing new right now. Your next update will find its way here.</p>
 <a class="studio-text-link" href="{{ url_for(workspace_endpoint) }}">Back to your Studio {{ icon('arrow') }}</a>
 </div>
+{% endif %}
 </section>
 {% endblock %}

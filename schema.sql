@@ -513,3 +513,19 @@ CREATE TABLE IF NOT EXISTS brief_assets (
  original_name TEXT NOT NULL, media_type TEXT NOT NULL, size INTEGER NOT NULL,
  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS notifications (
+    id INTEGER PRIMARY KEY,
+    recipient_id INTEGER NOT NULL REFERENCES users(id),
+    recipient_role TEXT NOT NULL CHECK (recipient_role IN ('client', 'service_provider')),
+    brief_id INTEGER NOT NULL REFERENCES project_briefs(id) ON DELETE CASCADE,
+    event_type TEXT NOT NULL CHECK (event_type IN ('submitted', 'revision_requested', 'resubmitted', 'approved')),
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    event_reference TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    read_at TEXT,
+    UNIQUE (brief_id, event_type, event_reference)
+);
+
+CREATE INDEX IF NOT EXISTS notifications_recipient_idx
+ON notifications (recipient_id, recipient_role, read_at);

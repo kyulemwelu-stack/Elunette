@@ -13,9 +13,10 @@
     <link rel="stylesheet"
           href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/signature-footer.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/designer-brief.css') }}">
 </head>
 
-<body class="dashboard-page provider-page review-page">
+<body class="dashboard-page provider-page review-page designer-page designer-legacy-page">
 
     <!-- HEADER -->
 
@@ -105,13 +106,47 @@
                 PROJECT EVALUATION
             </p>
 
-            <h1>Review Project Brief</h1>
+            <h1>{{ brief['title'] if brief is defined and brief else 'Review Project Brief' }}</h1>
 
             <p>
-                Examine the submitted project
-                requirements and provide a clear,
-                informed review decision.
+                {% if brief is defined and brief %}{{ brief['questionnaire_title'] }} &middot; {{ brief['client_name'] }}{% else %}Select a submitted brief to begin your review.{% endif %}
             </p>
+
+        </section>
+
+
+        <!-- COMPLETENESS INFORMATION -->
+
+        <section class="review-completeness"
+                 aria-labelledby="completeness-title">
+
+            <div class="section-header">
+
+                <p class="section-label">
+                    INFORMATION CHECK
+                </p>
+
+                <h2 id="completeness-title">
+                    Designer Review Summary
+                </h2>
+
+            </div>
+
+
+<div class="review-summary">
+    {% if brief is defined and brief %}
+    <div class="review-summary-heading">
+        <h3>Recorded completion</h3>
+        <strong class="review-percentage">{{ brief['completeness_percentage'] }}<span>%</span></strong>
+    </div>
+    <progress class="review-progress" max="100" value="{{ brief['completeness_percentage'] }}"
+              aria-label="Recorded brief completion">{{ brief['completeness_percentage'] }}%</progress>
+    <p class="form-hint">Based on applicable saved answers. Questionnaire completeness is separate from independent verification.</p>
+    {% else %}
+    <p>Completeness information will appear when a submitted brief is selected.</p>
+    {% endif %}
+</div>
+
 
         </section>
 
@@ -204,6 +239,8 @@
             </div>
 
 
+<div class="designer-expand-controls"><button type="button" data-expand-sections="open">Expand all</button><button type="button" data-expand-sections="close">Collapse all</button></div>
+<details class="designer-legacy-responses" open><summary>Submitted project requirements</summary>
 <div class="requirements-container">
 
     {% if responses is defined and responses %}
@@ -234,43 +271,7 @@
     {% endif %}
 
 </div>
-
-        </section>
-
-
-        <!-- COMPLETENESS INFORMATION -->
-
-        <section class="review-completeness"
-                 aria-labelledby="completeness-title">
-
-            <div class="section-header">
-
-                <p class="section-label">
-                    INFORMATION CHECK
-                </p>
-
-                <h2 id="completeness-title">
-                    Brief Completeness
-                </h2>
-
-            </div>
-
-
-<div class="review-summary">
-    {% if brief is defined and brief %}
-    <div class="review-summary-heading">
-        <h3>Recorded completion</h3>
-        <strong class="review-percentage">{{ brief['completeness_percentage'] }}<span>%</span></strong>
-    </div>
-    <progress class="review-progress" max="100" value="{{ brief['completeness_percentage'] }}"
-              aria-label="Recorded brief completion">{{ brief['completeness_percentage'] }}%</progress>
-    <p class="form-hint">Based on the applicable questionnaire answers saved with this brief.</p>
-    {% else %}
-    <p>Completeness information will appear when a submitted brief is selected.</p>
-    {% endif %}
-</div>
-
-
+</details>
         </section>
 
 
@@ -371,7 +372,7 @@
 <form
     action="{{ url_for('review_brief', brief_id=brief['id']) if brief is defined and brief else '' }}"
     method="POST"
-    class="approval-form">
+    class="approval-form designer-decision-form" id="legacy-approve-form" data-can-review="{{ 'true' if can_review|default(false) else 'false' }}">
 
 <!-- CSRF PROTECTION -->
 
@@ -425,7 +426,7 @@
 <form
     action="{{ url_for('review_brief', brief_id=brief['id']) if brief is defined and brief else '' }}"
     method="POST"
-    class="revision-request-form">
+    class="revision-request-form designer-decision-form" id="legacy-revision-form" data-can-review="{{ 'true' if can_review|default(false) else 'false' }}">
 
 <!-- CSRF PROTECTION -->
 
@@ -511,6 +512,8 @@
 
     {% include '_signature_footer.html' %}
 
+{% include '_designer_decision_dialog.html' %}
+<script src="{{ url_for('static',filename='js/designer-brief.js') }}" defer></script>
 </body>
 
 </html>

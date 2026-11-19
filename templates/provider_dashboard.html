@@ -1,5 +1,5 @@
 {% import '_brief_components.html' as brief_ui %}
-{% from '_studio_icons.html' import icon, paper_motif %}
+{% from '_studio_icons.html' import icon, paper_motif, notification_bell %}
 {% set first_name = user['full_name'].split()[0] %}
 {% set initials = user['full_name'].split()[0][0] ~ (user['full_name'].split()[-1][0] if user['full_name'].split() | length > 1 else '') %}
 <!DOCTYPE html>
@@ -39,7 +39,7 @@
         <header class="studio-toolbar">
             <p class="studio-breadcrumb">Your workspace <span aria-hidden="true">/</span> <strong>Overview</strong></p>
             <div class="studio-toolbar-actions">
-                <a class="studio-notifications" href="{{ url_for('notifications') }}" aria-label="View notifications">{{ icon('bell') }}</a>
+                {{ notification_bell(unread_notification_count()) }}
                 <details class="studio-account">
                     <summary aria-label="Account controls for {{ user['full_name'] }}"><span class="studio-avatar">{{ initials | upper }}</span><span class="studio-account-name">{{ user['full_name'] }}</span>{{ icon('chevron') }}</summary>
                     <div class="studio-account-menu">

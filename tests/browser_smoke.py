@@ -344,7 +344,16 @@ ATELIER_FOOTER_CHECK = """(() => {
             }
         }
         if (document.body.classList.contains('postroom-page')) {
-            if (!document.querySelector('.postroom-empty') || document.querySelector('input[type="search"],button[disabled]')) throw Error('Incorrect Postroom empty state');
+            const populated = location.pathname.includes('postroom-populated');
+            if (Boolean(document.querySelector('.postroom-empty')) === populated) throw Error('Incorrect Postroom empty state');
+            if (populated) {
+                const card = document.querySelector('.postroom-update');
+                const columns = getComputedStyle(card).gridTemplateColumns.split(' ').length;
+                if (columns !== (innerWidth <= 600 ? 2 : 3)) throw Error('Notification card is not responsive');
+                if (!card.querySelector('time[datetime]') || !card.querySelector('a[href*="brief_id=1"]')) throw Error('Missing project link or timestamp');
+                if (!card.querySelector('.postroom-unread') || !card.querySelector('[name=csrf_token]')) throw Error('Missing unread state or secure action');
+                if (!document.querySelector('.studio-notification-count')) throw Error('Missing unread badge');
+            }
             if (!document.querySelector('.studio-navigation [aria-current="page"]').href.endsWith('/notifications')) throw Error('Postroom navigation is not active');
             const heading = document.querySelector('.postroom-intro h1').getBoundingClientRect();
             const art = document.querySelector('.postroom-header-art').getBoundingClientRect();
@@ -486,6 +495,14 @@ def main():
                 (root/(name+'.html')).write_text(html,encoding='utf-8')
             html=fixture.client.get('/notifications').get_data(as_text=True).replace('/static/','/assets/')
             (root/'postroom-client.html').write_text(html,encoding='utf-8')
+            if postroom_only:
+                fixture.login(2)
+                response = fixture.post('/provider/briefs/1/review', {'decision':'request_revision', 'revision_comments':'Add a deadline.'})
+                if response.status_code != 302:
+                    raise RuntimeError('Could not generate Postroom fixture')
+                fixture.login(1)
+                html = fixture.client.get('/notifications').get_data(as_text=True).replace('/static/', '/assets/')
+                (root/'postroom-populated.html').write_text(html,encoding='utf-8')
             if collection_only:
                 for brief_id, status in enumerate(('draft','submitted','under_review','revision_requested','approved'),1):
                     fixture.db.execute('UPDATE project_briefs SET status=?,completeness_percentage=? WHERE id=?',(status,brief_id*20,brief_id))
@@ -638,6 +655,8 @@ def main():
                      ('postroom-client-small','320,1100',''), ('postroom-provider','1440,1000',''))
         if postroom_only:
             cases = tuple(case for case in cases if case[0].startswith('postroom-') or case[0] == 'footer-notifications')
+            cases += (('postroom-populated','1440,1000',''), ('postroom-populated-mobile','390,1100',''),
+                      ('postroom-populated-small','320,1100',''))
         if registration_only:
             cases = tuple(('registration-'+role+suffix,size,'') for role in ('client','service_provider') for suffix,size in (('','1440,1100'),('-tablet','820,1200'),('-mobile','390,1200'),('-small','320,1200')))
         if provider_selection_only:
@@ -687,6 +706,8 @@ def main():
                     page = 'postroom-client'
                 elif name == 'postroom-provider':
                     page = 'footer-notifications'
+                elif name.startswith('postroom-populated'):
+                    page = 'postroom-populated'
                 if name in ('collection-tablet','collection-mobile','collection-small'):
                     page = 'collection'
             profile = root / (name + "-profile")
@@ -755,10 +776,11 @@ def main():
                         raise RuntimeError('Secure deletion dialog or cancellation failed')
                 if name.startswith('postroom-'):
                     reached = False
+                    action = '.postroom-update a' if name.startswith('postroom-populated') else '.postroom-empty a'
                     for _ in range(24):
                         devtools.call('Input.dispatchKeyEvent', {'type': 'keyDown', 'key': 'Tab', 'code': 'Tab', 'windowsVirtualKeyCode': 9})
                         devtools.call('Input.dispatchKeyEvent', {'type': 'keyUp', 'key': 'Tab', 'code': 'Tab', 'windowsVirtualKeyCode': 9})
-                        focused = devtools.call('Runtime.evaluate', {'expression': "document.activeElement.matches('.postroom-empty a') && getComputedStyle(document.activeElement).outlineStyle !== 'none'"})
+                        focused = devtools.call('Runtime.evaluate', {'expression': f"document.activeElement.matches('{action}') && getComputedStyle(document.activeElement).outlineStyle !== 'none'"})
                         if focused.get('result', {}).get('value'):
                             reached = True
                             break

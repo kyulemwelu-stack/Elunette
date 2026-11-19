@@ -13,10 +13,22 @@
 .postroom-page .postroom-empty h2 { margin: 14px 0; font: 400 clamp(30px, 3vw, 38px)/1.2 var(--font-heading); letter-spacing: -.7px; }
 .postroom-page .postroom-empty > p:not(.studio-eyebrow) { max-width: 360px; color: #756052; font-size: 13px; line-height: 1.9; }
 .postroom-page .postroom-empty > a { margin-top: 26px; min-height: 32px; }
+.postroom-updates { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.postroom-update { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 14px; padding: 16px; border: 1px solid #DDD3C5; border-radius: 16px; background: var(--white); }
+.postroom-update-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: #E1E7D7; color: #5C3A26; }
+.postroom-update-body { overflow-wrap: anywhere; }
+.postroom-update h3 { margin: 0 0 4px; font: 600 15px var(--font-navigation); }
+.postroom-update p { margin: 0 0 6px; color: #756052; font-size: 13px; }
+.postroom-update time { display: block; margin-top: 4px; color: #756052; font-size: 11px; }
+.postroom-unread { display: inline-block; padding: 2px 7px; border-radius: 999px; background: #F1E7D3; color: var(--burgundy); font-size: 10px; vertical-align: middle; }
+.postroom-action { padding: 6px 10px; min-height: 32px; border: 1px solid #DDD3C5; border-radius: 8px; background: var(--white); color: var(--burgundy); font: 600 12px var(--font-navigation); cursor: pointer; }
+.postroom-action:hover { background: #F1E7D3; }
 @media (max-width: 600px) {
  .postroom-page .postroom-intro { gap: 12px; padding-top: 12px; }
  .postroom-page .postroom-header-art { width: 54px; margin-right: 0; }
  .postroom-page .postroom-intro h1 { font-size: clamp(31px, 8vw, 40px); letter-spacing: -1px; }
  .postroom-page .postroom-intro > div > p:last-child { max-width: 235px; font-size: 12px; }
  .postroom-page .postroom-empty { padding: 36px 20px; }
+ .postroom-update { grid-template-columns: auto minmax(0, 1fr); gap: 10px; }
+ .postroom-update > form { grid-column: 2; }
 }

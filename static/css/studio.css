@@ -30,7 +30,8 @@
 .studio-breadcrumb span { margin: 0 14px; color: #B9A99B; }
 .studio-breadcrumb strong { color: var(--chocolate); font-weight: 600; }
 .studio-toolbar-actions { display: flex; align-items: center; gap: 22px; }
-.studio-notifications { display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid var(--line); border-radius: 14px; background: var(--white); }
+.studio-notifications { position: relative; display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid var(--line); border-radius: 14px; background: var(--white); }
+.studio-notification-count { position: absolute; top: -5px; right: -5px; min-width: 18px; padding: 2px 4px; border-radius: 999px; background: var(--burgundy); color: var(--white); font: 600 10px/14px var(--font-navigation); text-align: center; }
 .studio-account { position: relative; }
 .studio-account summary { display: flex; align-items: center; gap: 10px; cursor: pointer; list-style: none; border-radius: 16px; font-size: 12px; font-weight: 600; }
 .studio-account summary::-webkit-details-marker { display: none; }

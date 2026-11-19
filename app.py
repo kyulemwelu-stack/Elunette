@@ -15,6 +15,7 @@ from flask import (
 from flask_wtf.csrf import CSRFProtect
 from werkzeug.security import check_password_hash, generate_password_hash
 from database import get_db, init_app
+from notifications import EVENTS, VISIBLE_NOTIFICATIONS, record_notification
 
 
 # ==========================================
@@ -505,7 +506,72 @@ def revision_history_preview():
 @app.route("/notifications")
 @login_required
 def notifications():
-    return render_template("notifications.html", user=current_user())
+    user = current_user()
+    records = get_db().execute(
+        """
+        SELECT n.*, b.title AS project_title,
+               (SELECT questionnaire_id FROM questionnaire_versions
+                WHERE id = b.questionnaire_version_id) AS questionnaire_id,
+               EXISTS (SELECT 1 FROM adaptive_definitions
+                       WHERE version_id = b.questionnaire_version_id) AS adaptive
+        """ + VISIBLE_NOTIFICATIONS + " ORDER BY n.created_at DESC, n.id DESC",
+        (user["id"], user["role"]),
+    ).fetchall()
+    updates = []
+    for record in records:
+        brief_id = record["brief_id"]
+        if user["role"] == "service_provider":
+            link = url_for("review_brief", brief_id=brief_id)
+        elif record["adaptive"]:
+            link = url_for("adaptive_review", brief_id=brief_id)
+        else:
+            link = url_for("client_questionnaire", brief_id=brief_id,
+                           questionnaire_id=record["questionnaire_id"])
+        created = datetime.fromisoformat(record["created_at"]).replace(tzinfo=timezone.utc)
+        local = created.astimezone(timezone(timedelta(hours=3)))
+        updates.append(dict(record, link=link, icon=EVENTS[record["event_type"]][2],
+                            timestamp=created.isoformat(), display_time=local.strftime("%d %b %Y, %H:%M EAT")))
+    response = app.make_response(render_template("notifications.html", user=user, updates=updates))
+    response.headers["Cache-Control"] = "private, no-store"
+    return response
+
+
+@app.post("/notifications/read", defaults={"notification_id": None})
+@app.post("/notifications/<int:notification_id>/read")
+@login_required
+def read_notifications(notification_id):
+    user = current_user()
+    db = get_db()
+    query = "SELECT n.id " + VISIBLE_NOTIFICATIONS
+    params = (user["id"], user["role"])
+    if notification_id is not None:
+        query += " AND n.id = ?"
+        params += (notification_id,)
+    else:
+        query += " AND n.read_at IS NULL"
+    with db:
+        updated = db.execute(
+            "UPDATE notifications SET read_at = COALESCE(read_at, CURRENT_TIMESTAMP) "
+            "WHERE id IN (" + query + ")",
+            params,
+        )
+        if notification_id is not None and updated.rowcount == 0:
+            abort(404)
+    return redirect(url_for("notifications"), code=303)
+
+
+@app.context_processor
+def notification_badge():
+    def unread_notification_count():
+        user = current_user()
+        if user is None:
+            return 0
+        return get_db().execute(
+            "SELECT COUNT(*) " + VISIBLE_NOTIFICATIONS + " AND n.read_at IS NULL",
+            (user["id"], user["role"]),
+        ).fetchone()[0]
+
+    return {"unread_notification_count": unread_notification_count}
 
 
 # ==========================================
@@ -825,6 +891,7 @@ def review_brief(brief_id):
 
         if new_status == "revision_requested":
             ensure_revision_cycle(db, brief_id, review_cursor.lastrowid)
+        record_notification(db, brief_id, new_status, f"review:{review_cursor.lastrowid}")
         db.commit()
 
         flash(
@@ -2899,6 +2966,9 @@ def submit_brief(brief_id):
             )
             if closed.rowcount != 1:
                 abort(409, "This revision cycle has already been submitted.")
+            record_notification(db, brief_id, "resubmitted", f"revision-cycle:{cycle['id']}")
+        else:
+            record_notification(db, brief_id, "submitted", "initial-submission")
         db.commit()
 
     except Exception:

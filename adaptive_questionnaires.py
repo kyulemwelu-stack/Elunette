@@ -10,8 +10,10 @@ from werkzeug.utils import secure_filename
 from werkzeug.exceptions import HTTPException
 from flask_wtf.csrf import CSRFError, generate_csrf
 from database import get_db
+from notifications import record_notification
 import questionnaire_engine as engine
 from questionnaire_review import build_review, readable_date, readable_time, readable_money
+from designer_review import build_designer_review, designer_timestamp
 
 
 def register(app, current_user, role_required):
@@ -22,6 +24,8 @@ def register(app, current_user, role_required):
     app.add_template_filter(readable_date,'review_date')
     app.add_template_filter(readable_time,'review_time')
     app.add_template_filter(readable_money,'review_money')
+    app.add_template_filter(designer_timestamp,'designer_timestamp')
+    app.add_template_filter(engine.public_url,'designer_public_url')
 
     api_endpoints={'adaptive_save','adaptive_draft_state','adaptive_upload','adaptive_submit','adaptive_submission_state'}
 
@@ -70,10 +74,11 @@ def register(app, current_user, role_required):
         user=current_user()
         if user is None: abort(401)
         key='assigned_provider_id' if provider else 'client_id'
-        row=get_db().execute(f'''SELECT b.*, d.service,d.schema_json,v.questionnaire_id,
+        row=get_db().execute(f'''SELECT b.*, d.service,d.schema_json,v.questionnaire_id,v.version_number AS definition_version,client.full_name AS client_name,
             a.answers_json,a.revision_response,a.generation FROM project_briefs b
             JOIN adaptive_definitions d ON d.version_id=b.questionnaire_version_id
             JOIN questionnaire_versions v ON v.id=b.questionnaire_version_id
+            JOIN users client ON client.id=b.client_id
             JOIN adaptive_drafts a ON a.brief_id=b.id WHERE b.id=? AND b.{key}=?''',(brief_id,user['id'])).fetchone()
         if row is None or (provider and row['status']=='draft'): abort(404)
         if editable and row['status'] not in ('draft','revision_requested'): abort(409)
@@ -95,8 +100,12 @@ def register(app, current_user, role_required):
         catalog,groups,answers,allowed,result=context(row,submitted=provider or row['status'] not in ('draft','revision_requested'))
         history=get_db().execute('SELECT * FROM adaptive_submissions WHERE brief_id=? ORDER BY revision_number DESC',(row['id'],)).fetchall()
         history=[dict(h,items=json.loads(h['answers_json'])) for h in history]
-        feedback=get_db().execute('SELECT * FROM brief_reviews WHERE brief_id=? ORDER BY id DESC',(row['id'],)).fetchall()
-        assets=get_db().execute('SELECT id,original_name FROM brief_assets WHERE brief_id=?',(row['id'],)).fetchall()
+        feedback=get_db().execute('SELECT r.*,u.full_name AS reviewer_name FROM brief_reviews r JOIN users u ON u.id=r.reviewer_id WHERE r.brief_id=? ORDER BY r.id DESC',(row['id'],)).fetchall()
+        assets=get_db().execute('SELECT id,original_name,media_type FROM brief_assets WHERE brief_id=?',(row['id'],)).fetchall()
+        if provider:
+            designer=build_designer_review(groups,answers,result,row,catalog,history)
+            return render_template('designer_brief.html',brief=row,designer=designer,catalog=catalog,
+                result=result,feedback=feedback,asset_map={a['id']:dict(a) for a in assets},user=current_user()),status
         review_view=not provider and (review or row['status'] not in ('draft','revision_requested'))
         review_data=build_review(groups,answers,result,row,
             lambda field: url_for('adaptive_edit',brief_id=row['id'],question=field,return_to='review')) if review_view else None
@@ -261,6 +270,8 @@ def register(app, current_user, role_required):
         updated=db.execute("UPDATE project_briefs SET status='submitted',completeness_percentage=?,submitted_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status IN ('draft','revision_requested')",
                            (result['percentage'],brief_id))
         if updated.rowcount!=1: abort(409)
+        event = 'resubmitted' if row['status'] == 'revision_requested' else 'submitted'
+        record_notification(db, brief_id, event, f'adaptive-submission:{submission_id}')
         db.commit()
         confirmation=url_for('adaptive_submission_success',brief_id=brief_id,submission_id=submission_id)
         if request.accept_mimetypes.best=='application/json':
@@ -286,9 +297,10 @@ def register(app, current_user, role_required):
         elif decision=='revision_requested':
             if not comment: abort(400,'Revision feedback is required.')
         else: abort(400)
-        db.execute('INSERT INTO brief_reviews(brief_id,reviewer_id,decision,comment) VALUES (?,?,?,?)',(brief_id,current_user()['id'],decision,comment))
+        review = db.execute('INSERT INTO brief_reviews(brief_id,reviewer_id,decision,comment) VALUES (?,?,?,?)',(brief_id,current_user()['id'],decision,comment))
         db.execute('UPDATE project_briefs SET status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?',(decision,brief_id))
         if decision=='revision_requested': db.execute("UPDATE adaptive_drafts SET revision_response='',generation=generation+1 WHERE brief_id=?",(brief_id,))
+        record_notification(db, brief_id, decision, f'review:{review.lastrowid}')
         db.commit(); return redirect(url_for('adaptive_provider',brief_id=brief_id))
 
     @app.route('/client/briefs/<int:brief_id>/adaptive/assets',methods=['POST'])
@@ -336,7 +348,7 @@ def register(app, current_user, role_required):
         if not user: abort(401)
         asset=get_db().execute('''SELECT a.*,b.client_id,b.assigned_provider_id,b.status FROM brief_assets a JOIN project_briefs b ON b.id=a.brief_id WHERE a.id=?''',(asset_id,)).fetchone()
         if asset is None or not (user['id']==asset['client_id'] or (user['id']==asset['assigned_provider_id'] and asset['status']!='draft')): abort(404)
-        # Providers may only download files referenced in the last submitted snapshot.
+        # Providers may only access files referenced by immutable submitted snapshots.
         if user['id']!=asset['client_id']:
             row=record(asset['brief_id'],provider=True)
             catalog=json.loads(row['schema_json'])
@@ -348,6 +360,10 @@ def register(app, current_user, role_required):
                 return False
             submitted=get_db().execute('SELECT answers_json FROM adaptive_submissions WHERE brief_id=?',(asset['brief_id'],)).fetchall()
             if not any(references(fields[item['field_id']],item['value']) for submission in submitted for item in json.loads(submission['answers_json'])): abort(404)
-        response=send_file(Path(app.config['ADAPTIVE_UPLOAD_ROOT'])/asset['storage_name'],mimetype=asset['media_type'],as_attachment=True,download_name=asset['original_name'])
+        preview=request.args.get('preview')=='1' and asset['media_type'] in ('image/png','image/jpeg','image/webp')
+        response=send_file(Path(app.config['ADAPTIVE_UPLOAD_ROOT'])/asset['storage_name'],mimetype=asset['media_type'],as_attachment=not preview,download_name=asset['original_name'])
+        if preview:
+            response.headers['Content-Security-Policy']="default-src 'none'; sandbox"
+            response.headers['X-Frame-Options']='DENY'
         response.headers['X-Content-Type-Options']='nosniff'; response.headers['Cache-Control']='private, no-store'
         return response

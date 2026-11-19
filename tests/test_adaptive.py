@@ -336,6 +336,30 @@ class Integration(unittest.TestCase):
         approved=self.client.post(f'/provider/briefs/{bid}/adaptive',data={'csrf_token':self.token,'decision':'approved','comment':'Approved'})
         self.assertEqual(approved.status_code,302,approved.data)
         self.assertEqual(self.db.execute('SELECT status FROM project_briefs WHERE id=?',(bid,)).fetchone()[0],'approved')
+        self.assertEqual(self.db.execute(
+            'SELECT event_type, recipient_id FROM notifications WHERE brief_id=? ORDER BY id', (bid,)
+        ).fetchall(), [('submitted', 2), ('revision_requested', 1), ('resubmitted', 2), ('approved', 1)])
+        provider_feed = self.client.get('/notifications').get_data(as_text=True)
+        self.assertIn(f'href="/provider/briefs/{bid}/review"', provider_feed)
+        self.assertIn('A revised project brief is ready for review.', provider_feed)
+        self.login(1)
+        client_feed = self.client.get('/notifications').get_data(as_text=True)
+        client_link = f'/client/briefs/{bid}/adaptive/review'
+        self.assertIn(f'href="{client_link}"', client_feed)
+        self.assertIn('Your project brief has been approved for design.', client_feed)
+        self.assertEqual(self.client.get(client_link).status_code, 200)
+
+    def test_notification_failure_rolls_back_adaptive_submission(self):
+        bid = self.new()
+        self.assertEqual(self.save(bid, complete('logo_branding')).status_code, 200)
+        self.db.execute("""CREATE TRIGGER reject_notification BEFORE INSERT ON notifications
+                           BEGIN SELECT RAISE(ABORT, 'test notification write failure'); END""")
+        self.assertEqual(self.submit(bid, 1).status_code, 500)
+        self.assertEqual(self.db.execute('SELECT status FROM project_briefs WHERE id=?', (bid,)).fetchone()[0], 'draft')
+        self.assertEqual(self.db.execute('SELECT COUNT(*) FROM adaptive_submissions').fetchone()[0], 0)
+        self.assertEqual(self.db.execute('SELECT COUNT(*) FROM notifications').fetchone()[0], 0)
+        self.db.execute('DROP TRIGGER reject_notification')
+        self.assertEqual(self.submit(bid, 1).status_code, 302)
 
     def test_submission_api_expired_tokens_sessions_and_incomplete_validation(self):
         import time
@@ -371,6 +395,74 @@ class Integration(unittest.TestCase):
         self.db.execute('DROP TRIGGER fail_submission');self.db.commit()
         response=self.client.post(url,data=data,headers=headers);self.assertEqual(response.status_code,200)
         self.assertEqual(self.db.execute('SELECT COUNT(*) FROM adaptive_submissions WHERE brief_id=?',(bid,)).fetchone()[0],1)
+
+    def test_designer_workspace_keeps_completeness_distinct_from_verification(self):
+        from html.parser import HTMLParser
+        class Visible(HTMLParser):
+            def __init__(self):super().__init__();self.parts=[]
+            def handle_data(self,data):self.parts.append(data)
+        bid=self.new('posters_flyers')
+        fields=engine.fields_for(engine.sections(engine.load_catalog(),'posters_flyers'))
+        cta=next(o['value'] for o in fields['PF08A']['options'] if o['value'] not in ('none','share','other'))
+        answers=complete('posters_flyers',{'META01':'Graduation studio review','PF02A':'celebrations','PF02J':'graduation','PF02C':'no',
+                         'PF08A':cta,'PF08C':['website'],'REL01':'Hidden religious answer',
+                         'PF06B':'<script>window.shouldNotRun=true</script>Graduation headline'})
+        result=self.save(bid,answers);self.assertEqual(result.status_code,200)
+        self.assertEqual(result.json['assessment']['percentage'],100)
+        self.assertTrue(result.json['assessment']['issues'])
+        self.assertEqual(self.submit(bid,1).status_code,302)
+        before=self.db.execute('SELECT answers_json,generation FROM adaptive_drafts WHERE brief_id=?',(bid,)).fetchone()
+        snapshot=self.db.execute('SELECT answers_json FROM adaptive_submissions WHERE brief_id=?',(bid,)).fetchone()[0]
+        self.login(2);page=self.client.get(f'/provider/briefs/{bid}/review');self.assertEqual(page.status_code,200)
+        html=page.get_data(as_text=True);visible=Visible();visible.feed(html);text=' '.join(visible.parts)
+        self.assertIn('Designer review summary',text);self.assertIn('Contact destinations',text)
+        self.assertIn('Questionnaire completeness and independent verification are separate checks.',text)
+        self.assertIn('required answers complete',text);self.assertIn('Details to verify',text)
+        self.assertIn('>100<',html);self.assertIn('data-blocked="true"',html)
+        self.assertIn('User 1',text);self.assertIn('Posters & Flyers',text)
+        for internal in ('META01','META02','PF02','EV01','posters_flyers','celebrations','graduation'):
+            self.assertNotIn(internal,text)
+        self.assertNotIn('Hidden religious answer',text)
+        self.assertIn('&lt;script&gt;',html);self.assertNotIn('<script>window.shouldNotRun',html)
+        self.assertIn('data-expand-sections="open"',html);self.assertIn('designer-decision-dialog',html)
+        self.assertEqual(self.client.post(f'/provider/briefs/{bid}/adaptive',data={'csrf_token':self.token,'decision':'approved','comment':'Cannot bypass warnings'}).status_code,409)
+        self.assertEqual(self.db.execute('SELECT answers_json,generation FROM adaptive_drafts WHERE brief_id=?',(bid,)).fetchone(),before)
+        self.assertEqual(self.db.execute('SELECT answers_json FROM adaptive_submissions WHERE brief_id=?',(bid,)).fetchone()[0],snapshot)
+        self.assertEqual(self.client.post(f'/client/briefs/{bid}/adaptive/save',json={'generation':1,'answers':{}},headers={'X-CSRFToken':self.token}).status_code,403)
+        self.login(4);self.assertEqual(self.client.get(f'/provider/briefs/{bid}/review').status_code,404)
+
+    def test_designer_image_previews_use_existing_authorisation_and_safe_types(self):
+        import base64
+        bid=self.new('posters_flyers');assets=[]
+        png=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aVzUAAAAASUVORK5CYII=')
+        for filename,content in [('brand.png',png),('brand-guide.txt',b'Approved brand guide'),('private-draft.png',png)]:
+            upload=self.client.post(f'/client/briefs/{bid}/adaptive/assets',data={'csrf_token':self.token,'file':(io.BytesIO(content),filename)})
+            self.assertEqual(upload.status_code,200);assets.append(upload.json['id'])
+        answers=complete('posters_flyers',{'PF02A':'celebrations','PF02J':'graduation','PF02C':'no','PF10A':'yes','PF10C':assets[0],'PF11E':'yes','PF11F':assets[1],'PF12A':'palette','PF12B':'warm_elegant','PF08E':'yes','PF08F':'https://example.com/design'})
+        self.assertEqual(self.save(bid,answers).status_code,200);self.assertEqual(self.submit(bid,1).status_code,302)
+        self.login(2)
+        page=self.client.get(f'/provider/briefs/{bid}/review').get_data(as_text=True)
+        self.assertIn('designer-image-preview',page);self.assertIn('brand-guide.txt',page);self.assertIn('Warm &amp; Elegant',page)
+        self.assertNotIn('private-draft.png',page)
+        self.assertIn('href="https://example.com/design"',page);self.assertIn('rel="noopener noreferrer"',page)
+        response=self.client.get(f'/brief-assets/{assets[0]}?preview=1');self.assertEqual(response.status_code,200)
+        self.assertEqual(response.mimetype,'image/png');self.assertIn('inline',response.headers['Content-Disposition'])
+        self.assertEqual(response.headers['X-Content-Type-Options'],'nosniff');self.assertIn('sandbox',response.headers['Content-Security-Policy']);response.close()
+        response=self.client.get(f'/brief-assets/{assets[1]}?preview=1');self.assertIn('attachment',response.headers['Content-Disposition']);response.close()
+        self.assertEqual(self.client.get(f'/brief-assets/{assets[2]}?preview=1').status_code,404)
+        self.login(4);self.assertEqual(self.client.get(f'/brief-assets/{assets[0]}?preview=1').status_code,404)
+        self.login(3);self.assertEqual(self.client.get(f'/brief-assets/{assets[0]}?preview=1').status_code,404)
+
+    def test_all_services_render_in_designer_workspace_without_draft_mutation(self):
+        for service in engine.services(engine.load_catalog()):
+            self.login(1);bid=self.new(service['value'])
+            self.assertEqual(self.save(bid,complete(service['value'])).status_code,200)
+            self.assertEqual(self.submit(bid,1).status_code,302)
+            self.login(2);response=self.client.get(f'/provider/briefs/{bid}/review')
+            self.assertEqual(response.status_code,200)
+            self.assertIn(b'designer-current-sections',response.data)
+            self.assertIn(service['label'],response.get_data(as_text=True).replace('&amp;','&'))
+            self.assertEqual(self.db.execute('SELECT status FROM project_briefs WHERE id=?',(bid,)).fetchone()[0],'submitted')
 
     def test_all_services_render_and_resume_through_dashboard_links(self):
         page=self.client.get('/briefs/new').get_data(as_text=True)

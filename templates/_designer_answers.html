@@ -1,0 +1,27 @@
+{% macro designer_answer(field, value) %}
+{% if field.type in ['single_choice','multi_choice'] %}
+    {% for option in field.options %}{% if value==option.value or field.type=='multi_choice' and option.value in value %}<span class="designer-chip{% if option.value in ['pending','partial','working'] %} is-pending{% endif %}">{{ option.label }}</span>{% endif %}{% endfor %}
+{% elif field.type=='palette_select' %}
+    {% for palette in catalog.palettes %}{% if palette.id==value %}<div class="designer-palette"><strong>{{ palette.name }}</strong><span class="designer-swatches" role="img" aria-label="{{ palette.name }}: {{ palette.colors|join(', ') }}">{% for colour in palette.colors %}<span style="background-color:{{ colour }}" title="{{ colour }}"></span>{% endfor %}</span><small>{{ palette.colors|join(' · ') }}</small></div>{% endif %}{% endfor %}
+{% elif field.type=='repeater' %}
+    <ol class="designer-repeat">{% for row in value %}<li><dl>{% for child in field.item_fields %}{% if child.id in row and row[child.id] is not none and row[child.id]!='' %}<div><dt>{{ child.label }}</dt><dd>{{ designer_answer(child,row[child.id]) }}</dd></div>{% endif %}{% endfor %}</dl>{% if not row %}<span class="designer-pending">Details to confirm</span>{% endif %}</li>{% endfor %}</ol>
+{% elif field.type=='date' %}<time datetime="{{ value }}">{{ value|review_date }}</time>
+{% elif field.type=='time' %}<time datetime="{{ value }}">{{ value|review_time }}</time>
+{% elif field.type=='money' %}<span class="designer-money">{{ value|review_money }}</span>
+{% elif field.type in ['file_upload','asset_reference'] %}
+    {% set asset=asset_map.get(value) %}
+    {% if asset %}<div class="designer-asset">{% if asset.media_type in ['image/png','image/jpeg','image/webp'] %}<a class="designer-preview-link" href="{{ url_for('adaptive_download',asset_id=value) }}"><img class="designer-image-preview" src="{{ url_for('adaptive_download',asset_id=value,preview=1) }}" alt="Client-supplied image: {{ asset.original_name }}" loading="lazy" decoding="async"></a>{% endif %}<a class="designer-attachment" href="{{ url_for('adaptive_download',asset_id=value) }}"><span aria-hidden="true">&#8595;</span>{{ asset.original_name }}<span class="designer-sr-only"> — Download supplied asset</span></a></div>{% else %}<span class="designer-pending">The supplied file is unavailable.</span>{% endif %}
+{% elif field.type=='color_multi_picker' %}<ul class="designer-colours">{% for colour in value %}<li><span style="background:{{ colour }}" aria-hidden="true"></span>{{ colour }}</li>{% endfor %}</ul>
+{% elif field.type in ['url','short_text'] and value is string and value|designer_public_url %}<a class="designer-url" href="{{ value }}" target="_blank" rel="noopener noreferrer">{{ value }} <span aria-hidden="true">&#8599;</span></a>
+{% elif field.type=='boolean' %}{{ 'Yes' if value else 'No' }}
+{% else %}<span class="designer-prose">{{ value }}</span>{% endif %}
+{% endmacro %}
+
+{% macro designer_sections(sections, prefix='designer', overview_open=true) %}
+{% for section in sections %}
+<details class="designer-section" id="{{ prefix }}-section-{{ section.id }}"{% if loop.first and overview_open %} open{% endif %}>
+    <summary><span class="designer-section-number" aria-hidden="true">{{ '%02d'|format(loop.index) }}</span><span><strong>{{ section.title }}</strong><small>{{ section.answers|length }} {{ 'detail' if section.answers|length==1 else 'details' }}</small></span><span class="designer-chevron" aria-hidden="true">&#8964;</span></summary>
+    <dl class="designer-answers">{% for item in section.answers %}<div class="designer-answer" id="{{ prefix }}-answer-{{ item.field_id }}"><dt>{{ item.field.label }}{% if item.pending %}<span class="designer-pending">Pending confirmation</span>{% endif %}</dt><dd>{{ designer_answer(item.field,item.value) }}</dd></div>{% endfor %}</dl>
+</details>
+{% endfor %}
+{% endmacro %}
