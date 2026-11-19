@@ -50,7 +50,7 @@
             </div>
         </header>
 
-        <main id="studio-main">
+        <main id="studio-main" tabindex="-1">
             {{ brief_ui.feedback() }}
             <div class="studio-page-heading"><div><p class="studio-eyebrow">A SPACE FOR WHAT COMES NEXT</p><h1>The Elunette Studio<span aria-hidden="true">.</span></h1></div><a class="studio-text-link" href="{{ url_for('my_briefs') }}">Explore your workspace {{ icon('arrow') }}</a></div>
 
@@ -102,8 +102,8 @@
                     {% else %}<div class="studio-workflow-empty"><p>Your workflow starts with your first brief.</p><a class="studio-text-link" href="{{ url_for('new_brief') }}">Give an idea its beginning {{ icon('arrow') }}</a></div>{% endif %}
                 </section>
             </div>
-            {% include '_signature_footer.html' %}
         </main>
+        {% include '_signature_footer.html' %}
     </div>
     {{ brief_ui.deletion_dialog('dashboard') }}
     {% include '_studio_invitation.html' %}

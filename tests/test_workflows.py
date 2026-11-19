@@ -440,7 +440,7 @@ class Workflows(unittest.TestCase):
         for url in ('/briefs', '/briefs-preview'):
             html = self.client.get(url).get_data(as_text=True)
             self.assertEqual(html.count('class="collection-dossier collection-dossier--'), 8)
-            self.assertIn('href="/briefs-preview" aria-current="page"', html)
+            self.assertIn('href="/briefs" aria-current="page"', html)
             self.assertNotIn('dashboard-header', html)
             self.assertIn('Published Design', html)
             self.assertIn('Version 1', html)
@@ -482,6 +482,38 @@ class Workflows(unittest.TestCase):
         with self.client.session_transaction() as session:
             session.clear()
         self.assertEqual(self.client.get('/notifications').status_code, 302)
+
+    def test_postroom_unread_filter_preserves_navigation_and_history(self):
+        self.assertEqual(self.post('/briefs/1/submit', {'save_answers':'1', 'answer_1':'No'}).status_code, 302)
+        self.login(2)
+        unread = self.client.get('/notifications?view=unread').get_data(as_text=True)
+        self.assertIn('href="/notifications?view=unread" aria-current="page"', unread)
+        self.assertIn('New brief submitted', unread)
+        self.assertIn('href="/provider/briefs/1/review"', unread)
+        response = self.post('/notifications/read', {'view':'unread'})
+        self.assertEqual(response.location, '/notifications?view=unread')
+        self.assertIn('No unread updates.', self.client.get(response.location).get_data(as_text=True))
+        self.assertIn('New brief submitted', self.client.get('/notifications').get_data(as_text=True))
+        self.login(4)
+        self.assertNotIn('New brief submitted', self.client.get('/notifications?view=unread').get_data(as_text=True))
+
+    def test_administration_directory_recovery_and_workspace_routes(self):
+        with self.client.get('/favicon.ico') as icon:
+            self.assertEqual((icon.status_code, icon.mimetype), (200, 'image/png'))
+        self.assertEqual(self.client.get('/admin/users').status_code, 403)
+        self.assertEqual(self.login(1).location, '/dashboard/client')
+        self.assertEqual(self.login(2).location, '/dashboard/provider')
+        self.assertEqual(self.client.get('/provider/questionnaires/rules-preview').location, '/provider/questionnaires')
+        self.assertEqual(self.login(5).location, '/dashboard/admin')
+        html = self.client.get('/admin/users?role=service_provider&search=user2%40example.test').get_data(as_text=True)
+        self.assertIn('user2@example.test', html)
+        self.assertNotIn('user4@example.test', html)
+        self.assertNotIn(self.password_hash, html)
+        self.assertIn('currently unavailable', self.client.get('/admin/users/new').get_data(as_text=True))
+        recovery = self.client.get('/forgot-password?role=service_provider').get_data(as_text=True)
+        self.assertIn('Password reset by email is currently unavailable', recovery)
+        self.assertIn('href="/login?role=service_provider"', recovery)
+        self.assertNotIn('<form', recovery)
 
     def test_questionnaire_form_posts_and_role_navigation(self):
         html = self.client.get("/client/questionnaires/1?brief_id=1").get_data(as_text=True)
@@ -1038,7 +1070,7 @@ class Workflows(unittest.TestCase):
         self.assertIn("Good to see you, User.", html)
         for metric, count in (("total", 8), ("pending", 2), ("approved", 2), ("revision", 2)):
             self.assertRegex(html, rf'id="studio-stat-{metric}"[^>]*>{count}</strong>')
-        for label in ("Draft", "Submitted", "Under Review", "Revision Requested", "Approved"):
+        for label in ("Draft", "Submitted", "Under review", "Revision requested", "Approved"):
             self.assertIn(label, html)
         elements = Page(html).elements
         for link in [a["href"] for tag, a in elements if tag == "a" and a.get("href", "").startswith("/")]:
@@ -1094,7 +1126,7 @@ class Workflows(unittest.TestCase):
             self.assertRegex(html, rf'id="provider-stat-{metric}"[^>]*>{count}</strong>')
         self.assertIn('id="provider-questionnaire-active">1', html)
         self.assertIn('id="provider-questionnaire-total">1', html)
-        self.assertIn('Revision Requested', html)
+        self.assertIn('Revision requested', html)
         self.assertIn('Approved', html)
         self.assertIn('User 1', html)
         elements = Page(html).elements
@@ -1282,9 +1314,12 @@ class Workflows(unittest.TestCase):
                 self.assertIn('aria-label="Footer navigation"', html, url)
                 self.assertIn('>Home</a>', html, url)
                 self.assertIn('>About</a>', html, url)
-        for url in ('/', '/about', '/login', '/register', '/forgot-password', '/reset-password-preview'):
+        for url in ('/', '/about', '/login', '/register'):
             html = self.client.get(url).get_data(as_text=True)
-            self.assertNotIn('signature-footer', html, url)
+            self.assertNotIn('<footer class="signature-footer"', html, url)
+        for url in ('/forgot-password', '/reset-password-preview'):
+            html = self.client.get(url).get_data(as_text=True)
+            self.assertEqual(html.count('<footer class="signature-footer"'), 1, url)
         with patch('app.datetime') as clock:
             clock.now.return_value.year = 2031
             html = self.client.get('/notifications').get_data(as_text=True)

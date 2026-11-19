@@ -75,6 +75,9 @@ function completeField(field, value) {
   if (field.type==='color_multi_picker') return value.every(colour => /^#[0-9a-f]{6}$/i.test(colour));
   return true;
 }
+function questionControl(node) {
+  return node.querySelector('[role="radiogroup"], .palette-gallery') || node.querySelector('[data-input]');
+}
 function update() {
   const all=answers(), enabled=active(all);
   if (eventHint) {
@@ -89,12 +92,13 @@ function update() {
     node.hidden=!enabled.has(node.dataset.field);
     if (newlyVisible) {node.classList.remove('field-reveal'); void node.offsetWidth; node.classList.add('field-reveal');}
     const input=node.querySelector('[data-input]');
-    input.setAttribute('aria-describedby','error-'+node.dataset.field);
+    const control=questionControl(node);
+    control.setAttribute('aria-describedby','error-'+node.dataset.field);
     const label=node.querySelector('.question-label'); label.id='label-'+node.dataset.field;
-    input.setAttribute('aria-labelledby',label.id);
+    control.setAttribute('aria-labelledby',label.id);
     const field=groups.flatMap(group=>group.fields).find(field=>field.id===node.dataset.field);
-    input.setAttribute('aria-required',String(!!field.required && enabled.has(field.id)));
-    if (input.tagName==='DIV') input.setAttribute('role','group');
+    if (control.tagName==='DIV' && !control.hasAttribute('role')) control.setAttribute('role','group');
+    if (control.getAttribute('role')!=='group') control.setAttribute('aria-required',String(!!field.required && enabled.has(field.id)));
     for (const radio of node.querySelectorAll('[data-choice]')) radio.checked=radio.value===input.value;
     for (const palette of node.querySelectorAll('[data-palette]')) palette.setAttribute('aria-pressed',String(palette.dataset.palette===input.value));
   }
@@ -152,7 +156,7 @@ function showErrors(errors) {
     const line=document.createElement('p'); line.textContent=key.startsWith('_') ? message : (field?.label || 'An answer')+': '+message; panel.append(line);
     const node=fieldNodes.find(node=>node.dataset.field===key);
     const inline=node?.querySelector('.field-error');
-    if (inline) {inline.textContent=message;node.querySelector('[data-input]').setAttribute('aria-invalid','true');}
+    if (inline) {inline.textContent=message;questionControl(node).setAttribute('aria-invalid','true');}
   }
 }
 class SaveError extends Error {

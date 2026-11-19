@@ -44,11 +44,11 @@
                 </details>
             </div>
         </header>
-        <main id="studio-main">
+        <main id="studio-main" tabindex="-1">
             {{ brief_ui.feedback() }}
             {% block content %}{% endblock %}
-            {% include '_signature_footer.html' %}
         </main>
+        {% include '_signature_footer.html' %}
     </div>
     {% block page_scripts %}{% endblock %}
 </body>

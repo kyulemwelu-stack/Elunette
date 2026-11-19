@@ -22,12 +22,19 @@
 <section class="postroom-collection" aria-labelledby="postroom-collection-title">
 <div class="postroom-section-heading">
 <h2 id="postroom-collection-title">Your postroom</h2>
+<div class="postroom-controls">
+<nav class="postroom-filters" aria-label="Filter updates">
+    <a href="{{ url_for('notifications') }}"{% if not unread_only %} aria-current="page"{% endif %}>All updates</a>
+    <a href="{{ url_for('notifications', view='unread') }}"{% if unread_only %} aria-current="page"{% endif %}>Unread</a>
+</nav>
 {% if updates|selectattr('read_at', 'none')|first is defined %}
 <form method="post" action="{{ url_for('read_notifications') }}">
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+{% if unread_only %}<input type="hidden" name="view" value="unread">{% endif %}
 <button class="postroom-action" type="submit">Mark all as read</button>
 </form>
-{% else %}<span>All updates</span>{% endif %}
+{% endif %}
+</div>
 </div>
 {% if updates %}
 <ul class="postroom-updates">
@@ -43,6 +50,7 @@
 {% if not update.read_at %}
 <form method="post" action="{{ url_for('read_notifications', notification_id=update.id) }}">
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+{% if unread_only %}<input type="hidden" name="view" value="unread">{% endif %}
 <button class="postroom-action" type="submit" aria-label="Mark {{ update.title }} for {{ update.project_title }} as read">Mark as read</button>
 </form>
 {% endif %}
@@ -52,10 +60,15 @@
 {% else %}
 <div class="postroom-empty">
 {{ envelope() }}
+{% if unread_only %}
+<h2>No unread updates.</h2>
+<a class="studio-text-link" href="{{ url_for('notifications') }}">View all updates {{ icon('arrow') }}</a>
+{% else %}
 <p class="studio-eyebrow">A QUIET MOMENT</p>
 <h2>All caught up, lovely.</h2>
 <p>There's nothing new right now. Your next update will find its way here.</p>
 <a class="studio-text-link" href="{{ url_for(workspace_endpoint) }}">Back to your Studio {{ icon('arrow') }}</a>
+{% endif %}
 </div>
 {% endif %}
 </section>

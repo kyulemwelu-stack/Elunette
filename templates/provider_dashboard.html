@@ -51,7 +51,7 @@
             </div>
         </header>
 
-        <main id="studio-main">
+        <main id="studio-main" tabindex="-1">
             {{ brief_ui.feedback() }}
             <div class="studio-page-heading"><div><p class="studio-eyebrow">THOUGHTFUL WORK BEGINS HERE</p><h1>The Elunette Provider Studio<span aria-hidden="true">.</span></h1></div><a class="studio-text-link" href="{{ url_for('provider_briefs') }}">Explore your workspace {{ icon('arrow') }}</a></div>
 
@@ -102,7 +102,7 @@
                 <section class="studio-quick" aria-labelledby="provider-questionnaires-title"><div class="studio-panel-top"><p class="studio-eyebrow">MAKE SPACE FOR BETTER BRIEFS</p><span class="studio-quick-plus">{{ icon('plus') }}</span></div><h2 id="provider-questionnaires-title">Clarity starts with<br>the right questions.</h2><div class="provider-questionnaire-counts"><span><strong id="provider-questionnaire-active">{{ questionnaires['active'] }}</strong> active</span><span><strong id="provider-questionnaire-total">{{ questionnaires['total'] }}</strong> total questionnaires</span></div><div class="studio-quick-links"><a href="{{ url_for('questionnaire_management') }}">Manage questionnaires {{ icon('arrow') }}</a><a href="{{ url_for('create_questionnaire') }}">Create a questionnaire {{ icon('plus') }}</a></div></section>
 
                 <section class="studio-attention provider-activity" aria-labelledby="provider-activity-title"><div class="studio-panel-top"><p class="studio-eyebrow">THOUGHTFUL DECISIONS, RECORDED</p>{{ icon('revision') }}</div><h2 id="provider-activity-title">Your recent review activity</h2>
-                    {% if recent_activity %}<ol class="provider-activity-list">{% for activity in recent_activity %}<li><a href="{{ url_for('review_brief', brief_id=activity['brief_id']) }}"><span class="provider-activity-icon provider-activity-icon--{{ activity['decision'] }}">{{ icon('check' if activity['decision'] == 'approved' else 'revision') }}</span><span><strong>{{ activity['title'] }}</strong><span class="provider-activity-decision">{{ activity['decision'] | replace('_', ' ') | title }}</span><small>{{ activity['client_name'] }} &middot; <time datetime="{{ activity['created_at'] | replace(' ', 'T') }}Z">{{ activity['created_at'][:10] }}</time></small></span>{{ icon('arrow') }}</a></li>{% endfor %}</ol>
+                    {% if recent_activity %}<ol class="provider-activity-list">{% for activity in recent_activity %}<li><a href="{{ url_for('review_brief', brief_id=activity['brief_id']) }}"><span class="provider-activity-icon provider-activity-icon--{{ activity['decision'] }}">{{ icon('check' if activity['decision'] == 'approved' else 'revision') }}</span><span><strong>{{ activity['title'] }}</strong><span class="provider-activity-decision">{{ brief_ui.status_label(activity['decision']) }}</span><small>{{ activity['client_name'] }} &middot; <time datetime="{{ activity['created_at'] | replace(' ', 'T') }}Z">{{ activity['created_at'][:10] }}</time></small></span>{{ icon('arrow') }}</a></li>{% endfor %}</ol>
                     {% else %}<div class="provider-activity-empty"><p>Your next thoughtful decision starts here.</p><p>Approvals and revision requests will appear once you've reviewed a client brief.</p></div>{% endif %}
                 </section>
 
@@ -111,8 +111,8 @@
                     {% else %}<div class="studio-workflow-empty"><p>A clear view of your reviews will grow with your first submission.</p><a class="studio-text-link" href="{{ url_for('questionnaire_management') }}">Prepare your questionnaires {{ icon('arrow') }}</a></div>{% endif %}
                 </section>
             </div>
-            {% include '_signature_footer.html' %}
         </main>
+        {% include '_signature_footer.html' %}
     </div>
     {% include '_studio_invitation.html' %}
 </body>

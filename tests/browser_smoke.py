@@ -185,9 +185,10 @@ PROVIDER_SELECTION_CHECK = """(() => {
         const questionnaire = document.querySelector('#questionnaire');
         const form = questionnaire.form;
         if (!form.querySelector('[name=csrf_token]') || form.querySelector('[name=provider_id]').value !== chosen) throw Error('Provider assignment or CSRF missing');
-        const values = [...questionnaire.options].filter(o => o.value).map(o => o.value);
+        const values = [...questionnaire.querySelectorAll('#provider-questionnaires option')].map(o => o.value);
         if (chosen === '2' ? values.length !== 1 || values[0] !== '1' : values.length !== 0) throw Error('Questionnaires are not provider-scoped');
-        if (form.querySelector('[type=submit]').disabled !== (values.length === 0)) throw Error('Invalid submit state');
+        if (questionnaire.querySelectorAll('option[value^="service:"]').length !== 7) throw Error('Built-in design services are missing');
+        if (!form.querySelector('#provider').required || form.querySelector('button.btn-primary[type=submit]').disabled) throw Error('Invalid submit state');
         if (document.querySelectorAll('footer.signature-footer').length !== 1) throw Error('Wrong footer count');
         if (window.browserErrors.length) throw Error(window.browserErrors.join('; '));
         document.body.dataset.browserCheck='passed';
@@ -237,7 +238,7 @@ LOGIN_CHECK = """(() => {
         const role=admin ? 'administrator' : provider ? 'service_provider' : 'client';
         const form=document.querySelector('#login-form');
         if (form.method !== 'post' || !form.action.endsWith('/login?role='+role) || !form.querySelector('[name=csrf_token]')) throw Error('Login action or CSRF changed');
-        if (!document.querySelector('.login-recovery').href.endsWith('/forgot-password')) throw Error('Recovery link missing');
+        if (new URL(document.querySelector('.login-recovery').href).pathname !== '/forgot-password') throw Error('Recovery link missing');
         if (!admin && !document.querySelector('.login-registration a').href.endsWith('/register?role='+role)) throw Error('Registration pathway wrong');
         if (matchMedia('(prefers-reduced-motion: reduce)').matches && getComputedStyle(document.querySelector('.login-submit')).transitionDuration !== '0s') throw Error('Reduced motion ignored');
         if (window.browserErrors.length) throw Error(window.browserErrors.join('; '));
@@ -882,16 +883,23 @@ def main():
                     else:
                         raise RuntimeError('Invitation repeated on refresh')
                 if provider_selection_only and name == 'provider-select-start':
-                    devtools.call('Runtime.evaluate', {'expression': "document.querySelector('#provider').value='2'; document.querySelector('#provider').form.querySelector('button').focus()"})
-                    devtools.call('Input.dispatchKeyEvent', {'type':'keyDown','key':'Enter','code':'Enter','windowsVirtualKeyCode':13,'text':'\r'})
-                    devtools.call('Input.dispatchKeyEvent', {'type':'keyUp','key':'Enter','code':'Enter','windowsVirtualKeyCode':13})
+                    devtools.call('Runtime.evaluate', {'expression': """
+                        document.querySelector('#questionnaire').value='service:logo_branding';
+                        const provider=document.querySelector('#provider');
+                        provider.focus();provider.value='2';
+                        provider.dispatchEvent(new Event('change',{bubbles:true}));
+                    """})
                     for _ in range(100):
-                        result=devtools.call('Runtime.evaluate', {'expression': "document.readyState === 'complete' && location.pathname === '/briefs/new' && document.querySelector('#provider')?.value === '2' && Boolean(document.querySelector('#questionnaire option[value=\"1\"]'))"})
+                        result = devtools.call('Runtime.evaluate', {'expression': """
+                            document.querySelector('#provider').value==='2' &&
+                            document.querySelector('#questionnaire').value==='service:logo_branding' &&
+                            !!document.querySelector('#provider-questionnaires option[value="1"]')
+                        """})
                         if result.get('result',{}).get('value'):
                             break
                         time.sleep(.1)
                     else:
-                        raise RuntimeError('Provider questionnaire GET selection failed with keyboard')
+                        raise RuntimeError('Live provider selection failed to load the assigned questionnaire and preserve the chosen service')
                 if atelier_only:
                     devtools.call('Runtime.evaluate', {'expression': "scrollTo(0, document.documentElement.scrollHeight)"})
                     time.sleep(.1)

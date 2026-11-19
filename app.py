@@ -162,6 +162,11 @@ def about():
     return render_template("about.html")
 
 
+@app.get("/favicon.ico")
+def favicon():
+    return app.send_static_file("images/elunette-icon.png")
+
+
 # ==========================================
 # CLIENT REGISTRATION
 # ==========================================
@@ -325,8 +330,8 @@ def reset_password_preview():
 # CLIENT WORKSPACE
 # ==========================================
 
-@app.route("/dashboard/client")
 @app.route("/dashboard/client-preview")
+@app.route("/dashboard/client")
 @role_required("client")
 def client_dashboard():
     briefs = client_briefs()
@@ -343,8 +348,8 @@ def client_dashboard():
     )
 
 
-@app.route("/briefs")
 @app.route("/briefs-preview")
+@app.route("/briefs")
 @role_required("client")
 def my_briefs():
     search = request.args.get("search", "").strip()[:150]
@@ -507,6 +512,7 @@ def revision_history_preview():
 @login_required
 def notifications():
     user = current_user()
+    unread_only = request.args.get("view") == "unread"
     records = get_db().execute(
         """
         SELECT n.*, b.title AS project_title,
@@ -514,7 +520,8 @@ def notifications():
                 WHERE id = b.questionnaire_version_id) AS questionnaire_id,
                EXISTS (SELECT 1 FROM adaptive_definitions
                        WHERE version_id = b.questionnaire_version_id) AS adaptive
-        """ + VISIBLE_NOTIFICATIONS + " ORDER BY n.created_at DESC, n.id DESC",
+        """ + VISIBLE_NOTIFICATIONS + (" AND n.read_at IS NULL" if unread_only else "")
+        + " ORDER BY n.created_at DESC, n.id DESC",
         (user["id"], user["role"]),
     ).fetchall()
     updates = []
@@ -531,7 +538,9 @@ def notifications():
         local = created.astimezone(timezone(timedelta(hours=3)))
         updates.append(dict(record, link=link, icon=EVENTS[record["event_type"]][2],
                             timestamp=created.isoformat(), display_time=local.strftime("%d %b %Y, %H:%M EAT")))
-    response = app.make_response(render_template("notifications.html", user=user, updates=updates))
+    response = app.make_response(render_template(
+        "notifications.html", user=user, updates=updates, unread_only=unread_only,
+    ))
     response.headers["Cache-Control"] = "private, no-store"
     return response
 
@@ -557,7 +566,8 @@ def read_notifications(notification_id):
         )
         if notification_id is not None and updated.rowcount == 0:
             abort(404)
-    return redirect(url_for("notifications"), code=303)
+    view = "unread" if request.form.get("view") == "unread" else None
+    return redirect(url_for("notifications", view=view), code=303)
 
 
 @app.context_processor
@@ -578,8 +588,8 @@ def notification_badge():
 # SERVICE PROVIDER DASHBOARD
 # ==========================================
 
-@app.route("/dashboard/provider")
 @app.route("/dashboard/provider-preview")
+@app.route("/dashboard/provider")
 @role_required("service_provider")
 def provider_dashboard():
     briefs = provider_brief_records()
@@ -1127,36 +1137,63 @@ def create_questionnaire():
 @app.route("/provider/questionnaires/rules-preview")
 @role_required("service_provider")
 def adaptive_rules_preview():
-    return render_template("adaptive_rules.html")
+    return redirect(url_for("questionnaire_management"))
 
 
 # ==========================================
 # ADMINISTRATOR WORKSPACE
 # ==========================================
 
-@app.route("/dashboard/admin")
 @app.route("/dashboard/admin-preview")
+@app.route("/dashboard/admin")
 @role_required("administrator")
 def admin_dashboard():
-    return render_template("admin_dashboard.html")
+    counts = get_db().execute(
+        """
+        SELECT COUNT(*) AS total, COUNT(CASE WHEN role = 'client' THEN 1 END) AS clients,
+               COUNT(CASE WHEN role = 'service_provider' THEN 1 END) AS providers,
+               COUNT(CASE WHEN status = 'inactive' THEN 1 END) AS inactive
+        FROM users
+        """
+    ).fetchone()
+    return render_template("admin_dashboard.html", user=current_user(), counts=counts)
 
 
 @app.route("/admin/users")
 @role_required("administrator")
 def user_management():
-    return render_template("user_management.html")
+    roles = {"client": "Client", "service_provider": "Service provider", "administrator": "Administrator"}
+    statuses = {"active": "Active", "inactive": "Inactive"}
+    search = request.args.get("search", "").strip()[:150]
+    role = request.args.get("role", "")
+    status = request.args.get("status", "")
+    role = role if role in roles else ""
+    status = status if status in statuses else ""
+    users = get_db().execute(
+        """
+        SELECT full_name, email, role, status FROM users
+        WHERE (? = '' OR role = ?) AND (? = '' OR status = ?)
+        ORDER BY full_name COLLATE NOCASE, id
+        """,
+        (role, role, status, status),
+    ).fetchall()
+    matches = [account for account in users if search.casefold() in
+               (account["full_name"] + " " + account["email"]).casefold()]
+    return render_template("user_management.html", user=current_user(), accounts=matches,
+                           search=search, role_filter=role, status_filter=status,
+                           roles=roles, statuses=statuses)
 
 
 @app.route("/admin/users/new", methods=["GET"])
 @role_required("administrator")
 def create_user():
-    return render_template("create_user.html")
+    return render_template("create_user.html", user=current_user())
 
 
 @app.route("/admin/users/edit-preview", methods=["GET"])
 @role_required("administrator")
 def edit_user_preview():
-    return render_template("edit_user.html")
+    return render_template("edit_user.html", user=current_user())
 
 
 # ==========================================

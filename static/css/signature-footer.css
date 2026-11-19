@@ -1,5 +1,18 @@
 @import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:wght@400&family=Manrope:wght@400;500&display=swap');
 
+.workspace-skip {
+    position: fixed;
+    z-index: 30;
+    top: 12px;
+    left: 12px;
+    padding: 10px 16px;
+    border-radius: 9px;
+    background: #FFFFFF;
+    color: #6B1F2F;
+    transform: translateY(calc(-100% - 18px));
+}
+.workspace-skip:focus { transform: none; outline: 2px solid #6B1F2F; outline-offset: 3px; }
+
 /* One compact, normal-flow footer for Client and Provider workspaces. */
 .signature-footer {
     box-sizing: border-box;

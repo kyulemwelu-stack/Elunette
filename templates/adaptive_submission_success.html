@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="{{ url_for('static',filename='css/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static',filename='css/adaptive.css') }}">
     <link rel="stylesheet" href="{{ url_for('static',filename='css/adaptive-review.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static',filename='css/signature-footer.css') }}">
 </head>
 <body class="adaptive-page adaptive-review-page adaptive-submission-page">
 <main class="adaptive-shell">
@@ -21,5 +22,6 @@
         <a class="review-secondary-action" href="{{ url_for('adaptive_review',brief_id=brief.id) }}">View my submitted brief</a>
     </section>
 </main>
+{% include '_signature_footer.html' %}
 </body>
 </html>

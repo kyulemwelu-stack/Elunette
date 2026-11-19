@@ -1,0 +1,58 @@
+/* Preserve the editorial composition while letting the copy reflow. */
+.about-page .about-stage { grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); }
+
+.about-page .story-band,
+.about-page .purpose-layout {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.about-page .about-stage h1,
+.about-page .story-band h2,
+.about-page .purpose-panel h3,
+.about-page .value-row h3 { overflow-wrap: anywhere; }
+
+.about-page .story-band :is(.section-label, .story-signature) { color: var(--cream); }
+.about-page .mission-panel :is(p, .purpose-topline) { color: var(--burgundy); }
+
+@media (max-width: 900px) {
+    .about-page .about-stage, .about-page .story-band { gap: 24px; }
+    .about-page .story-band { padding: 48px 6%; }
+    .about-page .story-band-content { padding-top: 12px; }
+    .about-page .purpose-section, .about-page .values-section { margin-bottom: 64px; }
+    .about-page .purpose-heading, .about-page .values-heading { margin-bottom: 34px; }
+    .about-page .purpose-panel { padding: 28px; min-height: 0; }
+    .about-page .purpose-panel h3 { margin-top: 32px; }
+}
+
+@media (max-width: 768px) {
+    .about-page .about-stage, .about-page .story-band, .about-page .purpose-layout { grid-template-columns: minmax(0, 1fr); }
+    .about-page .about-stage { max-width: 600px; min-height: 0; margin-bottom: 58px; padding-inline: 20px; }
+    .about-page .about-stage h1, .about-page .story-band h2 { font-size: clamp(36px, 8.5vw, 54px); }
+    .about-page .about-stage-copy { padding: 26px 0 0; }
+    .about-page .about-stage-copy .section-label { margin-bottom: 15px; }
+    .about-page .about-lead { font-size: 17px; }
+    .about-page .about-stage-visual { min-height: 375px; }
+    .about-page .visual-backdrop { inset: 22px 10px 26px 26px; }
+    .about-page .paper-back { top: 40px; height: 230px; }
+    .about-page .paper-front { top: 48px; min-height: 0; padding: 14px; }
+    .about-page .paper-content { padding: 12px 0; }
+    .about-page .paper-title { margin: 8px 0 14px; font-size: 26px; }
+    .about-page .paper-field { padding: 7px 0; }
+    .about-page .paper-bottom { padding-top: 8px; }
+    .about-page .visual-caption { display: none; }
+    .about-page .visual-sticker { right: 4px; bottom: 14px; width: 104px; min-height: 75px; }
+    .about-page .story-band { margin: 0 16px 62px; padding: 34px 23px; border-radius: 12px 50px 12px 12px; }
+    .about-page .story-asterisk { display: none; }
+    .about-page .story-band-content { padding-top: 0; }
+    .about-page .purpose-section, .about-page .values-section { padding-inline: 20px; }
+    .about-page .vision-panel { margin-top: 0; }
+    .about-page .value-row { grid-template-columns: 26px minmax(0, 1fr) auto; gap: 8px 12px; padding: 18px 6px; }
+    .about-page .value-row p { grid-column: 2 / -1; grid-row: 2; }
+    .about-page .value-mark { grid-column: 3; grid-row: 1; }
+    .about-page .about-final { padding-inline: 23px; }
+    .about-page .about-final h2, .about-page .purpose-heading h2, .about-page .values-heading h2 { font-size: clamp(34px, 8vw, 50px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .about-page .value-row, .about-page .about-discover, .about-page .about-final-btn { transition: none; }
+}

@@ -1,6 +1,8 @@
 {% macro status_badge(brief) -%}
-<span class="brief-state brief-state--{{ brief['status'] | replace('_', '-') }}">{{ brief['status'] | replace('_', ' ') | title }}</span>
+<span class="brief-state brief-state--{{ brief['status'] | replace('_', '-') }}">{{ status_label(brief['status']) }}</span>
 {%- endmacro %}
+
+{% macro status_label(value) -%}{{ value | replace('_', ' ') | capitalize }}{%- endmacro %}
 
 {% macro progress(brief) -%}
 <div class="brief-progress">
@@ -25,7 +27,7 @@
 {% macro feedback() -%}
 {% with messages = get_flashed_messages(with_categories=true) %}
 {% for category, message in messages %}
-<p class="brief-feedback" role="status">{{ message }}</p>
+<p class="brief-feedback" role="{{ 'alert' if category == 'error' else 'status' }}">{{ message }}</p>
 {% endfor %}
 {% endwith %}
 {%- endmacro %}

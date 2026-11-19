@@ -11,9 +11,12 @@
 
     <link rel="stylesheet"
           href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/signature-footer.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/about.css') }}">
 </head>
 
 <body class="about-page">
+    <a href="#about-content" class="workspace-skip">Skip to content</a>
 
     <!-- NAVIGATION -->
 
@@ -69,7 +72,7 @@
     </header>
 
 
-    <main>
+    <main id="about-content" tabindex="-1">
 
         <!-- EDITORIAL HERO -->
 
@@ -549,7 +552,7 @@
         <div class="about-footer-bottom">
 
             <p>
-                &copy; 2026 Elunette. All rights reserved.
+                &copy; {{ current_year }} Elunette. All rights reserved.
             </p>
 
             <p>Made for clearer beginnings.</p>

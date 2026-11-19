@@ -45,15 +45,15 @@
 .adaptive-page label {display: block; margin: 0 0 10px; font-size: 13px; line-height: 1.7; font-weight: 600; color: #5C3A26;}
 .adaptive-page .question-label {font-size: 14px; font-weight: 700; margin-bottom: 13px;}
 .adaptive-page .required-mark {font-size: 13px; font-weight: 400; color: #6B1F2F; margin-left: 5px;}
-.adaptive-page .optional-label, .adaptive-page .child-field label small {font-size: 10px; font-weight: 400; color: #887460; margin-left: 8px; white-space: nowrap;}
+.adaptive-page .optional-label, .adaptive-page .child-field label small {font-size: 11px; font-weight: 400; color: #756052; margin-left: 8px; white-space: nowrap;}
 .adaptive-page input:not([type=checkbox]):not([type=radio]):not([type=color]), .adaptive-page select, .adaptive-page textarea {
     display: block; width: 100%; min-width: 0; min-height: 50px; padding: 14px 16px;
-    border: 1px solid #ded4c7; border-radius: 11px; background: #fdfbf8; color: #5C3A26;
+    border: 1px solid #A18874; border-radius: 11px; background: #fdfbf8; color: #5C3A26;
     font-family: inherit; font-size: 14px; line-height: 1.6; box-shadow: none;
     transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
 }
 .adaptive-page textarea {resize: vertical; min-height: 120px;}
-.adaptive-page input::placeholder, .adaptive-page textarea::placeholder {color: #958878; opacity: 1; font-size: 13px;}
+.adaptive-page input::placeholder, .adaptive-page textarea::placeholder {color: #756052; opacity: 1; font-size: 13px;}
 .adaptive-page input:hover, .adaptive-page textarea:hover, .adaptive-page select:hover {border-color: #b5a48e;}
 .adaptive-page input:focus, .adaptive-page textarea:focus, .adaptive-page select:focus {background-color: white; border-color: #A3B18A;}
 .adaptive-page input[type=checkbox], .adaptive-page input[type=radio] {accent-color: #6B1F2F; width: 17px; height: 17px; flex: 0 0 17px; margin: 2px 0;}
@@ -64,6 +64,18 @@
 .adaptive-page button:disabled {opacity: .45; cursor: default; transform: none; box-shadow: none;}
 .adaptive-page a {color: #6B1F2F; text-underline-offset: 4px;}
 .adaptive-page :focus-visible {outline: 2px solid #6B1F2F; outline-offset: 4px;}
+.adaptive-page .adaptive-history-link {display: inline-flex; align-items: center; min-height: 44px; margin-bottom: 12px;}
+.adaptive-page .brief-feedback-card, .adaptive-page .adaptive-history {padding: clamp(18px, 4vw, 30px);}
+.adaptive-page .brief-feedback-card :is(h2, summary), .adaptive-page .adaptive-history h2 {margin-bottom: 10px;}
+.adaptive-page .brief-feedback-card :is(p, article), .adaptive-page .adaptive-history dd {white-space: pre-wrap; overflow-wrap: anywhere;}
+.adaptive-page .brief-feedback-card article, .adaptive-page .adaptive-history details {border-top: 1px solid #ded4c7; padding: 12px 0;}
+.adaptive-page .adaptive-history details:last-child {padding-bottom: 0;}
+.adaptive-page .adaptive-history summary, .adaptive-page .brief-feedback-card summary {cursor: pointer; min-height: 36px; font-weight: 700;}
+.adaptive-page :is(.adaptive-history, .brief-feedback-card) time {color: #756052; font-size: 12px; font-weight: 400; margin-inline-start: 8px;}
+.adaptive-page .adaptive-history dl > div {padding-block: 7px; border-bottom: 1px solid #ded4c7;}
+.adaptive-page .adaptive-history dt {font-weight: 700;}
+.adaptive-page .adaptive-history dd {white-space: normal; margin: 3px 0 0;}
+.adaptive-page .signature-footer {width: min(868px, calc(100% - 36px));}
 .adaptive-page .single-choice-grid, .adaptive-page .choice-grid {display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px;}
 .adaptive-page .option-card, .adaptive-page .choice-grid > label {display: flex; align-items: center; gap: 12px; margin: 0; padding: 14px 16px; border: 1px solid #e4dccf; border-radius: 12px; background: #fdfbf8; font-size: 12px; line-height: 1.6; font-weight: 400; cursor: pointer; min-height: 56px; transition: border-color 180ms ease, background-color 180ms ease;}
 .adaptive-page .option-card:hover, .adaptive-page .choice-grid > label:hover {background: #f5f5ee; border-color: #A3B18A;}

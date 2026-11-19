@@ -1,15 +1,16 @@
-{% from '_adaptive_answers.html' import answer with context %}
+{% import '_brief_components.html' as brief_ui %}
+{% from '_adaptive_review_answers.html' import review_answer with context %}
 {% macro input(field, name, value, nested=false) %}
 {% set kind=field.type %}
 {% if kind in ['single_choice','palette_select','asset_reference','file_upload'] %}
 {% set option_cards = kind=='single_choice' and field.options|length <= 6 and field.id!='META02' and not nested %}
 <select id="{{ name }}" data-input="{{ field.id }}" data-kind="{{ kind }}" {% if option_cards or kind=='palette_select' %}class="adaptive-sr-only" tabindex="-1" aria-hidden="true"{% endif %} {% if field.id=='META02' %}disabled{% endif %}>
-<option value="">Choose an answer</option>
+<option value="">{{ 'Choose an uploaded file' if kind in ['file_upload','asset_reference'] else 'Choose an answer' }}</option>
 {% if kind=='palette_select' %}{% for palette in catalog.palettes %}<option value="{{ palette.id }}" {% if value==palette.id %}selected{% endif %}>{{ palette.name }}</option>{% endfor %}
 {% elif kind in ['file_upload','asset_reference'] %}{% for asset in assets %}<option value="{{ asset.id }}" {% if value==asset.id %}selected{% endif %}>{{ asset.original_name }}</option>{% endfor %}
 {% else %}{% for option in field.options %}<option value="{{ option.value }}" {% if value==option.value %}selected{% endif %}>{{ option.label }}</option>{% endfor %}{% endif %}</select>
 {% if option_cards %}<div class="single-choice-grid" role="radiogroup" aria-label="{{ field.label }}">{% for option in field.options %}<label class="option-card"><input type="radio" name="{{ name }}-choice" data-choice="{{ option.value }}" value="{{ option.value }}" {% if value==option.value %}checked{% endif %}><span>{{ option.label }}</span></label>{% endfor %}</div>{% endif %}
-{% if kind=='palette_select' %}<div class="palette-gallery">{% for palette in catalog.palettes %}<button type="button" class="palette-choice" data-palette="{{ palette.id }}" aria-label="{{ palette.name }}: {{ palette.colors|join(', ') }}" aria-pressed="{{ 'true' if value==palette.id else 'false' }}"><span class="palette-name">{{ palette.name }}<span class="palette-check" aria-hidden="true">&#10003;</span></span><span class="swatches">{% for colour in palette.colors %}<span style="background-color:{{ colour }}" title="{{ colour }}"></span>{% endfor %}</span><small>{{ palette.colors|join(' · ') }}</small></button>{% endfor %}</div>{% endif %}
+{% if kind=='palette_select' %}<div class="palette-gallery" role="group">{% for palette in catalog.palettes %}<button type="button" class="palette-choice" data-palette="{{ palette.id }}" aria-label="{{ palette.name }}: {{ palette.colors|join(', ') }}" aria-pressed="{{ 'true' if value==palette.id else 'false' }}"><span class="palette-name">{{ palette.name }}<span class="palette-check" aria-hidden="true">&#10003;</span></span><span class="swatches">{% for colour in palette.colors %}<span style="background-color:{{ colour }}" title="{{ colour }}"></span>{% endfor %}</span><small>{{ palette.colors|join(' · ') }}</small></button>{% endfor %}</div>{% endif %}
 {% if kind in ['file_upload','asset_reference'] %}<div class="upload-area"><span class="upload-emblem" aria-hidden="true">&#8593;</span><label class="upload-label" for="{{ name }}-upload">Add your files</label><p>Images, documents or references, up to 20 MB each.</p><input id="{{ name }}-upload" type="file" data-upload="{{ field.id }}" accept=".pdf,.docx,.txt,.png,.jpg,.jpeg,.webp" aria-describedby="{{ name }}-formats"><small id="{{ name }}-formats">PDF, DOCX, TXT, PNG, JPEG or WebP</small><span class="upload-status" role="status"></span></div>{% endif %}
 {% elif kind=='multi_choice' %}<div id="{{ name }}" data-input="{{ field.id }}" data-kind="multi_choice" class="choice-grid">{% for option in field.options %}<label><input type="checkbox" value="{{ option.value }}" {% if value and option.value in value %}checked{% endif %}> {{ option.label }}</label>{% endfor %}</div>
 {% elif kind=='repeater' %}<div id="{{ name }}" data-input="{{ field.id }}" data-kind="repeater" data-max="{{ field.get('max_items',30) }}"><div class="rows">{% for row in value or [] %}<div class="repeat-row">{% set row_number=loop.index %}{% for child in field.item_fields %}<div class="child-field"><label for="{{ name }}-{{ row_number }}-{{ child.id }}">{{ child.label }}{% if child.required %}<span class="required-mark" aria-label="Required">*</span>{% else %} <small>Optional</small>{% endif %}</label>{{ input(child,name~'-'~row_number~'-'~child.id,row.get(child.id),true) }}</div>{% endfor %}<button type="button" class="remove-row">Remove row</button></div>{% endfor %}</div><template>{% set row_number='NEW' %}<div class="repeat-row">{% for child in field.item_fields %}<div class="child-field"><label for="{{ name }}-NEW-{{ child.id }}">{{ child.label }}{% if child.required %}<span class="required-mark" aria-label="Required">*</span>{% else %} <small>Optional</small>{% endif %}</label>{{ input(child,name~'-NEW-'~child.id,none,true) }}</div>{% endfor %}<button type="button" class="remove-row">Remove row</button></div></template><button type="button" class="add-row">+ Add row</button></div>
@@ -51,22 +52,35 @@
     <title>{{ brief.title }} | Elunette</title>
     <link rel="stylesheet" href="{{ url_for('static',filename='css/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static',filename='css/adaptive.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static',filename='css/signature-footer.css') }}">
     {% if review_view %}<link rel="stylesheet" href="{{ url_for('static',filename='css/adaptive-review.css') }}">{% endif %}
 </head>
 <body class="adaptive-page{% if review_view %} adaptive-review-page{% endif %}">
+<a href="#consultation-content" class="workspace-skip">Skip to brief</a>
 <main class="adaptive-shell">
     <nav class="consultation-nav" aria-label="Studio navigation">
         <a href="{{ url_for('provider_dashboard' if provider else 'client_dashboard') }}">&larr; Your Studio</a>
         <span class="consultation-wordmark">Elunette<span aria-hidden="true"> &#10023;</span></span>
     </nav>
-    <header class="consultation-intro">
+    <header class="consultation-intro" id="consultation-content" tabindex="-1">
         <p class="eyebrow">{{ 'Review your brief' if review_view else 'Your ideas, beautifully considered' }}</p>
         <h1>{{ brief.title }}</h1>
         <p>{{ 'Check the details, add any finishing touches, and share your brief with your designer.' if review_view and editable else 'Your creative brief, prepared for your designer.' if review_view else 'A little inspiration. A few thoughtful details. A brief that feels like you.' }}</p>
-        <span class="brief-state">{{ brief.status|replace('_',' ')|capitalize }}</span>
+        <span class="brief-state">{{ brief_ui.status_label(brief.status) }}</span>
     </header>
-    {% for category,message in get_flashed_messages(with_categories=true) %}<p role="status">{{ message }}</p>{% endfor %}
-    {% for feedback_item in feedback %}<aside class="adaptive-card"><p class="eyebrow">A note from your designer</p><strong>{{ feedback_item.decision|replace('_',' ') }}</strong><p>{{ feedback_item.comment }}</p></aside>{% endfor %}
+    {{ brief_ui.feedback() }}
+    {% if history %}<a class="adaptive-history-link" href="#submission-history">Submission history &darr;</a>{% endif %}
+    {% if feedback %}
+    <section class="adaptive-card brief-feedback-card" aria-labelledby="designer-feedback-heading">
+        <h2 id="designer-feedback-heading">Designer feedback</h2>
+        {% set latest = feedback[0] %}
+        <strong>{{ brief_ui.status_label(latest.decision) }}</strong>
+        {% if latest.comment %}<p>{{ latest.comment }}</p>{% endif %}
+        {% if feedback|length > 1 %}<details><summary>Previous feedback ({{ feedback|length - 1 }})</summary>
+            {% for item in feedback[1:] %}<article><strong>{{ brief_ui.status_label(item.decision) }}</strong> <time datetime="{{ item.created_at|replace(' ', 'T') }}Z">{{ item.created_at|designer_timestamp }}</time>{% if item.comment %}<p>{{ item.comment }}</p>{% endif %}</article>{% endfor %}
+        </details>{% endif %}
+    </section>
+    {% endif %}
 {% if editable and not review %}
     <div class="adaptive-progress">
         <div class="progress-heading"><span id="current-step">Your next step</span><span><strong id="progress-label">{{ result.percentage }}%</strong> complete</span></div>
@@ -119,11 +133,21 @@
     <script src="{{ url_for('static',filename='js/adaptive.js') }}" defer></script>
 {% elif review_view %}
 {% include '_adaptive_review.html' %}
-{% else %}
-<section class="adaptive-card"><h2>{{ 'Designer brief' if provider else 'Review your brief' }}</h2><p>{{ result.percentage }}% of required information complete.</p>{% if result.errors %}<h3>Information still needed</h3><ul>{% for key,message in result.errors.items() %}<li>{{ fieldmap.get(key,{}).get('label',key) }}: {{ message }}</li>{% endfor %}</ul>{% endif %}{% if result.issues and brief.status!='approved' %}<h3>Before design approval</h3><ul>{% for issue in result.issues %}<li>{{ issue }}</li>{% endfor %}</ul>{% endif %}<p>{{ 'Approved for design.' if brief.status=='approved' else 'Ready for designer review. Approval is a separate step.' if result.ready else 'Submitted information may need clarification or human verification before design approval.' }}</p><dl>{% for item in summary %}<dt>{{ item.label }} {% if provider %}<small>{{ item.field_id }}</small>{% endif %}</dt><dd>{{ answer(fieldmap[item.field_id],item.value) }}</dd>{% endfor %}</dl></section>
-{% if editable %}<a href="{{ url_for('adaptive_edit',brief_id=brief.id) }}">← Continue editing</a><form method="post" action="{{ url_for('adaptive_submit',brief_id=brief.id) }}" class="adaptive-card"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="generation" value="{{ brief.generation }}"><label><input type="checkbox" name="confirm" value="yes" required> I have reviewed the active answers and approve sending them to my designer.</label><button {% if result.errors %}disabled{% endif %}>{{ 'Resubmit for review' if brief.status=='revision_requested' else 'Submit for review' }}</button></form>{% endif %}
-{% if provider and brief.status in ['submitted','under_review'] %}<form method="post" action="{{ url_for('adaptive_provider',brief_id=brief.id) }}" class="adaptive-card"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label for="provider-comment">Feedback / revision instructions</label><textarea id="provider-comment" name="comment" maxlength="5000"></textarea><button name="decision" value="revision_requested">Request revision</button><label><input type="checkbox" name="verified" value="yes"> I have verified any claims, legal, dietary and regulatory wording.</label><button name="decision" value="approved" {% if result.errors %}disabled{% endif %}>Approve for design</button></form>{% endif %}
 {% endif %}
 {% if assets and not provider and not review_view %}<details class="adaptive-card"><summary>Your uploaded assets</summary><ul>{% for asset in assets %}<li><a href="{{ url_for('adaptive_download',asset_id=asset.id) }}">{{ asset.original_name }}</a></li>{% endfor %}</ul></details>{% endif %}
-{% for submission in history %}<details class="adaptive-card"><summary>Submission {{ submission.revision_number }} · {{ submission.created_at }}</summary>{% if submission.response_text %}<p>{{ submission.response_text }}</p>{% endif %}<dl>{% for item in submission['items'] %}<dt>{{ item.label }} {% if provider %}({{ item.field_id }}){% endif %}</dt><dd>{{ answer(fieldmap[item.field_id],item.value) }}</dd>{% endfor %}</dl></details>{% endfor %}
-</main></body></html>
+{% if history %}
+<section class="adaptive-card adaptive-history" id="submission-history" aria-labelledby="submission-history-heading">
+    <h2 id="submission-history-heading">Submission history</h2>
+    {% for submission in history %}
+    <details>
+        <summary>Submission {{ submission.revision_number }} <time datetime="{{ submission.created_at|replace(' ', 'T') }}Z">{{ submission.created_at|designer_timestamp }}</time></summary>
+        {% if submission.response_text %}<p>{{ submission.response_text }}</p>{% endif %}
+        <dl>{% for item in submission['items'] %}<div><dt>{{ item.label }}</dt><dd>{{ review_answer(fieldmap[item.field_id], item.value) }}</dd></div>{% endfor %}</dl>
+    </details>
+    {% endfor %}
+</section>
+{% endif %}
+</main>
+{% include '_signature_footer.html' %}
+</body>
+</html>

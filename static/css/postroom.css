@@ -5,9 +5,12 @@
 .postroom-page .postroom-intro > div > p:last-child { color: #756052; font-size: 14px; }
 .postroom-page .postroom-envelope { display: block; width: 100px; height: auto; flex-shrink: 0; }
 .postroom-page .postroom-header-art { width: 80px; margin-right: 12px; }
-.postroom-page .postroom-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 18px 0; border-top: 1px solid var(--line); }
+.postroom-page .postroom-section-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 20px; padding: 15px 0; border-top: 1px solid var(--line); }
 .postroom-page .postroom-section-heading h2 { font: 600 12px var(--font-navigation); }
-.postroom-page .postroom-section-heading > span { color: #756052; font-size: 11px; }
+.postroom-controls, .postroom-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.postroom-filters a { display: inline-flex; align-items: center; min-height: 36px; padding: 5px 10px; border-radius: 8px; color: var(--burgundy); font-size: 12px; }
+.postroom-filters a[aria-current="page"] { background: #E1E7D7; color: var(--chocolate); font-weight: 700; }
+.postroom-filters a:hover { text-decoration: underline; text-underline-offset: 3px; }
 .postroom-page .postroom-empty { display: flex; flex-direction: column; align-items: center; padding: 44px 24px; border: 1px solid #DDD3C5; border-radius: 22px; background: #FFFFFF; text-align: center; }
 .postroom-page .postroom-empty .postroom-envelope { margin-bottom: 24px; }
 .postroom-page .postroom-empty h2 { margin: 14px 0; font: 400 clamp(30px, 3vw, 38px)/1.2 var(--font-heading); letter-spacing: -.7px; }
@@ -21,7 +24,7 @@
 .postroom-update p { margin: 0 0 6px; color: #756052; font-size: 13px; }
 .postroom-update time { display: block; margin-top: 4px; color: #756052; font-size: 11px; }
 .postroom-unread { display: inline-block; padding: 2px 7px; border-radius: 999px; background: #F1E7D3; color: var(--burgundy); font-size: 10px; vertical-align: middle; }
-.postroom-action { padding: 6px 10px; min-height: 32px; border: 1px solid #DDD3C5; border-radius: 8px; background: var(--white); color: var(--burgundy); font: 600 12px var(--font-navigation); cursor: pointer; }
+.postroom-action { padding: 6px 10px; min-height: 36px; border: 1px solid #A18874; border-radius: 8px; background: var(--white); color: var(--burgundy); font: 600 12px var(--font-navigation); cursor: pointer; }
 .postroom-action:hover { background: #F1E7D3; }
 @media (max-width: 600px) {
  .postroom-page .postroom-intro { gap: 12px; padding-top: 12px; }
@@ -31,4 +34,6 @@
  .postroom-page .postroom-empty { padding: 36px 20px; }
  .postroom-update { grid-template-columns: auto minmax(0, 1fr); gap: 10px; }
  .postroom-update > form { grid-column: 2; }
+ .postroom-controls { width: 100%; justify-content: space-between; }
+ .postroom-filters a, .postroom-action { min-height: 44px; }
 }
