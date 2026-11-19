@@ -160,6 +160,7 @@ def normalize(field, value, catalog, asset_allowed=lambda asset: False, partial=
     if kind in ('date','time'):
         try:
             if kind=='date' and not re.fullmatch(r'\d{4}-\d{2}-\d{2}',value): raise ValueError()
+            if kind=='time' and not re.fullmatch(r'\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?',value): raise ValueError()
             (date if kind=='date' else time).fromisoformat(value)
         except ValueError: raise ValueError('Use a valid ISO '+kind+'.')
     if kind=='url' and not public_url(value): raise ValueError('Use a public HTTP or HTTPS URL.')
@@ -180,6 +181,7 @@ def validate(groups, answers, catalog, asset_allowed=lambda asset:False, partial
             if item is not None: clean[key]=item
         except ValueError as error: errors[key]=str(error)
     active=active_fields(groups,clean)
+    errors = {key: error for key, error in errors.items() if key in active or key not in fields}
     if partial:
         return clean,errors
     if not partial:
@@ -189,8 +191,10 @@ def validate(groups, answers, catalog, asset_allowed=lambda asset:False, partial
                 try: normalize(field,clean[key],catalog,asset_allowed,False)
                 except ValueError as error: errors[key]=str(error)
     live={k:v for k,v in clean.items() if k in active}
-    for low,high in [('EV02C','EV02D'),('BIZ05B','BIZ05C'),('EV03B','EV03C')]:
+    for low,high in [('EV02C','EV02D'),('BIZ05B','BIZ05C')]:
         if live.get(low) and live.get(high) and live[high]<live[low]: errors[high]='End must be on or after start.'
+    if live.get('EV03B') and live.get('EV03C') and time.fromisoformat(live['EV03C']) < time.fromisoformat(live['EV03B']):
+        errors['EV03C']='End must be on or after start.'
     for low,high in [('PF17B','PF17C'),('CORE04D','CORE04E')]:
         if live.get(low) and live.get(high):
             if live[low]['currency']!=live[high]['currency'] or Decimal(live[high]['amount'])<Decimal(live[low]['amount']): errors[high]='Use matching currencies and a maximum at least the minimum.'
@@ -207,22 +211,31 @@ def validate(groups, answers, catalog, asset_allowed=lambda asset:False, partial
         if {row.get('deliverable') for row in live.get('PF_CONTENT_VARIANTS',[])}!={'poster','flyer'}: errors['PF_CONTENT_VARIANTS']='Provide one poster and one flyer variation.'
     return clean,errors
 
+def is_pending(field, value):
+    if empty(value):
+        return False
+    if field['type'] == 'repeater':
+        return any(is_pending(child, row.get(child['id'])) for row in value for child in field['item_fields'])
+    if field['type'] == 'multi_choice':
+        return 'pending' in value
+    if field['type'] == 'single_choice':
+        return value in ('pending', 'partial', 'working') or (value == 'later' and field['id'] in ('PF07A', 'BM03'))
+    return False
+
+
 def assessment(groups, answers, catalog, asset_allowed=lambda asset:False):
     clean, errors=validate(groups,answers,catalog,asset_allowed,partial=False)
     active=active_fields(groups,clean)
     required=[k for k,f in active.items() if f.get('required')]
     complete=sum(not empty(clean.get(k)) and k not in errors for k in required)
-    def pending(value):
-        if isinstance(value,dict): return any(pending(v) for v in value.values())
-        if isinstance(value,list): return any(pending(v) for v in value)
-        return value in ('pending','partial','working')
-    issues=[f['label']+': information is pending.' for k,f in active.items() if pending(clean.get(k))]
+    issues=[f['label']+': information is pending.' for k,f in active.items() if is_pending(f,clean.get(k))]
     methods=clean.get('PF08C',[]) if 'PF08C' in active else []
     destinations={row.get('method') for row in clean.get('PF08D',[]) if row.get('value')}
     if set(methods)-{'pending'}-destinations: issues.append('Supply action destinations for each selected contact method before design approval.')
     for key in ('BIZ07B','AW04','COR10','SM07','BM07','PK10','PK15'):
         if key in active and not empty(clean.get(key)): issues.append(active[key]['label']+': human verification and approval required.')
-    if clean.get('EV04A') in ('online','hybrid') and not clean.get('EV03E'): issues.append('Time zone for an online or international event is needed before design approval.')
+    if 'EV04A' in active and clean.get('EV04A') in ('online','hybrid') and not clean.get('EV03E'):
+        issues.append('Time zone for an online or international event is needed before design approval.')
     return {'percentage':round(100*complete/len(required)) if required else 100,'errors':errors,'issues':issues,'ready':not errors and not issues}
 
 def snapshot(groups, answers):

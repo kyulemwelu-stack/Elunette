@@ -22,7 +22,9 @@
     {% endif %}
     <section class="designer-actions" id="designer-actions" aria-labelledby="designer-actions-heading"><p class="designer-eyebrow">Your professional review</p><h2 id="designer-actions-heading">Next steps for this brief</h2><p>Keep your review notes separate from the client&rsquo;s answers. Your decision will be recorded in the brief&rsquo;s history.</p>
     {% if designer.can_review %}
-    <form method="post" action="{{ url_for('adaptive_provider',brief_id=brief.id) }}" id="designer-decision-form" class="designer-decision-form" data-submission-id="{{ designer.latest_submission.id if designer.latest_submission else 0 }}" data-verification-needed="{{ 'true' if designer.human_verification else 'false' }}" data-blocked="{{ 'true' if designer.blocking else 'false' }}">
+    {% set submission_id = designer.latest_submission.id if designer.latest_submission else 0 %}
+    <form method="post" action="{{ url_for('adaptive_provider',brief_id=brief.id) }}" id="designer-decision-form" class="designer-decision-form" data-submission-id="{{ submission_id }}" data-verification-needed="{{ 'true' if designer.human_verification else 'false' }}" data-blocked="{{ 'true' if designer.blocking else 'false' }}">
+    <input type="hidden" name="submission_id" value="{{ submission_id }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label for="provider-comment">Review note or revision instructions <span>Required when requesting a revision</span></label><textarea id="provider-comment" name="comment" maxlength="5000" rows="4" placeholder="Describe what needs clarification, or add a note to accompany approval."></textarea>
         {% if designer.human_verification %}<label class="designer-verify"><input type="checkbox" name="verified" value="yes"><span>I have verified the flagged claims, legal, dietary or regulatory wording.</span></label>{% endif %}

@@ -23,11 +23,6 @@ def bucket(group_id, field_id):
     if group_id in ('PF16','PF17','CORE04'): return 'timeline'
     return 'specific'
 
-def pending(value):
-    if isinstance(value,dict): return any(pending(v) for v in value.values())
-    if isinstance(value,list): return any(pending(v) for v in value)
-    return value in ('pending','partial','working')
-
 def title_for(field, group):
     label=field['label'].strip().rstrip('?')
     label=re.sub(r'^(?:What is the |Which |Do you have |Provide the selected |Provide |Enter |Upload |Give )','',label,flags=re.I)
@@ -76,7 +71,7 @@ def build_review(groups, answers, result, brief, edit_url):
         if engine.empty(item['value']): continue
         field_id=item['field_id'];field=active[field_id]
         section=grouped[bucket(group_for[field_id]['id'],field_id)]
-        section['answers'].append(dict(item,field=field,pending=pending(item['value']),attention=field_id in result['errors']))
+        section['answers'].append(dict(item,field=field,pending=engine.is_pending(field,item['value']),attention=field_id in result['errors']))
     sections=[]
     for section in grouped.values():
         if section['answers']:

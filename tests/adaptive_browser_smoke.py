@@ -11,6 +11,7 @@ import time
 import urllib.request
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from test_adaptive import Integration, complete
+from questionnaire_engine import load_catalog, services
 from browser_smoke import DevTools
 from werkzeug.serving import make_server
 
@@ -97,12 +98,44 @@ def main():
             evaluate("document.querySelector('#save').click()")
             wait("document.querySelector('#save-status').textContent.startsWith('Draft saved.')")
         reference=root/'reference.txt'; reference.write_text('Approved questionnaire reference',encoding='utf-8')
+        invalid=root/'invalid.txt'; invalid.write_text('<html>Invalid reference</html>',encoding='utf-8')
         evaluate("{const nav=document.querySelector('#section-select');nav.value='PF07';nav.dispatchEvent(new Event('change'));}document.querySelector('#PF07A').value='ready';document.querySelector('#PF07A').dispatchEvent(new Event('change',{bubbles:true}));document.querySelector('#PF07B').value='upload';document.querySelector('#PF07B').dispatchEvent(new Event('change',{bubbles:true}));")
         node=dev.call('DOM.getDocument')['root']['nodeId']
         upload=dev.call('DOM.querySelector',{'nodeId':node,'selector':'#PF07D-upload'})['nodeId']
+        dev.call('DOM.setFileInputFiles',{'nodeId':upload,'files':[str(invalid)]})
+        wait("document.querySelector('[data-field=PF07D] .upload-status').textContent.startsWith('Choose a valid PDF')")
+        wait("document.querySelector('#PF07D-upload').value === ''")
         dev.call('DOM.setFileInputFiles',{'nodeId':upload,'files':[str(reference)]})
         wait("document.querySelector('[data-field=PF07D] .upload-status').textContent.startsWith('Uploaded ')")
         if not evaluate("Number(document.querySelector('#PF07D').value)>0"): raise RuntimeError('Uploaded file not attached to its question')
+        evaluate("""{
+          const choose=(key,value)=>{
+            const input=document.getElementById(key);
+            input.value=value;
+            input.dispatchEvent(new Event('change',{bubbles:true}));
+          };
+          choose('PF02A','celebrations');
+          choose('PF02J','graduation');
+          choose('PF02C','no');
+        }""")
+        if not evaluate("!document.querySelector('#event-details-hint').hidden && document.querySelector('[data-field=EV01A]').hidden"):
+            raise RuntimeError('Event subtype with no event details needs a non-blocking hint')
+        evaluate("""{
+          document.querySelector('#PF02C').value='yes';
+          document.querySelector('#PF02C').dispatchEvent(new Event('change',{bubbles:true}));
+          document.querySelector('#EV06A').value='yes';
+          document.querySelector('#EV06A').dispatchEvent(new Event('change',{bubbles:true}));
+          document.querySelector('#EV06B .add-row').click();
+        }""")
+        if not evaluate("document.querySelector('#event-details-hint').hidden"):
+            raise RuntimeError('Event hint stayed visible after the event module was enabled')
+        if not evaluate("""(() => {
+          const select = document.querySelector('#EV06B select[data-kind=asset_reference]');
+          const upload = document.querySelector('#EV06B input[type=file]');
+          return [...select.options].some(option => option.textContent === 'reference.txt') &&
+            Boolean(document.getElementById(upload.getAttribute('aria-describedby')));
+        })()"""): raise RuntimeError('New repeater row could not reuse an upload or lacked its format label')
+        evaluate("document.querySelector('#EV06B .remove-row').click()")
         evaluate("document.querySelector('#save').click()")
         wait("document.querySelector('#save-status').textContent.startsWith('Draft saved.')")
         evaluate("document.querySelector('#PF07B').value='type';document.querySelector('#PF07B').dispatchEvent(new Event('change',{bubbles:true}));")
@@ -167,6 +200,55 @@ def main():
         if not evaluate("document.querySelector('#PF06B').value==='My unsaved local edit'"):raise RuntimeError('Conflict overwrote local form values')
         if json.loads(fixture.db.execute('SELECT answers_json FROM adaptive_drafts WHERE brief_id=?',(bid,)).fetchone()[0])['PF06B']!='A different tab saved this':raise RuntimeError('Stale browser overwrote newer database answers')
         print('Save coalescing, in-flight edits, lost response, expired token/session, completed review and conflict protection: passed',flush=True)
+        branches = {
+            'posters_flyers': {'PF02C':'yes', 'EV02A':'single', 'EV03A':'fixed'},
+            'logo_branding': {'LOGO_BRANDING00':'stationery', 'CORE03B':'brand'},
+            'websites_applications': {'WEBSITES_APPLICATIONS00':'ecommerce', 'WA06':['store','roles','api']},
+            'social_media_design': {'SOCIAL_MEDIA_DESIGN00':'carousel', 'CORE03B':'custom'},
+            'events_invitations': {'EVENTS_INVITATIONS00':'wedding', 'EI07':'yes'},
+            'brochures_menus': {'BROCHURES_MENUS00':'restaurant', 'BM06':'yes'},
+            'packaging_design': {'PACKAGING_DESIGN00':'label', 'PK09':'yes', 'PK11':'yes'},
+        }
+        for service in services(load_catalog()):
+            code=service['value']
+            brief=fixture.new(code)
+            saved=fixture.save(brief,complete(code,branches[code]))
+            if saved.status_code!=200: raise RuntimeError(f'{code} fixture could not save: {saved.json}')
+            for width in (1440,390,320):
+                dev.call('Emulation.setDeviceMetricsOverride',{'width':width,'height':960,'deviceScaleFactor':1,'mobile':width<600})
+                dev.call('Page.navigate',{'url':f'http://127.0.0.1:{server.server_port}/client/briefs/{brief}/adaptive'})
+                wait("document.readyState==='complete' && document.querySelector('#section-select')?.options.length>0")
+                layout=evaluate("""(() => {
+                  const nav=document.querySelector('#section-select');
+                  for (const option of [...nav.options]) {
+                    nav.value=option.value;
+                    nav.dispatchEvent(new Event('change'));
+                    const step=document.querySelector('.wizard-section:not([hidden])');
+                    if (document.documentElement.scrollWidth>innerWidth+1 ||
+                        step.getBoundingClientRect().bottom>document.querySelector('.wizard-footer').getBoundingClientRect().top)
+                        return option.value;
+                  }
+                  return browserErrors.join(';');
+                })()""")
+                if layout: raise RuntimeError(f'{code} at {width}px: {layout}')
+            else:
+                if code=='posters_flyers' and not evaluate("document.querySelector('#EV02B').type==='date' && document.querySelector('#EV03B').type==='time'"): raise RuntimeError('Native date or time input missing')
+                if code=='websites_applications':
+                    evaluate("""{
+                      const rows=document.querySelector('#WA05');
+                      rows.querySelector('.add-row').click();
+                      const name=rows.querySelector('.repeat-row:last-child input');
+                      name.value='Updated checkout';
+                      name.dispatchEvent(new Event('input',{bubbles:true}));
+                      rows.querySelector('.repeat-row:first-child .remove-row').click();
+                      document.querySelector('#save').click();
+                    }""")
+                    wait("document.querySelector('#save-status').textContent.startsWith('Draft saved.')")
+                    dev.call('Page.reload')
+                    wait("document.readyState==='complete' && document.querySelector('#section-select')?.options.length>0")
+                    if not evaluate("document.querySelectorAll('#WA05 .repeat-row').length===1 && document.querySelector('#WA05 .repeat-row input').value==='Updated checkout'"):
+                        raise RuntimeError('Repeater add, edit, remove or restore failed')
+            print(f"{service['label']} active questionnaire sections at 1440px, 390px and 320px: passed",flush=True)
         print('Screenshots:',root)
     finally:
         if dev: dev.socket.close()

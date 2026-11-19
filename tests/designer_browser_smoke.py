@@ -121,7 +121,7 @@ def main():
         wait("document.querySelector('#designer-decision-dialog').open")
         if fixture.db.execute('SELECT status FROM project_briefs WHERE id=?',(warning,)).fetchone()[0]!='submitted':raise RuntimeError('Opening confirmation changed status')
         evaluate("document.querySelector('[data-cancel-decision]').click()")
-        if not evaluate("!document.querySelector('#designer-decision-dialog').open && document.activeElement.value==='revision_requested'"):raise RuntimeError('Dialog cancellation/focus failed')
+        wait("!document.querySelector('#designer-decision-dialog').open && document.activeElement.value==='revision_requested'")
         evaluate("document.querySelector('button[value=revision_requested]').click();window.oldDesignerDocument=true;document.querySelector('[data-confirm-decision]').click()")
         wait("!window.oldDesignerDocument && document.readyState==='complete'")
         if fixture.db.execute('SELECT status FROM project_briefs WHERE id=?',(warning,)).fetchone()[0]!='revision_requested':raise RuntimeError('Revision request failed')

@@ -1,7 +1,7 @@
 """Designer-only presentation built from submitted answers, never live draft edits."""
 from datetime import datetime, timezone, timedelta
 import questionnaire_engine as engine
-from questionnaire_review import bucket, pending, title_for, guidance
+from questionnaire_review import bucket, title_for, guidance
 
 SECTIONS=[('overview','Project overview'),('goals','Project goals and target audience'),
           ('specific','Category-specific information'),('content','Main message and supporting content'),
@@ -26,7 +26,7 @@ def group_answers(groups, items, answers):
         field=dict(definitions[key])
         field['label']={'META01':'Project title','META02':'Design service'}.get(key,item.get('label',field['label']))
         section=section_key(parents[key]['id'],key)
-        result[section]['answers'].append(dict(item,field=field,pending=pending(item['value'])))
+        result[section]['answers'].append(dict(item,field=field,pending=engine.is_pending(field,item['value'])))
     return [section for section in result.values() if section['answers']]
 
 def designer_timestamp(value):

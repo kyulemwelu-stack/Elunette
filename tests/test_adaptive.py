@@ -8,6 +8,7 @@ import sqlite3
 import tempfile
 import unittest
 import questionnaire_engine as engine
+from werkzeug.test import EnvironBuilder
 
 
 def example(field,catalog):
@@ -62,6 +63,66 @@ class Engine(unittest.TestCase):
         self.assertEqual(len(self.catalog['posters_flyers']['category_branches']),9)
         self.assertEqual(len(self.catalog['posters_flyers']['main_question_groups']),17)
 
+    def test_documented_question_rows_match_runtime_catalog(self):
+        spec = engine.CATALOG_PATH.with_name('ELUNETTE_COMPLETE_QUESTIONNAIRE_SPEC.md')
+        fields = {
+            key: field for service in engine.services(self.catalog)
+            for key, field in engine.fields_for(engine.sections(self.catalog, service['value'])).items()
+        }
+
+        def visibility(predicate):
+            if not predicate:
+                return 'Always'
+            for group, joiner in (('all', ' AND '), ('any', ' OR ')):
+                if group in predicate:
+                    return '(' + joiner.join(map(visibility, predicate[group])) + ')'
+            operator = {'eq':'=', 'ne':'!=', 'in':'∈', 'not_in':'not in',
+                        'contains':'includes', 'not_empty':'not empty'}[predicate['op']]
+            operand = predicate.get('value', ', '.join(predicate.get('values', [])))
+            return f"{predicate['field']} {operator} {operand}".rstrip()
+
+        count = 0
+        for line in spec.read_text(encoding='utf-8').splitlines():
+            cells = [cell.strip() for cell in line.strip('|').split('|')]
+            if len(cells) != 5 or not re.fullmatch(r'[A-Z]+\d+[A-Z]?', cells[0]):
+                continue
+            key, label, kind, requirement, when = cells
+            with self.subTest(field=key):
+                field = fields[key]
+                self.assertEqual((field['label'], field['type'], field['required']),
+                                 (label, kind, requirement == 'Required'))
+                if key in ('BIZ04B', 'BIZ04C'):
+                    when = '(BIZ04A = yes OR PF02E = sale)'
+                self.assertEqual(visibility(field.get('when')), when)
+            count += 1
+        self.assertGreaterEqual(count, 322)
+
+    def test_service_specific_required_and_optional_follow_ups(self):
+        cases = (
+            ('logo_branding', {'LOGO_BRANDING00':'identity', 'LB03':'existing', 'LB08':'yes'}, ('LB10','LB12'), ('LB09',)),
+            ('logo_branding', {'LOGO_BRANDING00':'stationery'}, ('LB11',), ()),
+            ('websites_applications', {'WA03':'redesign','WA06':['roles','api']}, (), ('WA04','WA08','WA10')),
+            ('social_media_design', {'SOCIAL_MEDIA_DESIGN00':'ads','SM06':'yes'}, ('SM06','SM07'), ()),
+            ('social_media_design', {'SOCIAL_MEDIA_DESIGN00':'carousel'}, ('SM09',), ()),
+            ('events_invitations', {'EI04':'yes','EI07':'yes'}, ('EI08',), ('EI05',)),
+            ('brochures_menus', {'BROCHURES_MENUS00':'restaurant','BM06':'yes','BM10':'yes'}, ('BM05','BM06','BM07'), ('BM11',)),
+            ('packaging_design', {'PK05':'yes','PK09':'yes','PK11':'yes'}, ('PK06','PK10','PK12'), ()),
+        )
+        for service, overrides, required, optional in cases:
+            with self.subTest(service=service, overrides=overrides):
+                groups = engine.sections(self.catalog, service)
+                default = engine.active_fields(groups, complete(service))
+                answers = complete(service, overrides)
+                active = engine.active_fields(groups, answers)
+                for key in (*required, *optional):
+                    self.assertNotIn(key, default)
+                    self.assertEqual(active[key]['required'], key in required)
+                for key in (*required, *optional):
+                    self.assertEqual(
+                        key in engine.assessment(groups, dict(answers, **{key:None}), self.catalog, lambda _: True)['errors'],
+                        key in required,
+                    )
+
     def test_condition_operators_and_missing_negative_ancestor(self):
         for op,value,expected in [('eq','x',True),('ne','y',True),('in',None,True),('not_in',None,False),('not_empty',None,True)]:
             self.assertEqual(engine.condition({'field':'a','op':op,'value':value,'values':['x']},{'a':'x'}),expected)
@@ -78,6 +139,69 @@ class Engine(unittest.TestCase):
                 result=engine.assessment(groups,answers,self.catalog,lambda asset:True)
                 self.assertEqual(result['errors'],{})
                 self.assertEqual(result['percentage'],100)
+
+    def test_all_catalog_subtype_choices_and_event_switches(self):
+        poster = engine.sections(self.catalog, 'posters_flyers')
+        fields = engine.fields_for(poster)
+        selectors = {
+            field['when']['value']: field for key, field in fields.items()
+            if key in ('PF02D', 'PF02E', 'PF02F', 'PF02G', 'PF02H', 'PF02I', 'PF02J', 'PF02K')
+        }
+        for category in fields['PF02A']['options']:
+            category = category['value']
+            selector = selectors.get(category)
+            subtypes = selector['options'] if selector else [{'value': None}]
+            for option in subtypes:
+                for event in ('yes', 'no'):
+                    with self.subTest(category=category, subtype=option['value'], event=event):
+                        overrides = {'PF02A': category, 'PF02C': event}
+                        # Include old values from all other subtype controls.
+                        overrides.update({field['id']: 'other' for field in selectors.values()})
+                        if selector:
+                            overrides[selector['id']] = option['value']
+                        answers = complete('posters_flyers', overrides)
+                        active = engine.active_fields(poster, answers)
+                        self.assertEqual('EV01A' in active, event == 'yes')
+                        self.assertEqual('BIZ01A' in active, category == 'business_promotion')
+                        self.assertEqual('PF02L' in active, option['value'] == 'other')
+                        active_categories = {
+                            branch['id'] for branch in self.catalog['posters_flyers']['category_branches']
+                            if any(field['id'] in active for field in branch['fields'])
+                        }
+                        self.assertEqual(active_categories, {category})
+                        self.assertEqual(set(active) & {field['id'] for field in selectors.values()},
+                                         {selector['id']} if selector else set())
+                        self.assertEqual(engine.assessment(poster, answers, self.catalog, lambda _: True)['errors'], {})
+        for service in self.catalog['other_services']:
+            key = service['id']
+            subtype = service['subtype_field']
+            groups = engine.sections(self.catalog, key)
+            for option in subtype['options']:
+                with self.subTest(service=key, subtype=option['value']):
+                    answers = complete(key, {subtype['id']: option['value']})
+                    result = engine.assessment(groups, answers, self.catalog, lambda _: True)
+                    self.assertEqual(result['errors'], {})
+                    self.assertEqual(result['percentage'], 100)
+                    snapshot = {item['field_id']:item['value'] for item in engine.snapshot(groups, answers)}
+                    self.assertEqual(snapshot[subtype['id']], option['value'])
+
+    def test_hidden_invalid_inputs_and_pending_choices(self):
+        groups = engine.sections(self.catalog, 'posters_flyers')
+        answers = complete('posters_flyers', {
+            'PF02C':'no', 'EV04A':'online', 'EV04F':'bad hidden URL', 'META01':'working',
+        })
+        result = engine.assessment(groups, answers, self.catalog)
+        self.assertEqual(result['errors'], {})
+        self.assertEqual(result['issues'], [])
+        self.assertNotIn('EV04F', {item['field_id'] for item in engine.snapshot(groups, answers)})
+        pending = complete('posters_flyers', {'PF07A':'later'})
+        self.assertFalse(engine.assessment(groups, pending, self.catalog)['ready'])
+        fixed = complete('posters_flyers', {
+            'PF02C':'yes', 'EV03A':'fixed', 'EV03B':'10:00:00', 'EV03C':'10:00',
+        })
+        self.assertNotIn('EV03C', engine.assessment(groups, fixed, self.catalog)['errors'])
+        fixed['EV03C'] = '09:59:59'
+        self.assertIn('EV03C', engine.assessment(groups, fixed, self.catalog)['errors'])
 
     def test_scripture_hidden_event_and_reversible_subtypes(self):
         groups=engine.sections(self.catalog,'posters_flyers')
@@ -478,6 +602,69 @@ class Integration(unittest.TestCase):
             qid=self.db.execute('SELECT v.questionnaire_id FROM project_briefs b JOIN questionnaire_versions v ON v.id=b.questionnaire_version_id WHERE b.id=?',(bid,)).fetchone()[0]
             self.assertEqual(self.client.get(f'/client/questionnaires/{qid}?brief_id={bid}').status_code,302)
         self.assertEqual(self.client.get('/dashboard/client').status_code,200)
+    def test_all_services_complete_workflow_with_notifications(self):
+        scenarios = {
+            'posters_flyers': {'PF02A':'celebrations', 'PF02J':'birthday', 'PF02C':'no', 'EV01A':'Hidden fixture detail'},
+            'logo_branding': {'LOGO_BRANDING00':'stationery', 'LB03':'existing', 'CORE03B':'brand'},
+            'websites_applications': {'WEBSITES_APPLICATIONS00':'ecommerce', 'WA03':'redesign', 'WA06':['store','payments','roles','api'],
+                                      'WA08':[{'role':'Shop manager','permissions':'Manage products'}]},
+            'social_media_design': {'SOCIAL_MEDIA_DESIGN00':'carousel', 'CORE03B':'custom'},
+            'events_invitations': {'EVENTS_INVITATIONS00':'wedding', 'EI04':'yes', 'EI07':'yes'},
+            'brochures_menus': {'BROCHURES_MENUS00':'restaurant', 'BM06':'yes', 'BM10':'yes'},
+            'packaging_design': {'PACKAGING_DESIGN00':'label', 'PK05':'yes', 'PK09':'yes', 'PK11':'yes'},
+        }
+        for service, overrides in scenarios.items():
+            with self.subTest(service=service):
+                self.login(1)
+                bid = self.new(service)
+                path = f'/client/briefs/{bid}/adaptive'
+                self.assertEqual(self.save(bid, {'META01':'Incomplete project'}).status_code, 200)
+                self.assertIn(b'Incomplete project', self.client.get(path).data)
+                self.assertIn(b'data-can-submit="false"', self.client.get(path+'/review').data)
+                if service == 'packaging_design':
+                    upload = self.client.post(path+'/assets', data={
+                        'csrf_token':self.token, 'file':(io.BytesIO(b'%PDF-1.4\n%%EOF'), 'dieline.pdf'),
+                    })
+                    self.assertEqual(upload.status_code, 200)
+                    overrides = dict(overrides, PK06=upload.json['id'])
+                answers = complete(service, overrides)
+                saved = self.save(bid, answers, 1)
+                self.assertEqual(saved.status_code, 200, saved.json)
+                self.assertEqual(saved.json['assessment']['percentage'], 100, saved.json)
+                self.assertEqual(self.db.execute('SELECT status FROM project_briefs WHERE id=?', (bid,)).fetchone()[0], 'draft')
+                self.assertIn(b'data-can-submit="true"', self.client.get(path+'/review').data)
+                self.assertEqual(self.submit(bid, 2).status_code, 302)
+                first_id = self.db.execute('SELECT id FROM adaptive_submissions WHERE brief_id=?', (bid,)).fetchone()[0]
+                self.login(2)
+                review = f'/provider/briefs/{bid}/adaptive'
+                response = self.client.get(review)
+                self.assertEqual(response.status_code, 200)
+                self.assertNotIn(b'Hidden fixture detail', response.data)
+                self.assertIn(b'Test project', response.data)
+                self.assertIn(f'name="submission_id" value="{first_id}"'.encode(), response.data)
+                self.assertEqual(self.client.post(review, data={
+                    'csrf_token':self.token, 'decision':'revision_requested', 'comment':'Please clarify the project title.',
+                    'submission_id':first_id,
+                }).status_code, 302)
+                self.login(1)
+                self.assertEqual(self.save(bid, {'META01':'Revised project'}, 3, 'Clarified the title.').status_code, 200)
+                self.assertEqual(self.submit(bid, 4).status_code, 302)
+                self.login(2)
+                decision = {'csrf_token':self.token, 'decision':'approved', 'verified':'yes'}
+                self.assertEqual(self.client.post(review, data=dict(decision, submission_id=first_id)).status_code, 409)
+                latest_id = self.db.execute(
+                    'SELECT id FROM adaptive_submissions WHERE brief_id=? AND revision_number=2', (bid,),
+                ).fetchone()[0]
+                self.assertEqual(self.client.post(review, data=dict(decision, submission_id=latest_id)).status_code, 302)
+                snapshots = self.db.execute('SELECT answers_json FROM adaptive_submissions WHERE brief_id=? ORDER BY revision_number', (bid,)).fetchall()
+                self.assertEqual(len(snapshots), 2)
+                original, revised = ({item['field_id']:item['value'] for item in json.loads(row[0])} for row in snapshots)
+                self.assertEqual(revised, dict(original, META01='Revised project'))
+                self.assertNotIn('EV01A', original)
+                self.assertEqual(self.db.execute(
+                    'SELECT event_type,recipient_id FROM notifications WHERE brief_id=? ORDER BY id', (bid,),
+                ).fetchall(), [('submitted',2), ('revision_requested',1), ('resubmitted',2), ('approved',1)])
+
     def test_submit_revision_approval_and_immutable_snapshots(self):
         bid=self.new(); answers=complete('logo_branding'); response=self.save(bid,answers); self.assertEqual(response.status_code,200,response.data)
         self.assertEqual(self.submit(bid,1).status_code,302)
@@ -556,11 +743,25 @@ class Integration(unittest.TestCase):
         for filename,content in [('script.svg',b'<svg><script>bad</script></svg>'),('fake.png',b'<html>bad</html>')]:
             response=self.client.post(endpoint,data={'csrf_token':self.token,'file':(io.BytesIO(content),filename)})
             self.assertEqual(response.status_code,400)
+            self.assertIn('Choose a valid PDF', response.json['errors']['_form'])
+        for size, status in ((20*1024*1024+1, 400), (25*1024*1024+1, 413)):
+            with closing(EnvironBuilder(path=endpoint, method='POST', data={
+                'csrf_token':self.token, 'file':(io.BytesIO(b'A'*size), 'large.txt'),
+            })) as builder:
+                environ = builder.get_environ()
+                with closing(environ['wsgi.input']):
+                    response = self.client.open(environ)
+            self.assertEqual(response.status_code, status)
+        self.assertEqual(self.db.execute('SELECT COUNT(*) FROM brief_assets').fetchone()[0], 0)
         response=self.client.post(endpoint,data={'csrf_token':self.token,'file':(io.BytesIO(b'Approved client copy'),'../../copy.txt')})
         self.assertEqual(response.status_code,200); asset=response.json['id']
         response=self.client.get(f'/brief-assets/{asset}'); self.assertEqual(response.status_code,200); self.assertIn('attachment',response.headers['Content-Disposition']); response.close()
-        other=self.new(); self.assertEqual(self.save(other,{'CORE02B':asset}).status_code,400)
+        other=self.new(); self.assertEqual(self.save(other,{'CORE02A':'yes','CORE02B':asset}).status_code,400)
         self.login(3); self.assertEqual(self.client.get(f'/brief-assets/{asset}').status_code,404)
         self.login(2); self.assertEqual(self.client.get(f'/brief-assets/{asset}').status_code,404)
+        storage_name = self.db.execute('SELECT storage_name FROM brief_assets WHERE id=?', (asset,)).fetchone()[0]
+        (Path(self.app.config['ADAPTIVE_UPLOAD_ROOT']) / storage_name).unlink()
+        self.login(1)
+        self.assertEqual(self.client.get(f'/brief-assets/{asset}').status_code, 404)
 
 if __name__=='__main__': unittest.main()

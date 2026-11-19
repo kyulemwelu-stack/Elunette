@@ -286,6 +286,13 @@ def register(app, current_user, role_required):
         row=record(brief_id,provider=True)
         if request.method=='GET': return page(row,review=True,provider=True)
         if row['status'] not in ('submitted','under_review'): abort(409)
+        if 'submission_id' in request.form:
+            latest = db.execute(
+                'SELECT id FROM adaptive_submissions WHERE brief_id=? ORDER BY revision_number DESC LIMIT 1',
+                (brief_id,),
+            ).fetchone()
+            if request.form.get('submission_id', type=int) != (latest['id'] if latest else 0):
+                abort(409, 'This brief changed. Reload to review the latest submission.')
         decision=request.form.get('decision'); comment=request.form.get('comment','').strip()
         if len(comment)>5000: abort(400)
         if decision=='approved':
@@ -308,9 +315,11 @@ def register(app, current_user, role_required):
     def adaptive_upload(brief_id):
         db=get_db(); db.execute('BEGIN IMMEDIATE'); row=record(brief_id,editable=True)
         upload=request.files.get('file')
-        if not upload: abort(400,'Choose a file.')
+        if not upload:
+            return api_error('upload_invalid', 'Choose a file to upload.', 400)
         data=upload.stream.read(20*1024*1024+1)
-        if not data or len(data)>20*1024*1024: abort(400,'File limit is 20 MB.')
+        if not data or len(data)>20*1024*1024:
+            return api_error('upload_invalid', 'Choose a non-empty file up to 20 MB.', 400)
         name=secure_filename(upload.filename or '')
         if len(name)>200: name=Path(name).stem[:180]+Path(name).suffix
         extension=Path(name).suffix.lower()
@@ -329,9 +338,11 @@ def register(app, current_user, role_required):
                 with zipfile.ZipFile(io.BytesIO(data)) as archive:
                     if '[Content_Types].xml' in archive.namelist() and 'word/document.xml' in archive.namelist() and sum(x.file_size for x in archive.infolist())<100*1024*1024: mime='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
             except zipfile.BadZipFile: pass
-        if mime is None: abort(400,'Unsupported or mismatched file content. SVG is not accepted; supply PDF or a raster image.')
+        if mime is None:
+            return api_error('upload_invalid', 'Choose a valid PDF, DOCX, TXT, PNG, JPEG or WebP file.', 400)
         total=db.execute('SELECT COALESCE(SUM(size),0) FROM brief_assets WHERE brief_id=?',(brief_id,)).fetchone()[0]
-        if total+len(data)>200*1024*1024: abort(400,'This brief has reached its 200 MB upload limit.')
+        if total+len(data)>200*1024*1024:
+            return api_error('upload_invalid', 'This brief has reached its 200 MB upload limit.', 400)
         root=Path(app.config['ADAPTIVE_UPLOAD_ROOT']); root.mkdir(parents=True,exist_ok=True)
         storage=secrets.token_hex(24)+extension; path=root/storage
         try:
@@ -361,7 +372,11 @@ def register(app, current_user, role_required):
             submitted=get_db().execute('SELECT answers_json FROM adaptive_submissions WHERE brief_id=?',(asset['brief_id'],)).fetchall()
             if not any(references(fields[item['field_id']],item['value']) for submission in submitted for item in json.loads(submission['answers_json'])): abort(404)
         preview=request.args.get('preview')=='1' and asset['media_type'] in ('image/png','image/jpeg','image/webp')
-        response=send_file(Path(app.config['ADAPTIVE_UPLOAD_ROOT'])/asset['storage_name'],mimetype=asset['media_type'],as_attachment=not preview,download_name=asset['original_name'])
+        path = Path(app.config['ADAPTIVE_UPLOAD_ROOT']) / asset['storage_name']
+        try:
+            response=send_file(path,mimetype=asset['media_type'],as_attachment=not preview,download_name=asset['original_name'])
+        except FileNotFoundError:
+            abort(404)
         if preview:
             response.headers['Content-Security-Policy']="default-src 'none'; sandbox"
             response.headers['X-Frame-Options']='DENY'

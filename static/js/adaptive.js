@@ -13,6 +13,15 @@ let uncertainSave=null, lastSaveResult=null, uploadsInFlight=0, reviewing=false;
 const recovery=document.getElementById('save-recovery');
 const signIn=document.getElementById('save-sign-in');
 const fieldNodes = [...form.querySelectorAll('[data-field]')];
+const uploadedAssets = new Map();
+const eventHint = document.getElementById('event-details-hint');
+const eventSubtypes = {
+  PF02D: ['concert','festival','party','performance','film','exhibition','sports'],
+  PF02F: ['seminar','corporate_event'],
+  PF02G: ['school_event','workshop'],
+  PF02J: ['birthday','wedding','graduation','anniversary','baby'],
+  PF02K: ['service','youth','conference','prayer','outreach','gospel'],
+};
 const empty = value => value == null || value === '' || (Array.isArray(value) && !value.length);
 function condition(p, answers) {
   if (!p) return true;
@@ -68,6 +77,10 @@ function completeField(field, value) {
 }
 function update() {
   const all=answers(), enabled=active(all);
+  if (eventHint) {
+    eventHint.hidden = all.PF02C !== 'no' || !Object.entries(eventSubtypes)
+      .some(([field, values]) => enabled.has(field) && values.includes(all[field]));
+  }
   const signature=[...enabled].join(',');
   if (previousActive && signature!==previousActive) document.getElementById('visibility-status').textContent='Your questions have updated to match your answers.';
   previousActive=signature;
@@ -274,6 +287,10 @@ form.addEventListener('click',event=>{
     const fragment=repeater.querySelector('template').content.cloneNode(true); const suffix=String(++rowCounter);
     for (const node of fragment.querySelectorAll('[id]')) node.id=node.id.replace('-NEW-','-new'+suffix+'-');
     for (const node of fragment.querySelectorAll('[for]')) node.htmlFor=node.htmlFor.replace('-NEW-','-new'+suffix+'-');
+    for (const node of fragment.querySelectorAll('[aria-describedby]')) node.setAttribute('aria-describedby',node.getAttribute('aria-describedby').replace('-NEW-','-new'+suffix+'-'));
+    for (const select of fragment.querySelectorAll('select[data-kind="file_upload"],select[data-kind="asset_reference"]')) {
+      for (const [id,name] of uploadedAssets) select.add(new Option(name,id));
+    }
     repeater.querySelector('.rows').append(fragment); changed();
   }
   if (button.classList.contains('remove-row')) { button.closest('.repeat-row').remove(); changed(); }
@@ -291,24 +308,30 @@ form.addEventListener('click',event=>{
   }
   if (button.classList.contains('remove-colour')) { button.closest('label').remove(); changed(); }
 });
-form.addEventListener('input',event=>{
-  if (event.target.type==='color') event.target.closest('label').querySelector('[data-hex]').value=event.target.value.toUpperCase();
-  if (event.target.hasAttribute('data-hex') && /^#[0-9a-f]{6}$/i.test(event.target.value)) event.target.closest('label').querySelector('[type="color"]').value=event.target.value;
-});
 form.addEventListener('change',async event=>{
   const input=event.target; if (!input.dataset.upload) return;
   if (!input.files.length) {delete input.dataset.uploadFailed;return;}
   uploadsInFlight++;delete input.dataset.uploadFailed;
+  input.disabled=true;
   const note=input.parentElement.querySelector('.upload-status'); note.textContent='Uploading…';
   const upload=new FormData(); upload.append('file',input.files[0]);
   try {
     const state=await requestJSON(data.stateUrl);csrf=state.csrf_token;
     const asset=await requestJSON(data.uploadUrl,{method:'POST',headers:{'X-CSRFToken':csrf},body:upload});
+    uploadedAssets.set(String(asset.id),asset.name);
     for (const select of form.querySelectorAll('select[data-kind="file_upload"],select[data-kind="asset_reference"]')) select.add(new Option(asset.name,String(asset.id)));
     const target=input.closest('.child-field, .adaptive-field').querySelector('select'); target.value=asset.id;
     note.textContent='Uploaded '+asset.name; changed();
-  } catch (error) { input.dataset.uploadFailed='true';note.textContent=error.message; }
-  finally {uploadsInFlight--;if (!uploadsInFlight) form.dispatchEvent(new Event('adaptive-uploads-finished'));}
+  } catch (error) {
+    input.dataset.uploadFailed='true';
+    note.textContent=error.errors?._form || error.message;
+  }
+  finally {
+    input.value='';
+    input.disabled=false;
+    uploadsInFlight--;
+    if (!uploadsInFlight) form.dispatchEvent(new Event('adaptive-uploads-finished'));
+  }
 });
 document.getElementById('back').onclick=()=>goTo(sectionIndex-1);
 document.getElementById('next').onclick=()=>{if (sectionIndex===visibleGroups.length-1) openReview(); else goTo(sectionIndex+1);};
@@ -321,9 +344,15 @@ async function openReview() {
       status.textContent='Finishing your uploads before saving...';
       await new Promise(resolve=>form.addEventListener('adaptive-uploads-finished',resolve,{once:true}));
     }
-    if (form.querySelector('[data-upload-failed=true]')) {
+    const enabled = active(answers());
+    const failed = [...form.querySelectorAll('[data-upload-failed=true]')]
+      .find(input => enabled.has(input.closest('[data-field]').dataset.field));
+    if (failed) {
       status.textContent='Please retry your upload or choose a saved file before reviewing. Your answers are still here.';
-      showErrors({_form:status.textContent});return;
+      showErrors({_form:status.textContent});
+      goTo(visibleGroups.findIndex(group => group.id===failed.closest('[data-section]').dataset.section));
+      failed.focus();
+      return;
     }
     await save();location.assign(data.reviewUrl);
   } catch { /* Saving already explains the problem and preserves this page. */ }

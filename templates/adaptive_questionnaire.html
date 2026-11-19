@@ -99,6 +99,7 @@
                 <label class="question-label" for="{{ field.id }}">{{ field.label }}{% if field.required %}<span class="required-mark" aria-label="Required">*</span>{% else %}<small class="optional-label">Optional</small>{% endif %}</label>
                 {{ input(field,field.id,answers.get(field.id)) }}
                 <small class="field-error" id="error-{{ field.id }}"></small>
+                {% if field.id=='PF02C' %}<p id="event-details-hint" role="status" hidden>Choose Yes if this design should include an event date, time or venue. Leave No selected for a teaser or announcement without event details.</p>{% endif %}
             </div>
             {% endfor %}
         </section>
